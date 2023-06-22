@@ -1,0 +1,458 @@
+#!/bin/bash
+
+#set -x
+CURRENT_VERSION="0.1.0"
+
+WORKDIR=$(pwd)
+JOBNUM=$(nproc)
+KERNELVERSION=
+MASTERVERSION=
+ARCH=
+
+declare -A KERNEL_BUILD_DOCKER
+KERNEL_BUILD_DOCKERIMAGE[1]="dockerproxy.com/yifengyou/linux1.0:latest"
+KERNEL_BUILD_DOCKERIMAGE[2]="dockerproxy.com/yifengyou/linux2.0:latest"
+KERNEL_BUILD_DOCKERIMAGE[3]="dockerproxy.com/yifengyou/linux3.0:latest"
+KERNEL_BUILD_DOCKERIMAGE[4]="dockerproxy.com/yifengyou/linux4.0:latest"
+KERNEL_BUILD_DOCKERIMAGE[5]="dockerproxy.com/yifengyou/linux5.0:latest"
+KERNEL_BUILD_DOCKERIMAGE[6]="dockerproxy.com/yifengyou/linux6.0:latest"
+
+declare -A ROOTFS_AMD64_QCOW2
+ROOTFS_AMD64_QCOW2[1]="https://cloud.debian.org/images/cloud/buster/latest/debian-10-nocloud-amd64.qcow2"
+# debian 6 squeeze
+ROOTFS_AMD64_QCOW2[2]="https://cloud.debian.org/images/cloud/buster/latest/debian-10-nocloud-amd64.qcow2"
+# debian 8 jessie
+ROOTFS_AMD64_QCOW2[3]="https://cloud.debian.org/images/cloud/buster/latest/debian-10-nocloud-amd64.qcow2"
+# debian 10 buster
+ROOTFS_AMD64_QCOW2[4]="https://cloud.debian.org/images/cloud/buster/latest/debian-10-nocloud-amd64.qcow2"
+# debian 12 bullseye
+ROOTFS_AMD64_QCOW2[5]="https://cloud.debian.org/images/cloud/bullseye/latest/debian-11-nocloud-amd64.qcow2"
+# debian 12 bookworm
+ROOTFS_AMD64_QCOW2[6]="https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-nocloud-amd64.qcow2"
+
+declare -A ROOTFS_ARM64_QCOW2
+ROOTFS_ARM64_QCOW2[1]="https://cloud.debian.org/images/cloud/bookworm/latest/debian-10-nocloud-arm64.qcow2"
+# debian 6 squeeze
+ROOTFS_ARM64_QCOW2[2]="https://cloud.debian.org/images/cloud/bookworm/latest/debian-10-nocloud-arm64.qcow2"
+# debian 8 jessie
+ROOTFS_ARM64_QCOW2[3]="https://cloud.debian.org/images/cloud/bookworm/latest/debian-10-nocloud-arm64.qcow2"
+# debian 10 buster
+ROOTFS_ARM64_QCOW2[4]="https://cloud.debian.org/images/cloud/bookworm/latest/debian-10-nocloud-arm64.qcow2"
+# debian 12 bullseye
+ROOTFS_ARM64_QCOW2[5]="https://cloud.debian.org/images/cloud/bookworm/latest/debian-11-nocloud-arm64.qcow2"
+# debian 12 bookworm
+ROOTFS_ARM64_QCOW2[6]="https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-nocloud-arm64.qcow2"
+
+usage() {
+	echo "Usage: kdev [OPTION]... [ARGS]..."
+	echo "Linux kernel cli tools."
+	echo ""
+	echo "  -a, --arch [arch]         specific arch, support aarch64 and x86_64."
+	echo "  -s, --sourcedir [dir]     specific kernel source dir."
+	echo "  -c, --check               check environment."
+	echo "  -k, --kernel              build kernel."
+	echo "      --nodocker            build kernel without docker."
+	echo "  -f, --filesystem          download debian rootfs qcow2."
+	echo "  -r, --run                 just run up vm with kernel."
+	echo "  -d, --debug               run up vm with kernel in debug mode."
+	echo "  -i, --aptinstall          install build dependency."
+	echo "  --nodocker                don't build kernel in docker."
+	echo "  -h, --help                show help info."
+	echo "  -v, --verbose             verbose output."
+	echo "  -V, --version             show version."
+	exit
+}
+if [ $# -lt 1 ]; then
+	usage
+fi
+
+precheck()
+{
+	if [ -n "${ARCH}" ]; then
+		case ${ARCH} in
+		x86_64)
+			echo "The ARCH is x86_64"
+			;;
+		aarch64)
+			echo "The ARCH is aarch64"
+			;;
+		*)
+			echo "Unsupported arch ${ARCH}" >&2
+			exit 1
+			;;
+		esac
+	else
+		ARCH=`uname -m`
+		echo "The ARCH is ${ARCH} (auto-detect)"
+	fi
+
+	if [ -n "${SOURCEDIR}" ]; then
+		if [ ! -d "${SOURCEDIR}" ]; then
+			echo "dir ${SOURCEDIR} does't exists!"
+			exit 1
+		fi
+	else
+		SOURCEDIR=`pwd`
+		echo "The source dir is ${SOURCEDIR}"
+	fi
+
+	# check root
+	if [ "$(id -u)" != "0" ]; then
+		echo "superuser root privileges are required to run"
+		echo "  sudo kdev $*"
+		exit 1
+	fi
+	# check target dir
+	if [ -f "${SOURCEDIR}/Makefile" ] && [ -f "${SOURCEDIR}/Kconfig" ]; then
+		echo "Check ${SOURCEDIR} ok! It's kernel source directory."
+	else
+		echo "Check ${SOURCEDIR} failed! It's not a kernel source directory."
+		exit 1
+	fi
+	KERNELVERSION=$(cd ${SOURCEDIR} && make kernelversion)
+	if [ -z "${KERNELVERSION}" ]; then
+		echo "Unsupported ${KERNELVERSION}"
+	else
+		echo "kernel version : ${KERNELVERSION}"
+	fi
+	MASTERVERSION=${KERNELVERSION%%.*}
+	echo "master version : ${MASTERVERSION}"
+	if [ -f /.dockerenv ]; then
+		echo "current is in docker, all is ok!"
+		return
+	fi
+	if [ "${NODOCKER}" != "YES" ] && [ -z "${KERNEL_BUILD_DOCKERIMAGE[${MASTERVERSION}]}" ]; then
+		echo " no docker image support current kernel version"
+		exit 1
+	fi
+	# check docker environment
+	if [ -z "${NODOCKER}" ]; then
+		if ! docker version &> /dev/null ; then
+			echo "you need install docker at first"
+			echo "Tips: run \`kdev -i\`"
+			exit 1
+		fi
+	fi
+}
+
+do_build_kernel()
+{
+	cd ${SOURCEDIR}
+	echo "start do build kernel binary..."
+	make mrproper
+	make debian_x86_64_defconfig
+	#make x86_64_defconfig
+
+	#make deb-pkg clean
+	#make deb-pkg kernel-headers kernel_image
+
+	if [ $? -ne 0 ]; then
+		echo "make debian_x86_64_defconfig failed!"
+		exit 1
+	fi
+	ls -alh .config
+	make ARCH=${ARCH} -j "${JOBNUM}"
+	if [ $? -ne 0 ]; then
+		echo "Build kernel binary failed!"
+		exit 1
+	fi
+	KERNELRELEASE=$(make ARCH=${ARCH} kernelrelease)
+	if [ ! -d ${WORKDIR}/boot ]; then
+		mkdir -p ${WORKDIR}/boot
+	fi
+	make ARCH=${ARCH} install INSTALL_PATH=${WORKDIR}/boot
+	if [ $? -ne 0 ]; then
+		echo "make install to ${WORKDIR}/boot failed!"
+		exit 1
+	fi
+	make ARCH=${ARCH} INSTALL_MOD_STRIP=1 modules_install -j ${JOBNUM} INSTALL_MOD_PATH=${WORKDIR}
+	if [ $? -ne 0 ]; then
+		echo "make modules_install to ${WORKDIR} failed!"
+		exit 1
+	fi
+	if [ ! -d ${WORKDIR}/usr/src/linux-headers-${KERNELRELEASE} ]; then
+		mkdir -p ${WORKDIR}/usr/src/linux-headers-${KERNELRELEASE}
+	fi
+	make ARCH=${ARCH} headers_install INSTALL_HDR_PATH=${WORKDIR}/usr/src/linux-headers-${KERNELRELEASE}
+	if [ $? -ne 0 ]; then
+		echo "make headers_install to ${WORKDIR} failed!"
+		exit 1
+	fi
+}
+
+build_kernel()
+{
+	if [ "${NODOCKER}" == "YES" ]; then
+		echo "build kernel without docker environment"
+		do_build_kernel
+	else
+		if [ ! -f /.dockerenv ]; then
+			echo "start docker environment"
+			docker run -it \
+				-v `realpath kdev`:/bin/kdev \
+				-v ${SOURCEDIR}:/kernel \
+				-v ${WORKDIR}:/workdir \
+				-w /workdir \
+				${KERNEL_BUILD_DOCKERIMAGE[6]} \
+				/bin/kdev -a ${ARCH} -k -s /kernel
+			if [ $? -ne 0 ]; then
+				echo "exit docker env with error code!"
+				exit 1
+			fi
+			exit 0
+		else
+			do_build_kernel
+		fi
+	fi
+}
+
+build_rootfs()
+{
+	case ${ARCH} in
+	x86_64)
+		QCOW2URL=${ROOTFS_AMD64_QCOW2[${MASTERVERSION}]}
+		;;
+	aarch64)
+		QCOW2URL=${ROOTFS_AMD64_QCOW2[${MASTERVERSION}]}
+		;;
+	*)
+		echo "Unsupported arch ${ARCH}" >&2
+		exit 1
+		;;
+	esac
+	if [ -z "${QCOW2URL}" ]; then
+		echo " no qcow2 support current kernel version"
+		exit 1
+	else
+		echo " using qcow2 ${QCOW2URL}"
+	fi
+	
+	QCOW2=`basename ${QCOW2URL}`
+	echo " select QCOW2 ${QCOW2}"
+	cd ${WORKDIR}
+	if [ ! -f ${QCOW2} ]; then
+		echo " start to download ${QCOW2URL}"
+		wget -c ${QCOW2URL}
+	else
+		echo " already exists ${QCOW2}, reusing it."
+		qemu-nbd --disconnect ${QCOW2} || :
+		modprobe nbd max_part=9 || :
+	fi
+	for nbd in /dev/nbd{0..8}; do
+		if qemu-nbd --connect ${nbd} ${QCOW2} ; then
+			sync
+			NBD=${nbd}
+			break
+		fi
+	done
+	if [ -z "${NBD}" ]; then
+		echo "No available nbd found!"
+		exit 1
+	fi
+
+	TMPMNT="/tmp/qcow2-${RANDOM}"
+	mkdir -p ${TMPMNT}
+	mount -o rw ${NBD}p1 ${TMPMNT}
+	ls ${TMPMNT}/boot/
+
+	# copy linux vmlinuz
+	if [ -d ${WORKDIR}/boot ] && [ "${WORKDIR}/boot" != "/boot" ]; then
+		cp -a ${WORKDIR}/boot/* ${TMPMNT}/boot/
+		echo " copy vmlinuz done!"
+	fi
+	# copy linux modules
+	if [ -d ${WORKDIR}/lib/modules ] && [ "${WORKDIR}/lib" != "/lib" ]; then
+		cp -a ${WORKDIR}/lib/modules/* ${TMPMNT}/lib/modules/
+		echo " copy modules(stripped) done!"
+	fi
+	# copy linux headers
+	if [ -d ${WORKDIR}/usr/src ] && [ "${WORKDIR}/usr" != "/usr" ]; then
+		cp -a ${WORKDIR}/usr/src/* ${TMPMNT}/usr/src/
+		echo " copy headers done!"
+	fi
+	# set passwd
+	if [ "${TMPMNT}" != "/" ]; then
+		NEWPASSWD='root:$y$j9T$LVUsOCwrorSF0vX0oHD1g1$64jSrSnxxzwDHPQ0j6/AT0OgpgeKI7zIuUdtBxzT6hA:19531:0:99999:7:::'
+		sed -i "1s#.*#${NEWPASSWD}#" ${TMPMNT}/etc/shadow
+		echo " set root passwd : yifengyou"
+	fi
+	# set hostname
+	HOSTNAME=${QCOW2%%.*}
+	echo "${HOSTNAME}" > ${TMPMNT}/etc/hostname
+	echo " set hostname : ${HOSTNAME}"
+	touch ${TMPMNT}/etc/firstboot
+	# set first boot script
+	cat > ${TMPMNT}/etc/rc.local << EOF
+#!/bin/bash
+
+if [ -f /etc/firstboot ]; then
+	update-initramfs -k all -c
+	update-grub2
+	sync
+	rm -f /etc/firstboot
+	reboot -f
+fi
+
+EOF
+	chmod +x ${TMPMNT}/etc/rc.local
+	echo " set rc.local done!"
+
+	echo " All setting done. clean..."
+	umount ${TMPMNT}
+	sync
+	qemu-nbd --disconnect ${NBD}
+	sync
+	rmdir ${TMPMNT}
+	sync
+}
+
+generate_virsh_xml()
+{
+	exit 0
+	cat > ${WORKDIR}/vmxml << EOF
+<domain type='kvm'>
+  ...
+  <os>
+    <type arch='x86_64'>hvm</type>
+    <kernel>/boot/vmlinuz</kernel>
+    <initrd>/boot/initrd</initrd>
+    <cmdline>root=/dev/sda1 console=ttyS0</cmdline>
+    <boot dev='hd'/>
+  </os>
+  ...
+</domain>
+EOF
+
+}
+run_qemu_debian()
+{
+	exit 0
+	if [ -f /.dockerenv ]
+	then
+		echo "must not run in docker!"
+		exit 1
+	fi
+	QEMU_APP="qemu-system-x86_64"
+	if ! which qemu-system-x86_64 &> /dev/null
+	then
+		if [ -f /usr/libexec/qemu-kvm ]
+		then
+			QEMU_APP="/usr/libexec/qemu-kvm"
+		else
+			echo "qemu-system-x86_64 or /usr/libexec/qemu-kvm not found!"
+			clean && exit 1
+		fi
+	fi
+}
+
+finished()
+{
+	echo "All done!"
+	exit 0
+}
+
+while [[ $# -gt 0 ]]; do
+	case $1 in
+	-a|--arch)
+		ARCH="$2"
+		shift
+		shift
+		;;
+	-c|--check)
+		CHECK=YES
+		shift
+		;;
+	-k|--kernel)
+		BUILDKERNEL=YES
+		shift
+		;;
+	-s|--sourcedir)
+		SOURCEDIR="$2"
+		shift
+		shift
+		;;
+	--nodocker)
+		NODOCKER=YES
+		shift
+		;;
+	-f|--filesystem)
+		BUILDFS=YES
+		shift # past value
+		;;
+	-r|--run)
+		RUN=YES
+		shift
+		;;
+	--nodocker)
+		NODOCKER=YES
+		shift
+		;;
+	-i|--aptinstall)
+		APTINSTALL=YES
+		shift
+		;;
+	-h|--help)
+		HELP=YES
+		shift
+		;;
+	-v|--verbose)
+		VERBOSE=YES
+		shift
+		;;
+	-V|--version)
+		VERSION=YES
+		shift
+		;;
+	*)
+		echo "Unkown option $1" # handle unknown options
+		usage
+		exit 1
+		;;
+	esac
+done
+
+if [ "${VERSION}" == "YES" ]; then
+	echo "kdev version ${CURRENT_VERSION}"
+	exit 0
+fi
+
+if [ "${HELP}" == "YES" ]; then
+	usage
+fi
+
+if [ "${APTINSTALL}" == "YES" ]; then
+	sudo apt-get install -y \
+		docker gcc g++ bison \
+		flex vim cscope \
+		build-essential
+	if [ $? -ne 0 ]; then
+		echo "install denpendency failed!"
+		exit 1
+	fi
+	exit 0
+fi
+
+if [ "${CHECK}" == "YES" ]; then
+	precheck
+	finished
+fi
+
+if [ "${BUILDKERNEL}" == "YES" ]; then
+	precheck
+	build_kernel
+	finished
+fi
+
+if [ "${BUILDFS}" == "YES" ]; then
+	precheck
+	build_rootfs
+	finished
+fi
+
+if [ "${RUN}" == "YES" ]; then
+	precheck
+	run_qemu_debian
+	finished
+fi
+
+finished
