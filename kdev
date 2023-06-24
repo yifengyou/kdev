@@ -380,7 +380,7 @@ run_qemu()
 		VMNAME="linux-${MASTERVERSION}-${ARCH}"
 	fi
 	echo " try startup ${VMNAME}"
-	VMSTAT=$(virsh domstate ${VMNAME})
+	VMSTAT=$(virsh domstate ${VMNAME} 2> /dev/null)
 	if [ -n "${VMSTAT}" ] ; then
 		if [ "${VMSTAT}" == "running" ] ; then
 			echo "${VMNAME} already running"
@@ -414,7 +414,7 @@ run_qemu()
 		VIRSHVCPU="8"
 	fi
 	if [ -z "${VIRSHRAM}" ]; then
-		VIRSHRAM="8"
+		VIRSHRAM="8192"
 	fi
 	virt-install \
 		--name ${VMNAME} \
@@ -430,12 +430,7 @@ run_qemu()
 		echo "virsh define/start ${VMNAME} failed!"
 		exit 1
 	fi
-	virsh start ${VMNAME}
-	if [ $? -eq 0 ]; then
-		echo " start ${VMNAME} success! enjoy it~~"
-	else
-		echo " start ${VMNAME} failed!"
-	fi
+	echo " start ${VMNAME} success! enjoy it~~"
 }
 
 finished()
