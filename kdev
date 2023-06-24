@@ -283,7 +283,7 @@ build_rootfs()
 	if [ "${TMPMNT}" != "/" ]; then
 		NEWPASSWD='root:$y$j9T$LVUsOCwrorSF0vX0oHD1g1$64jSrSnxxzwDHPQ0j6/AT0OgpgeKI7zIuUdtBxzT6hA:19531:0:99999:7:::'
 		sed -i "1s#.*#${NEWPASSWD}#" ${TMPMNT}/etc/shadow
-		echo " set root passwd : yifengyou"
+		echo " set root passwd : youyifeng"
 	fi
 	# set hostname
 	HOSTNAME=${QCOW2%%.*}
@@ -299,6 +299,7 @@ if [ -f /etc/firstboot ]; then
 	update-grub2
 	sync
 	rm -f /etc/firstboot
+	ssh-keygen -A
 	reboot -f
 fi
 
@@ -315,118 +316,6 @@ EOF
 	sync
 }
 
-generate_virsh_xml()
-{
-	if [ -z ${XMLNAME} ];then
-		XMLNAME=linux-${MASTERVERSION}-${ARCH}.xml
-	fi
-	cat > ${WORKDIR}/${XMLNAME} << EOF
-<domain type='kvm'>
-  <name>VMNAME</name>
-  <metadata>
-    <libosinfo:libosinfo xmlns:libosinfo="http://libosinfo.org/xmlns/libvirt/domain/1.0">
-      <libosinfo:os id="http://debian.org/debian/10"/>
-    </libosinfo:libosinfo>
-  </metadata>
-  <memory unit='KiB'>8388608</memory>
-  <currentMemory unit='KiB'>8388608</currentMemory>
-  <vcpu placement='static'>8</vcpu>
-  <resource>
-    <partition>/machine</partition>
-  </resource>
-  <os>
-    <type arch='x86_64' machine='pc-i440fx-5.2'>hvm</type>
-    <boot dev='hd'/>
-    <bootmenu enable='yes'/>
-  </os>
-  <features>
-    <acpi/>
-    <apic/>
-    <hyperv>
-      <relaxed state='on'/>
-      <vapic state='on'/>
-      <spinlocks state='on' retries='8191'/>
-    </hyperv>
-    <vmport state='off'/>
-  </features>
-  <cpu mode='host-model' check='full'/>
-  <clock offset='localtime'>
-    <timer name='rtc' tickpolicy='catchup'/>
-    <timer name='pit' tickpolicy='delay'/>
-    <timer name='hpet' present='no'/>
-    <timer name='hypervclock' present='yes'/>
-  </clock>
-  <on_poweroff>destroy</on_poweroff>
-  <on_reboot>restart</on_reboot>
-  <on_crash>destroy</on_crash>
-  <pm>
-    <suspend-to-mem enabled='no'/>
-    <suspend-to-disk enabled='no'/>
-  </pm>
-  <devices>
-    <emulator>QEMUAPP</emulator>
-    <disk type='file' device='disk'>
-      <driver name='qemu' type='qcow2'/>
-      <source file='QCOW2'/>
-      <backingStore/>
-      <target dev='sda' bus='sata'/>
-      <address type='drive' controller='0' bus='0' target='0' unit='0'/>
-    </disk>
-    <controller type='usb' index='0' model='qemu-xhci' ports='15'>
-      <address type='pci' domain='0x0000' bus='0x00' slot='0x04' function='0x0'/>
-    </controller>
-    <controller type='pci' index='0' model='pci-root'/>
-    <controller type='sata' index='0'>
-      <address type='pci' domain='0x0000' bus='0x00' slot='0x05' function='0x0'/>
-    </controller>
-    <controller type='virtio-serial' index='0'>
-      <address type='pci' domain='0x0000' bus='0x00' slot='0x06' function='0x0'/>
-    </controller>
-    <controller type='ide' index='0'>
-      <address type='pci' domain='0x0000' bus='0x00' slot='0x01' function='0x1'/>
-    </controller>
-    <interface type='bridge'>
-      <source bridge='br0'/>
-      <virtualport type='openvswitch'/>
-      <model type='e1000'/>
-      <address type='pci' domain='0x0000' bus='0x00' slot='0x03' function='0x0'/>
-    </interface>
-    <serial type='pty'>
-      <target type='isa-serial' port='0'>
-        <model name='isa-serial'/>
-      </target>
-    </serial>
-    <console type='pty'>
-      <target type='serial' port='0'/>
-    </console>
-    <channel type='spicevmc'>
-      <target type='virtio' name='com.redhat.spice.0'/>
-      <address type='virtio-serial' controller='0' bus='0' port='1'/>
-    </channel>
-    <input type='mouse' bus='ps2'/>
-    <input type='keyboard' bus='ps2'/>
-    <graphics type='spice' autoport='yes' listen='127.0.0.1'>
-      <listen type='address' address='127.0.0.1'/>
-    </graphics>
-    <video>
-      <model type='qxl' ram='65536' vram='65536' vgamem='16384' heads='1' primary='yes'/>
-      <address type='pci' domain='0x0000' bus='0x00' slot='0x02' function='0x0'/>
-    </video>
-    <redirdev bus='usb' type='spicevmc'>
-      <address type='usb' bus='0' port='2'/>
-    </redirdev>
-    <redirdev bus='usb' type='spicevmc'>
-      <address type='usb' bus='0' port='3'/>
-    </redirdev>
-    <memballoon model='virtio'>
-      <address type='pci' domain='0x0000' bus='0x00' slot='0x07' function='0x0'/>
-    </memballoon>
-  </devices>
-  <seclabel type='dynamic' model='dac' relabel='yes'/>
-</domain>
-EOF
-	echo "generate virsh xml, write to ${WORKDIR}/${XMLNAME}"
-}
 run_qemu()
 {
 	if [ -f /.dockerenv ]; then
@@ -491,7 +380,12 @@ run_qemu()
 		VMNAME="linux-${MASTERVERSION}-${ARCH}"
 	fi
 	echo " try startup ${VMNAME}"
-	if virsh domstate ${VMNAME} &> /dev/null ; then
+	VMSTAT=$(virsh domstate ${VMNAME})
+	if [ -n "${VMSTAT}" ] ; then
+		if [ "${VMSTAT}" == "running" ] ; then
+			echo "${VMNAME} already running"
+			return
+		fi
 		virsh start ${VMNAME}
 		if [ $? -eq 0 ]; then
 			echo " start ${VMNAME} success! enjoy it~~"
@@ -500,14 +394,40 @@ run_qemu()
 		fi
 		return
 	fi
-	echo " linux-${VMNAME} does't exists! create new vm"
-	generate_virsh_xml
-	sed -i "s#VMNAME#${VMNAME}#g" ${WORKDIR}/${XMLNAME}
-	sed -i "s#QEMUAPP#${QEMUAPP}#g" ${WORKDIR}/${XMLNAME}
-	sed -i "s#QCOW2#${QCOW2}#g" ${WORKDIR}/${XMLNAME}
-	virsh define ${WORKDIR}/${XMLNAME}
+	echo " ${VMNAME} does't exists! create new vm"
+	case ${ARCH} in
+	x86_64)
+		VIRSHARCH="x86_64"
+		;;
+	arm64)
+		VIRSHARCH="aarch64"
+		VIRSHVCPU="2"
+		VIRSHRAM="4096"
+		;;
+	*)
+		echo "Unsupported arch ${ARCH}" >&2
+		exit 1
+		;;
+	esac
+
+	if [ -z "${VIRSHVCPU}" ]; then
+		VIRSHVCPU="8"
+	fi
+	if [ -z "${VIRSHRAM}" ]; then
+		VIRSHRAM="8"
+	fi
+	virt-install \
+		--name ${VMNAME} \
+		--arch ${VIRSHARCH} \
+		--ram ${VIRSHRAM} \
+		--vcpus ${VIRSHVCPU} \
+		--disk path=$QCOW2,format=qcow2 \
+		--network bridge=br0,virtualport_type=openvswitch \
+		--import \
+		--noautoconsole \
+		--graphics none
 	if [ $? -ne 0 ]; then
-		echo "virsh define ${VMNAME} failed!"
+		echo "virsh define/start ${VMNAME} failed!"
 		exit 1
 	fi
 	virsh start ${VMNAME}
