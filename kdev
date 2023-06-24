@@ -8,6 +8,7 @@ JOBNUM=$(nproc)
 KERNELVERSION=
 MASTERVERSION=
 ARCH=
+XMLNAME=
 
 declare -A KERNEL_BUILD_DOCKER
 KERNEL_BUILD_DOCKERIMAGE[1]="dockerproxy.com/yifengyou/linux1.0:latest"
@@ -47,7 +48,7 @@ usage() {
 	echo "Usage: kdev [OPTION]... [ARGS]..."
 	echo "Linux kernel cli tools."
 	echo ""
-	echo "  -a, --arch [arch]         specific arch, support aarch64 and x86_64."
+	echo "  -a, --arch [arch]         specific arch, support arm64 and x86_64."
 	echo "  -s, --sourcedir [dir]     specific kernel source dir."
 	echo "  -c, --check               check environment."
 	echo "  -k, --kernel              build kernel."
@@ -73,8 +74,8 @@ precheck()
 		x86_64)
 			echo "The ARCH is x86_64"
 			;;
-		aarch64)
-			echo "The ARCH is aarch64"
+		arm64)
+			echo "The ARCH is arm64"
 			;;
 		*)
 			echo "Unsupported arch ${ARCH}" >&2
@@ -109,13 +110,14 @@ precheck()
 		echo "Check ${SOURCEDIR} failed! It's not a kernel source directory."
 		exit 1
 	fi
-	KERNELVERSION=$(cd ${SOURCEDIR} && make kernelversion)
+	
+	KERNELVERSION=`cd ${SOURCEDIR} && make kernelversion`
 	if [ -z "${KERNELVERSION}" ]; then
 		echo "Unsupported ${KERNELVERSION}"
 	else
 		echo "kernel version : ${KERNELVERSION}"
 	fi
-	MASTERVERSION=${KERNELVERSION%%.*}
+	MASTERVERSION=${KERNELVERSION:0:1}
 	echo "master version : ${MASTERVERSION}"
 	if [ -f /.dockerenv ]; then
 		echo "current is in docker, all is ok!"
@@ -139,33 +141,36 @@ do_build_kernel()
 {
 	cd ${SOURCEDIR}
 	echo "start do build kernel binary..."
+	if [ "`uname -m`" != ${ARCH} ]; then
+		if [ "${ARCH}" == "arm64" ]; then
+			CROSS_COMPILE="aarch64-linux-gnu-"
+		fi
+	fi
 	make mrproper
-	make debian_x86_64_defconfig
-	#make x86_64_defconfig
-
+	make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} debian_${ARCH}_defconfig
 	#make deb-pkg clean
 	#make deb-pkg kernel-headers kernel_image
 
 	if [ $? -ne 0 ]; then
-		echo "make debian_x86_64_defconfig failed!"
+		echo "make debian_${ARCH}_defconfig failed!"
 		exit 1
 	fi
 	ls -alh .config
-	make ARCH=${ARCH} -j "${JOBNUM}"
+	make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} -j "${JOBNUM}"
 	if [ $? -ne 0 ]; then
 		echo "Build kernel binary failed!"
 		exit 1
 	fi
-	KERNELRELEASE=$(make ARCH=${ARCH} kernelrelease)
+	KERNELRELEASE=$(make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} kernelrelease)
 	if [ ! -d ${WORKDIR}/boot ]; then
 		mkdir -p ${WORKDIR}/boot
 	fi
-	make ARCH=${ARCH} install INSTALL_PATH=${WORKDIR}/boot
+	make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} install INSTALL_PATH=${WORKDIR}/boot
 	if [ $? -ne 0 ]; then
 		echo "make install to ${WORKDIR}/boot failed!"
 		exit 1
 	fi
-	make ARCH=${ARCH} INSTALL_MOD_STRIP=1 modules_install -j ${JOBNUM} INSTALL_MOD_PATH=${WORKDIR}
+	make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} INSTALL_MOD_STRIP=1 modules_install -j ${JOBNUM} INSTALL_MOD_PATH=${WORKDIR}
 	if [ $? -ne 0 ]; then
 		echo "make modules_install to ${WORKDIR} failed!"
 		exit 1
@@ -173,7 +178,7 @@ do_build_kernel()
 	if [ ! -d ${WORKDIR}/usr/src/linux-headers-${KERNELRELEASE} ]; then
 		mkdir -p ${WORKDIR}/usr/src/linux-headers-${KERNELRELEASE}
 	fi
-	make ARCH=${ARCH} headers_install INSTALL_HDR_PATH=${WORKDIR}/usr/src/linux-headers-${KERNELRELEASE}
+	make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} headers_install INSTALL_HDR_PATH=${WORKDIR}/usr/src/linux-headers-${KERNELRELEASE}
 	if [ $? -ne 0 ]; then
 		echo "make headers_install to ${WORKDIR} failed!"
 		exit 1
@@ -187,9 +192,13 @@ build_kernel()
 		do_build_kernel
 	else
 		if [ ! -f /.dockerenv ]; then
+			if [ ! -f /bin/kdev ]; then
+				echo "kdev not found in /bin/"
+				exit 1
+			fi
 			echo "start docker environment"
 			docker run -it \
-				-v `realpath kdev`:/bin/kdev \
+				-v /bin/kdev:/bin/kdev \
 				-v ${SOURCEDIR}:/kernel \
 				-v ${WORKDIR}:/workdir \
 				-w /workdir \
@@ -212,8 +221,8 @@ build_rootfs()
 	x86_64)
 		QCOW2URL=${ROOTFS_AMD64_QCOW2[${MASTERVERSION}]}
 		;;
-	aarch64)
-		QCOW2URL=${ROOTFS_AMD64_QCOW2[${MASTERVERSION}]}
+	arm64)
+		QCOW2URL=${ROOTFS_ARM64_QCOW2[${MASTERVERSION}]}
 		;;
 	*)
 		echo "Unsupported arch ${ARCH}" >&2
@@ -308,40 +317,204 @@ EOF
 
 generate_virsh_xml()
 {
-	exit 0
-	cat > ${WORKDIR}/vmxml << EOF
+	if [ -z ${XMLNAME} ];then
+		XMLNAME=linux-${MASTERVERSION}-${ARCH}.xml
+	fi
+	cat > ${WORKDIR}/${XMLNAME} << EOF
 <domain type='kvm'>
-  ...
+  <name>VMNAME</name>
+  <metadata>
+    <libosinfo:libosinfo xmlns:libosinfo="http://libosinfo.org/xmlns/libvirt/domain/1.0">
+      <libosinfo:os id="http://debian.org/debian/10"/>
+    </libosinfo:libosinfo>
+  </metadata>
+  <memory unit='KiB'>8388608</memory>
+  <currentMemory unit='KiB'>8388608</currentMemory>
+  <vcpu placement='static'>8</vcpu>
+  <resource>
+    <partition>/machine</partition>
+  </resource>
   <os>
-    <type arch='x86_64'>hvm</type>
-    <kernel>/boot/vmlinuz</kernel>
-    <initrd>/boot/initrd</initrd>
-    <cmdline>root=/dev/sda1 console=ttyS0</cmdline>
+    <type arch='x86_64' machine='pc-i440fx-5.2'>hvm</type>
     <boot dev='hd'/>
+    <bootmenu enable='yes'/>
   </os>
-  ...
+  <features>
+    <acpi/>
+    <apic/>
+    <hyperv>
+      <relaxed state='on'/>
+      <vapic state='on'/>
+      <spinlocks state='on' retries='8191'/>
+    </hyperv>
+    <vmport state='off'/>
+  </features>
+  <cpu mode='host-model' check='full'/>
+  <clock offset='localtime'>
+    <timer name='rtc' tickpolicy='catchup'/>
+    <timer name='pit' tickpolicy='delay'/>
+    <timer name='hpet' present='no'/>
+    <timer name='hypervclock' present='yes'/>
+  </clock>
+  <on_poweroff>destroy</on_poweroff>
+  <on_reboot>restart</on_reboot>
+  <on_crash>destroy</on_crash>
+  <pm>
+    <suspend-to-mem enabled='no'/>
+    <suspend-to-disk enabled='no'/>
+  </pm>
+  <devices>
+    <emulator>QEMUAPP</emulator>
+    <disk type='file' device='disk'>
+      <driver name='qemu' type='qcow2'/>
+      <source file='QCOW2'/>
+      <backingStore/>
+      <target dev='sda' bus='sata'/>
+      <address type='drive' controller='0' bus='0' target='0' unit='0'/>
+    </disk>
+    <controller type='usb' index='0' model='qemu-xhci' ports='15'>
+      <address type='pci' domain='0x0000' bus='0x00' slot='0x04' function='0x0'/>
+    </controller>
+    <controller type='pci' index='0' model='pci-root'/>
+    <controller type='sata' index='0'>
+      <address type='pci' domain='0x0000' bus='0x00' slot='0x05' function='0x0'/>
+    </controller>
+    <controller type='virtio-serial' index='0'>
+      <address type='pci' domain='0x0000' bus='0x00' slot='0x06' function='0x0'/>
+    </controller>
+    <controller type='ide' index='0'>
+      <address type='pci' domain='0x0000' bus='0x00' slot='0x01' function='0x1'/>
+    </controller>
+    <interface type='bridge'>
+      <source bridge='br0'/>
+      <virtualport type='openvswitch'/>
+      <model type='e1000'/>
+      <address type='pci' domain='0x0000' bus='0x00' slot='0x03' function='0x0'/>
+    </interface>
+    <serial type='pty'>
+      <target type='isa-serial' port='0'>
+        <model name='isa-serial'/>
+      </target>
+    </serial>
+    <console type='pty'>
+      <target type='serial' port='0'/>
+    </console>
+    <channel type='spicevmc'>
+      <target type='virtio' name='com.redhat.spice.0'/>
+      <address type='virtio-serial' controller='0' bus='0' port='1'/>
+    </channel>
+    <input type='mouse' bus='ps2'/>
+    <input type='keyboard' bus='ps2'/>
+    <graphics type='spice' autoport='yes' listen='127.0.0.1'>
+      <listen type='address' address='127.0.0.1'/>
+    </graphics>
+    <video>
+      <model type='qxl' ram='65536' vram='65536' vgamem='16384' heads='1' primary='yes'/>
+      <address type='pci' domain='0x0000' bus='0x00' slot='0x02' function='0x0'/>
+    </video>
+    <redirdev bus='usb' type='spicevmc'>
+      <address type='usb' bus='0' port='2'/>
+    </redirdev>
+    <redirdev bus='usb' type='spicevmc'>
+      <address type='usb' bus='0' port='3'/>
+    </redirdev>
+    <memballoon model='virtio'>
+      <address type='pci' domain='0x0000' bus='0x00' slot='0x07' function='0x0'/>
+    </memballoon>
+  </devices>
+  <seclabel type='dynamic' model='dac' relabel='yes'/>
 </domain>
 EOF
-
+	echo "generate virsh xml, write to ${WORKDIR}/${XMLNAME}"
 }
-run_qemu_debian()
+run_qemu()
 {
-	exit 0
-	if [ -f /.dockerenv ]
-	then
+	if [ -f /.dockerenv ]; then
 		echo "must not run in docker!"
 		exit 1
 	fi
-	QEMU_APP="qemu-system-x86_64"
-	if ! which qemu-system-x86_64 &> /dev/null
-	then
-		if [ -f /usr/libexec/qemu-kvm ]
-		then
-			QEMU_APP="/usr/libexec/qemu-kvm"
+	case ${ARCH} in
+	x86_64)
+		QEMUAPP="qemu-system-x86_64"
+		;;
+	arm64)
+		QEMUAPP="qemu-system-aarch64"
+		;;
+	*)
+		echo "Unsupported arch ${ARCH}" >&2
+		exit 1
+		;;
+	esac
+	QEMUAPP=`which ${QEMUAPP}`
+	echo "${QEMUAPP}"
+	eval ${QEMUAPP} --version &> /dev/null 
+	if [ $? -ne 0 ] ; then
+		echo "you need install qemu-system-${ARCH} at first"
+		echo "Tips: run \`kdev -i\`"
+		exit 1
+	fi
+	if ! virsh --version &> /dev/null ; then
+		echo "you need install libvirt-clients at first"
+		echo "Tips: run \`kdev -i\`"
+		exit 1
+	fi
+	case ${ARCH} in
+	x86_64)
+		QCOW2URL=${ROOTFS_AMD64_QCOW2[${MASTERVERSION}]}
+		;;
+	arm64)
+		QCOW2URL=${ROOTFS_ARM64_QCOW2[${MASTERVERSION}]}
+		;;
+	*)
+		echo "Unsupported arch ${ARCH}" >&2
+		exit 1
+		;;
+	esac
+	if [ -z "${QCOW2URL}" ]; then
+		echo " no qcow2 support current kernel version"
+		exit 1
+	else
+		echo " using qcow2 ${QCOW2URL}"
+	fi
+	
+	QCOW2=`basename ${QCOW2URL}`
+	cd ${WORKDIR}
+	QCOW2=`realpath ${QCOW2}`
+	if [ ! -f "${QCOW2}" ]; then
+		echo " no qcow2 found!"
+		echo "Tips: run \`kdev -i\`"
+		exit 1
+	else
+		echo " found QCOW2 ${QCOW2} in workdir, using it."
+	fi
+	if [ -z "${VMNAME}" ]; then
+		VMNAME="linux-${MASTERVERSION}-${ARCH}"
+	fi
+	echo " try startup ${VMNAME}"
+	if virsh domstate ${VMNAME} &> /dev/null ; then
+		virsh start ${VMNAME}
+		if [ $? -eq 0 ]; then
+			echo " start ${VMNAME} success! enjoy it~~"
 		else
-			echo "qemu-system-x86_64 or /usr/libexec/qemu-kvm not found!"
-			clean && exit 1
+			echo " start ${VMNAME} failed!"
 		fi
+		return
+	fi
+	echo " linux-${VMNAME} does't exists! create new vm"
+	generate_virsh_xml
+	sed -i "s#VMNAME#${VMNAME}#g" ${WORKDIR}/${XMLNAME}
+	sed -i "s#QEMUAPP#${QEMUAPP}#g" ${WORKDIR}/${XMLNAME}
+	sed -i "s#QCOW2#${QCOW2}#g" ${WORKDIR}/${XMLNAME}
+	virsh define ${WORKDIR}/${XMLNAME}
+	if [ $? -ne 0 ]; then
+		echo "virsh define ${VMNAME} failed!"
+		exit 1
+	fi
+	virsh start ${VMNAME}
+	if [ $? -eq 0 ]; then
+		echo " start ${VMNAME} success! enjoy it~~"
+	else
+		echo " start ${VMNAME} failed!"
 	fi
 }
 
@@ -451,7 +624,7 @@ fi
 
 if [ "${RUN}" == "YES" ]; then
 	precheck
-	run_qemu_debian
+	run_qemu
 	finished
 fi
 
