@@ -110,7 +110,11 @@ precheck()
 		echo "Check ${SOURCEDIR} failed! It's not a kernel source directory."
 		exit 1
 	fi
-	
+	HUGEFILE=$(find ${SOURCEDIR}/ -name .git -prune -type f -size +100M)
+	if [ -n "${HUGEFILE}" ]; then
+		echo " warnning: file hugefile!"
+		echo "${HUGEFILE}"
+	fi
 	KERNELVERSION=`cd ${SOURCEDIR} && make kernelversion`
 	if [ -z "${KERNELVERSION}" ]; then
 		echo "Unsupported ${KERNELVERSION}"
