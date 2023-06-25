@@ -1,4 +1,4 @@
-FROM debian:jessie
+FROM debian:squeeze
 
 COPY bashrc /root/.bashrc
 COPY sources.list /etc/apt/sources.list
