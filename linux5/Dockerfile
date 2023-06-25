@@ -20,6 +20,7 @@ RUN apt-get update \
 		rsync \
 		bear \
 		git \
+		gcc-aarch64-linux-gnu \
 		flex \
 		bison \
 		bc \

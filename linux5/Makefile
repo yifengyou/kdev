@@ -4,12 +4,12 @@ default:
 	@echo "push             push docker image"
 
 build:
-	docker build . -t yifengyou/linux6.0:latest
-	docker tag yifengyou/linux6.0:latest dockerproxy.com/yifengyou/linux6.0:latest 
+	docker build . -t yifengyou/linux5.0:latest
+	docker tag yifengyou/linux5.0:latest dockerproxy.com/yifengyou/linux5.0:latest 
 
 pull:
-	docker pull dockerproxy.com/yifengyou/linux6.0:latest
-	docker tag dockerproxy.com/yifengyou/linux6.0:latest yifengyou/linux6.0:latest
+	docker pull dockerproxy.com/yifengyou/linux5.0:latest
+	docker tag dockerproxy.com/yifengyou/linux5.0:latest yifengyou/linux5.0:latest
 
 push:
-	docker push yifengyou/linux6.0:latest
+	docker push yifengyou/linux5.0:latest

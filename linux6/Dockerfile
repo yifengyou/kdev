@@ -1,4 +1,4 @@
-FROM debian:bullseye
+FROM debian:bookworm
 
 COPY bashrc /root/.bashrc
 COPY sources.list /etc/apt/sources.list

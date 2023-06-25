@@ -150,8 +150,8 @@ do_build_kernel()
 			CROSS_COMPILE="aarch64-linux-gnu-"
 		fi
 	fi
-	make mrproper
-	make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} debian_${ARCH}_defconfig
+	#make O=${WORKDIR}/build mrproper
+	make O=${WORKDIR}/build ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} debian_${ARCH}_defconfig
 	#make deb-pkg clean
 	#make deb-pkg kernel-headers kernel_image
 
@@ -159,30 +159,37 @@ do_build_kernel()
 		echo "make debian_${ARCH}_defconfig failed!"
 		exit 1
 	fi
-	ls -alh .config
-	make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} -j "${JOBNUM}"
+	ls -alh ${WORKDIR}/build/.config
+	make O=${WORKDIR}/build ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} -j "${JOBNUM}"
 	if [ $? -ne 0 ]; then
 		echo "Build kernel binary failed!"
 		exit 1
 	fi
-	KERNELRELEASE=$(make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} kernelrelease)
+
+	KERNELRELEASE=$(make O=${WORKDIR}/build --no-print-directory ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} kernelrelease)
+	echo " kernel install to ${WORKDIR}/boot"
 	if [ ! -d ${WORKDIR}/boot ]; then
 		mkdir -p ${WORKDIR}/boot
 	fi
-	make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} install INSTALL_PATH=${WORKDIR}/boot
+	make O=${WORKDIR}/build ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} install INSTALL_PATH=${WORKDIR}/boot
 	if [ $? -ne 0 ]; then
 		echo "make install to ${WORKDIR}/boot failed!"
 		exit 1
 	fi
-	make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} INSTALL_MOD_STRIP=1 modules_install -j ${JOBNUM} INSTALL_MOD_PATH=${WORKDIR}
+
+	echo " kernel modules install to ${WORKDIR}"
+	make O=${WORKDIR}/build ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} INSTALL_MOD_STRIP=1 modules_install -j ${JOBNUM} INSTALL_MOD_PATH=${WORKDIR}
 	if [ $? -ne 0 ]; then
 		echo "make modules_install to ${WORKDIR} failed!"
 		exit 1
 	fi
-	if [ ! -d ${WORKDIR}/usr/src/linux-headers-${KERNELRELEASE} ]; then
-		mkdir -p ${WORKDIR}/usr/src/linux-headers-${KERNELRELEASE}
+
+	KERNEL_HEADER_INSTALL=${WORKDIR}/usr/src/linux-headers-${KERNELRELEASE}
+	echo " kernel headers install to ${KERNEL_HEADER_INSTALL}"
+	if [ ! -d "${KERNEL_HEADER_INSTALL}" ]; then
+		mkdir -p ${KERNEL_HEADER_INSTALL}
 	fi
-	make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} headers_install INSTALL_HDR_PATH=${WORKDIR}/usr/src/linux-headers-${KERNELRELEASE}
+	make O=${WORKDIR}/build ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} headers_install INSTALL_HDR_PATH=${KERNEL_HEADER_INSTALL}
 	if [ $? -ne 0 ]; then
 		echo "make headers_install to ${WORKDIR} failed!"
 		exit 1
@@ -206,7 +213,7 @@ build_kernel()
 				-v ${SOURCEDIR}:/kernel \
 				-v ${WORKDIR}:/workdir \
 				-w /workdir \
-				${KERNEL_BUILD_DOCKERIMAGE[6]} \
+				${KERNEL_BUILD_DOCKERIMAGE[${MASTERVERSION}]} \
 				/bin/kdev -a ${ARCH} -k -s /kernel
 			if [ $? -ne 0 ]; then
 				echo "exit docker env with error code!"
@@ -425,7 +432,7 @@ run_qemu()
 		--arch ${VIRSHARCH} \
 		--ram ${VIRSHRAM} \
 		--vcpus ${VIRSHVCPU} \
-		--disk path=$QCOW2,format=qcow2 \
+		--disk path=$QCOW2,format=qcow2,bus=scsi \
 		--network bridge=br0,virtualport_type=openvswitch \
 		--import \
 		--noautoconsole \
