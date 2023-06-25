@@ -38,9 +38,9 @@ ROOTFS_ARM64_QCOW2[2]="https://cloud.debian.org/images/cloud/bookworm/latest/deb
 # debian 8 jessie
 ROOTFS_ARM64_QCOW2[3]="https://cloud.debian.org/images/cloud/bookworm/latest/debian-10-nocloud-arm64.qcow2"
 # debian 10 buster
-ROOTFS_ARM64_QCOW2[4]="https://cloud.debian.org/images/cloud/bookworm/latest/debian-10-nocloud-arm64.qcow2"
+ROOTFS_ARM64_QCOW2[4]="https://cloud.debian.org/images/cloud/buster/latest/debian-10-nocloud-arm64.qcow2"
 # debian 12 bullseye
-ROOTFS_ARM64_QCOW2[5]="https://cloud.debian.org/images/cloud/bookworm/latest/debian-11-nocloud-arm64.qcow2"
+ROOTFS_ARM64_QCOW2[5]="https://cloud.debian.org/images/cloud/bullseye/latest/debian-11-nocloud-arm64.qcow2"
 # debian 12 bookworm
 ROOTFS_ARM64_QCOW2[6]="https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-nocloud-arm64.qcow2"
 
@@ -306,9 +306,14 @@ build_rootfs()
 #!/bin/bash
 
 if [ -f /etc/firstboot ]; then
-	update-initramfs -k all -c
+	cd /boot
+	for k in \$(ls vmlinuz-*); do
+		KERNEL=\${k//vmlinuz-/}
+		update-initramfs -k \${KERNEL} -c
+	done
 	update-grub2
 	sync
+	chpasswd <<< "root:youyifeng"
 	rm -f /etc/firstboot
 	ssh-keygen -A
 	reboot -f

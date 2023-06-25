@@ -1,8 +1,9 @@
-FROM debian:bullseye
+FROM debian:buster
 
 COPY bashrc /root/.bashrc
 COPY sources.list /etc/apt/sources.list
-RUN apt-get update \
+RUN echo "Acquire { https::Verify-Peer false }" > /etc/apt/apt.conf.d/99verify-peer.conf \
+    && apt-get update \
 	&& apt-get install -y systemd systemd-sysv \
 	&& apt-get install -y \
 		vim \
@@ -20,6 +21,7 @@ RUN apt-get update \
 		rsync \
 		bear \
 		git \
+		gcc-aarch64-linux-gnu \
 		flex \
 		bison \
 		bc \
