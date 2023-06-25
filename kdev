@@ -13,7 +13,7 @@ XMLNAME=
 declare -A KERNEL_BUILD_DOCKER
 KERNEL_BUILD_DOCKERIMAGE[1]="dockerproxy.com/yifengyou/linux1.0:latest"
 KERNEL_BUILD_DOCKERIMAGE[2]="dockerproxy.com/yifengyou/linux2.0:latest"
-KERNEL_BUILD_DOCKERIMAGE[3]="dockerproxy.com/yifengyou/linux3.0:latest"
+KERNEL_BUILD_DOCKERIMAGE[3]="dockerproxy.com/yifengyou/linux4.0:latest"
 KERNEL_BUILD_DOCKERIMAGE[4]="dockerproxy.com/yifengyou/linux4.0:latest"
 KERNEL_BUILD_DOCKERIMAGE[5]="dockerproxy.com/yifengyou/linux5.0:latest"
 KERNEL_BUILD_DOCKERIMAGE[6]="dockerproxy.com/yifengyou/linux6.0:latest"
@@ -23,7 +23,7 @@ ROOTFS_AMD64_QCOW2[1]="https://cloud.debian.org/images/cloud/buster/latest/debia
 # debian 6 squeeze
 ROOTFS_AMD64_QCOW2[2]="https://cloud.debian.org/images/cloud/buster/latest/debian-10-nocloud-amd64.qcow2"
 # debian 8 jessie
-ROOTFS_AMD64_QCOW2[3]="https://cloud.debian.org/images/cloud/buster/latest/debian-10-nocloud-amd64.qcow2"
+ROOTFS_AMD64_QCOW2[3]="https://cloud.debian.org/images/cloud/buster/latest/debian-8-nocloud-amd64.qcow2"
 # debian 10 buster
 ROOTFS_AMD64_QCOW2[4]="https://cloud.debian.org/images/cloud/buster/latest/debian-10-nocloud-amd64.qcow2"
 # debian 12 bullseye
@@ -36,7 +36,7 @@ ROOTFS_ARM64_QCOW2[1]="https://cloud.debian.org/images/cloud/bookworm/latest/deb
 # debian 6 squeeze
 ROOTFS_ARM64_QCOW2[2]="https://cloud.debian.org/images/cloud/bookworm/latest/debian-10-nocloud-arm64.qcow2"
 # debian 8 jessie
-ROOTFS_ARM64_QCOW2[3]="https://cloud.debian.org/images/cloud/bookworm/latest/debian-10-nocloud-arm64.qcow2"
+ROOTFS_ARM64_QCOW2[3]="https://cloud.debian.org/images/cloud/bookworm/latest/debian-8-nocloud-arm64.qcow2"
 # debian 10 buster
 ROOTFS_ARM64_QCOW2[4]="https://cloud.debian.org/images/cloud/buster/latest/debian-10-nocloud-arm64.qcow2"
 # debian 12 bullseye
@@ -115,7 +115,8 @@ precheck()
 		echo " warnning: file hugefile!"
 		echo "${HUGEFILE}"
 	fi
-	KERNELVERSION=`cd ${SOURCEDIR} && make kernelversion`
+	cd ${SOURCEDIR} 
+	KERNELVERSION=$( make kernelversion )
 	if [ -z "${KERNELVERSION}" ]; then
 		echo "Unsupported ${KERNELVERSION}"
 	else
@@ -150,10 +151,8 @@ do_build_kernel()
 			CROSS_COMPILE="aarch64-linux-gnu-"
 		fi
 	fi
-	#make O=${WORKDIR}/build mrproper
+	make O=${WORKDIR}/build mrproper
 	make O=${WORKDIR}/build ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} debian_${ARCH}_defconfig
-	#make deb-pkg clean
-	#make deb-pkg kernel-headers kernel_image
 
 	if [ $? -ne 0 ]; then
 		echo "make debian_${ARCH}_defconfig failed!"
@@ -166,7 +165,6 @@ do_build_kernel()
 		exit 1
 	fi
 
-	KERNELRELEASE=$(make O=${WORKDIR}/build --no-print-directory ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} kernelrelease)
 	echo " kernel install to ${WORKDIR}/boot"
 	if [ ! -d ${WORKDIR}/boot ]; then
 		mkdir -p ${WORKDIR}/boot
@@ -184,6 +182,8 @@ do_build_kernel()
 		exit 1
 	fi
 
+	cd ${SOURCEDIR}
+	KERNELRELEASE=$( make -s --no-print-directory O=${WORKDIR}/build ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} kernelrelease 2>/dev/null )
 	KERNEL_HEADER_INSTALL=${WORKDIR}/usr/src/linux-headers-${KERNELRELEASE}
 	echo " kernel headers install to ${KERNEL_HEADER_INSTALL}"
 	if [ ! -d "${KERNEL_HEADER_INSTALL}" ]; then
@@ -313,7 +313,9 @@ if [ -f /etc/firstboot ]; then
 	done
 	update-grub2
 	sync
-	chpasswd <<< "root:youyifeng"
+	if which chpasswd &> /dev/null ; then
+		chpasswd <<< "root:youyifeng"
+	fi
 	rm -f /etc/firstboot
 	ssh-keygen -A
 	reboot -f
