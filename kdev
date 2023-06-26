@@ -23,7 +23,7 @@ ROOTFS_AMD64_QCOW2[1]="https://cloud.debian.org/images/cloud/buster/latest/debia
 # debian 6 squeeze
 ROOTFS_AMD64_QCOW2[2]="https://cloud.debian.org/images/cloud/buster/latest/debian-10-nocloud-amd64.qcow2"
 # debian 8 jessie
-ROOTFS_AMD64_QCOW2[3]="https://cloud.debian.org/images/cloud/buster/latest/debian-8-nocloud-amd64.qcow2"
+ROOTFS_AMD64_QCOW2[3]="https://cloud-images.ubuntu.com/releases/xenial/release/ubuntu-16.04-server-cloudimg-amd64-disk1.img"
 # debian 10 buster
 ROOTFS_AMD64_QCOW2[4]="https://cloud.debian.org/images/cloud/buster/latest/debian-10-nocloud-amd64.qcow2"
 # debian 12 bullseye
@@ -36,7 +36,7 @@ ROOTFS_ARM64_QCOW2[1]="https://cloud.debian.org/images/cloud/bookworm/latest/deb
 # debian 6 squeeze
 ROOTFS_ARM64_QCOW2[2]="https://cloud.debian.org/images/cloud/bookworm/latest/debian-10-nocloud-arm64.qcow2"
 # debian 8 jessie
-ROOTFS_ARM64_QCOW2[3]="https://cloud.debian.org/images/cloud/bookworm/latest/debian-8-nocloud-arm64.qcow2"
+ROOTFS_ARM64_QCOW2[3]="https://cloud-images.ubuntu.com/releases/xenial/release/ubuntu-16.04-server-cloudimg-arm64-uefi1.img"
 # debian 10 buster
 ROOTFS_ARM64_QCOW2[4]="https://cloud.debian.org/images/cloud/buster/latest/debian-10-nocloud-arm64.qcow2"
 # debian 12 bullseye
@@ -291,21 +291,29 @@ build_rootfs()
 		echo " copy headers done! ${TMPMNT}/usr/src"
 	fi
 	# set passwd
-	if [ "${TMPMNT}" != "/" ]; then
-		NEWPASSWD='root:$y$j9T$LVUsOCwrorSF0vX0oHD1g1$64jSrSnxxzwDHPQ0j6/AT0OgpgeKI7zIuUdtBxzT6hA:19531:0:99999:7:::'
-		sed -i "1s#.*#${NEWPASSWD}#" ${TMPMNT}/etc/shadow
-		echo " set root passwd : youyifeng"
-	fi
+	#if [ "${TMPMNT}" != "/" ]; then
+	#	NEWPASSWD='root:$y$j9T$LVUsOCwrorSF0vX0oHD1g1$64jSrSnxxzwDHPQ0j6/AT0OgpgeKI7zIuUdtBxzT6hA:19531:0:99999:7:::'
+	#	sed -i "1s#.*#${NEWPASSWD}#" ${TMPMNT}/etc/shadow
+	#	echo " set root passwd : youyifeng"
+	#fi
 	# set hostname
 	HOSTNAME=${QCOW2%%.*}
 	echo "${HOSTNAME}" > ${TMPMNT}/etc/hostname
 	echo " set hostname : ${HOSTNAME}"
+
+	# disable cloud init
+	if [ -d "${TMPMNT}/etc/cloud" ]; then
+		touch "${TMPMNT}/etc/cloud/cloud-init.disabled"
+		echo " disable cloud init"
+	fi
+
 	touch ${TMPMNT}/etc/firstboot
 	# set first boot script
 	cat > ${TMPMNT}/etc/rc.local << EOF
 #!/bin/bash
 
 if [ -f /etc/firstboot ]; then
+	rm -f /etc/firstboot
 	cd /boot
 	for k in \$(ls vmlinuz-*); do
 		KERNEL=\${k//vmlinuz-/}
@@ -314,12 +322,20 @@ if [ -f /etc/firstboot ]; then
 	update-grub2
 	sync
 	if which chpasswd &> /dev/null ; then
-		chpasswd <<< "root:youyifeng"
+		echo root:youyifeng | chpasswd
+	elif which passwd &> /dev/null ; then
+		echo youyifeng | passwd -stdin root
+	else
+		echo "can't reset root passwd"
 	fi
-	rm -f /etc/firstboot
+	if [ -d /etc/cloud/ ]; then
+		touch /etc/cloud/cloud-init.disabled
+	fi
 	ssh-keygen -A
 	reboot -f
 fi
+
+exit 0
 
 EOF
 	chmod +x ${TMPMNT}/etc/rc.local

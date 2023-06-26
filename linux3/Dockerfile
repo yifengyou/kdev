@@ -7,7 +7,7 @@ COPY bashrc /root/.bashrc
 RUN set -x && echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections && \
     apt-get update && \
     apt-get install -y -q apt-utils dialog && \
-    apt-get install -y -q sudo aptitude flex bison libncurses5-dev make git exuberant-ctags sparse bc libssl-dev libelf-dev && \
+    apt-get install -y -q sudo aptitude xz-utils flex bison libncurses5-dev make git exuberant-ctags sparse bc libssl-dev libelf-dev && \
     if [ "$GCC_VERSION" ]; then \
       apt-get install -y -q gcc-${GCC_VERSION} g++-${GCC_VERSION} gcc-${GCC_VERSION}-plugin-dev gcc g++ \
         gcc-${GCC_VERSION}-aarch64-linux-gnu g++-${GCC_VERSION}-aarch64-linux-gnu gcc-aarch64-linux-gnu g++-aarch64-linux-gnu \
