@@ -294,7 +294,7 @@ build_rootfs()
 	#if [ "${TMPMNT}" != "/" ]; then
 	#	NEWPASSWD='root:$y$j9T$LVUsOCwrorSF0vX0oHD1g1$64jSrSnxxzwDHPQ0j6/AT0OgpgeKI7zIuUdtBxzT6hA:19531:0:99999:7:::'
 	#	sed -i "1s#.*#${NEWPASSWD}#" ${TMPMNT}/etc/shadow
-	#	echo " set root passwd : youyifeng"
+	#	echo " set root passwd : linux"
 	#fi
 	# set hostname
 	HOSTNAME=${QCOW2%%.*}
@@ -322,9 +322,9 @@ if [ -f /etc/firstboot ]; then
 	update-grub2
 	sync
 	if which chpasswd &> /dev/null ; then
-		echo root:youyifeng | chpasswd
+		echo root:linux | chpasswd
 	elif which passwd &> /dev/null ; then
-		echo youyifeng | passwd -stdin root
+		echo linux | passwd -stdin root
 	else
 		echo "can't reset root passwd"
 	fi
