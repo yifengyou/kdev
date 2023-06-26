@@ -13,7 +13,7 @@ XMLNAME=
 declare -A KERNEL_BUILD_DOCKER
 KERNEL_BUILD_DOCKERIMAGE[1]="dockerproxy.com/yifengyou/linux1.0:latest"
 KERNEL_BUILD_DOCKERIMAGE[2]="dockerproxy.com/yifengyou/linux2.0:latest"
-KERNEL_BUILD_DOCKERIMAGE[3]="dockerproxy.com/yifengyou/linux4.0:latest"
+KERNEL_BUILD_DOCKERIMAGE[3]="dockerproxy.com/yifengyou/linux3.0:latest"
 KERNEL_BUILD_DOCKERIMAGE[4]="dockerproxy.com/yifengyou/linux4.0:latest"
 KERNEL_BUILD_DOCKERIMAGE[5]="dockerproxy.com/yifengyou/linux5.0:latest"
 KERNEL_BUILD_DOCKERIMAGE[6]="dockerproxy.com/yifengyou/linux6.0:latest"
@@ -166,7 +166,7 @@ do_build_kernel()
 	fi
 
 	echo " kernel install to ${WORKDIR}/boot"
-	if [ ! -d ${WORKDIR}/boot ]; then
+	if [ ! -d "${WORKDIR}/boot" ]; then
 		mkdir -p ${WORKDIR}/boot
 	fi
 	make O=${WORKDIR}/build ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} install INSTALL_PATH=${WORKDIR}/boot
@@ -283,12 +283,12 @@ build_rootfs()
 	# copy linux modules
 	if [ -d ${WORKDIR}/lib/modules ] && [ "${WORKDIR}/lib" != "/lib" ]; then
 		cp -a ${WORKDIR}/lib/modules/* ${TMPMNT}/lib/modules/
-		echo " copy modules(stripped) done!"
+		echo " copy modules(stripped) done! ${TMPMNT}/lib/modules/"
 	fi
 	# copy linux headers
 	if [ -d ${WORKDIR}/usr/src ] && [ "${WORKDIR}/usr" != "/usr" ]; then
 		cp -a ${WORKDIR}/usr/src/* ${TMPMNT}/usr/src/
-		echo " copy headers done!"
+		echo " copy headers done! ${TMPMNT}/usr/src"
 	fi
 	# set passwd
 	if [ "${TMPMNT}" != "/" ]; then
