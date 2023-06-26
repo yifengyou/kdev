@@ -1,9 +1,0 @@
-deb [trusted=yes] http://snapshot.debian.org/archive/debian/20210326T030000Z jessie main contrib non-free
-deb-src [trusted=yes] http://snapshot.debian.org/archive/debian/20210326T030000Z jessie main contrib non-free
-
-deb [trusted=yes] http://snapshot.debian.org/archive/debian/20210326T030000Z jessie-updates main contrib non-free
-deb-src [trusted=yes] http://snapshot.debian.org/archive/debian/20210326T030000Z jessie-updates main contrib non-free
-
-deb [trusted=yes] http://snapshot.debian.org/archive/debian-security/20210326T030000Z jessie/updates main contrib non-free
-deb-src [trusted=yes] http://snapshot.debian.org/archive/debian-security/20210326T030000Z jessie/updates main contrib non-free
-
