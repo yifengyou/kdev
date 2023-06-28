@@ -21,7 +21,7 @@ KERNEL_BUILD_DOCKERIMAGE[6]="dockerproxy.com/yifengyou/linux6.0:latest"
 declare -A ROOTFS_AMD64_QCOW2
 ROOTFS_AMD64_QCOW2[1]="https://cloud.debian.org/images/cloud/buster/latest/debian-10-nocloud-amd64.qcow2"
 # debian 6 squeeze
-ROOTFS_AMD64_QCOW2[2]="https://cloud.centos.org/centos/6/images/CentOS-6-x86_64-GenericCloud.qcow2"
+ROOTFS_AMD64_QCOW2[2]="http://cloud-images-archive.ubuntu.com/releases/lucid/release-20150427/ubuntu-10.04-server-cloudimg-amd64-disk1.img"
 # debian 8 jessie
 ROOTFS_AMD64_QCOW2[3]="https://cloud-images.ubuntu.com/releases/xenial/release/ubuntu-16.04-server-cloudimg-amd64-disk1.img"
 # debian 10 buster
@@ -313,6 +313,9 @@ build_rootfs()
 		echo " disable cloud init"
 	fi
 
+	if ls ${TMPMNT}/usr/bin/cloud-* &> /dev/null ; then
+		rm -f ${TMPMNT}/usr/bin/cloud-*
+	fi
 	touch ${TMPMNT}/etc/firstboot
 	# set first boot script
 	cat > ${TMPMNT}/etc/rc.local << EOF
@@ -336,6 +339,7 @@ if [ -f /etc/firstboot ]; then
 	fi
 	if [ -d /etc/cloud/ ]; then
 		touch /etc/cloud/cloud-init.disabled
+		rm -f /usr/bin/cloud-*
 	fi
 	ssh-keygen -A
 	reboot -f
@@ -460,12 +464,14 @@ run_qemu()
 		--name ${VMNAME} \
 		--arch ${VIRSHARCH} \
 		--ram ${VIRSHRAM} \
+		--os-type=linux \
+		--video=vga \
 		--vcpus ${VIRSHVCPU} \
 		--disk path=$QCOW2,format=qcow2,bus=scsi \
 		--network bridge=br0,virtualport_type=openvswitch \
 		--import \
-		--noautoconsole \
-		--graphics none
+		--graphics spice,listen=0.0.0.0 \
+		--noautoconsole
 	if [ $? -ne 0 ]; then
 		echo "virsh define/start ${VMNAME} failed!"
 		exit 1
