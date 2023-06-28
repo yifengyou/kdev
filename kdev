@@ -21,7 +21,7 @@ KERNEL_BUILD_DOCKERIMAGE[6]="dockerproxy.com/yifengyou/linux6.0:latest"
 declare -A ROOTFS_AMD64_QCOW2
 ROOTFS_AMD64_QCOW2[1]="https://cloud.debian.org/images/cloud/buster/latest/debian-10-nocloud-amd64.qcow2"
 # debian 6 squeeze
-ROOTFS_AMD64_QCOW2[2]="http://cloud-images-archive.ubuntu.com/releases/lucid/release-20150427/ubuntu-10.04-server-cloudimg-amd64-disk1.img"
+ROOTFS_AMD64_QCOW2[2]="https://cloud.centos.org/centos/6/images/CentOS-6-x86_64-GenericCloud.qcow2"
 # debian 8 jessie
 ROOTFS_AMD64_QCOW2[3]="https://cloud-images.ubuntu.com/releases/xenial/release/ubuntu-16.04-server-cloudimg-amd64-disk1.img"
 # debian 10 buster
