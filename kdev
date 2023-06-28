@@ -21,7 +21,7 @@ KERNEL_BUILD_DOCKERIMAGE[6]="dockerproxy.com/yifengyou/linux6.0:latest"
 declare -A ROOTFS_AMD64_QCOW2
 ROOTFS_AMD64_QCOW2[1]="https://cloud.debian.org/images/cloud/buster/latest/debian-10-nocloud-amd64.qcow2"
 # debian 6 squeeze
-ROOTFS_AMD64_QCOW2[2]="https://cloud.debian.org/images/cloud/buster/latest/debian-10-nocloud-amd64.qcow2"
+ROOTFS_AMD64_QCOW2[2]="http://cloud-images-archive.ubuntu.com/releases/lucid/release-20150427/ubuntu-10.04-server-cloudimg-amd64-disk1.img"
 # debian 8 jessie
 ROOTFS_AMD64_QCOW2[3]="https://cloud-images.ubuntu.com/releases/xenial/release/ubuntu-16.04-server-cloudimg-amd64-disk1.img"
 # debian 10 buster
@@ -104,7 +104,7 @@ precheck()
 		exit 1
 	fi
 	# check target dir
-	if [ -f "${SOURCEDIR}/Makefile" ] && [ -f "${SOURCEDIR}/Kconfig" ]; then
+	if [ -f "${SOURCEDIR}/Makefile" ] && [ -f "${SOURCEDIR}/Kbuild" ]; then
 		echo "Check ${SOURCEDIR} ok! It's kernel source directory."
 	else
 		echo "Check ${SOURCEDIR} failed! It's not a kernel source directory."
@@ -151,6 +151,7 @@ do_build_kernel()
 			CROSS_COMPILE="aarch64-linux-gnu-"
 		fi
 	fi
+	mkdir -p ${WORKDIR}/build || :
 	make O=${WORKDIR}/build mrproper
 	make O=${WORKDIR}/build ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} debian_${ARCH}_defconfig
 
@@ -178,8 +179,12 @@ do_build_kernel()
 	echo " kernel modules install to ${WORKDIR}"
 	make O=${WORKDIR}/build ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} INSTALL_MOD_STRIP=1 modules_install -j ${JOBNUM} INSTALL_MOD_PATH=${WORKDIR}
 	if [ $? -ne 0 ]; then
-		echo "make modules_install to ${WORKDIR} failed!"
-		exit 1
+		# try again
+		make O=${WORKDIR}/build ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} INSTALL_MOD_STRIP=1 modules_install -j ${JOBNUM} INSTALL_MOD_PATH=${WORKDIR}
+		if [ $? -ne 0 ]; then
+			echo "make modules_install to ${WORKDIR} failed!"
+			exit 1
+		fi
 	fi
 
 	cd ${SOURCEDIR}
@@ -208,6 +213,7 @@ build_kernel()
 				exit 1
 			fi
 			echo "start docker environment"
+			echo " using docker image:${KERNEL_BUILD_DOCKERIMAGE[${MASTERVERSION}]}"
 			docker run -it \
 				-v /bin/kdev:/bin/kdev \
 				-v ${SOURCEDIR}:/kernel \
