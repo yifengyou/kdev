@@ -349,7 +349,7 @@ def handle_check(args):
         perror("unsupoorted masterversion", args.masterversion)
     print(f"master version : {args.masterversion}")
 
-    print("check all ok!")
+    print("handle check done!")
 
 
 def handle_kernel(args):
@@ -510,6 +510,8 @@ JOB=%s
             perror("docker build failed!")
         print("docker build ok with 0 retcode")
 
+    print("handle kernel done!")
+
 
 def handle_rootfs(args):
     handle_check(args)
@@ -627,7 +629,7 @@ exit 0
     do_exe_cmd(f"umount -l {args.tmpdir}")
     do_exe_cmd(f"qemu-nbd --disconnect {args.nbd}")
     os.rmdir(args.tmpdir)
-    print(" handle rootfs done!")
+    print("handle rootfs done!")
 
 
 def handle_run(args):
@@ -673,7 +675,7 @@ def handle_run(args):
     else:
         print(f" found qcow2 {args.qcow2} in workdir, using it.")
 
-    if not args.name:
+    if not hasattr(args, "name"):
         args.name = f"linux-{args.masterversion}-{args.arch}"
 
     print(f" try startup {args.name}")
@@ -724,10 +726,40 @@ def handle_run(args):
         print(f" start {args.name} success! enjoy it~~")
     else:
         print(f" start {args.name} failed!")
+    print("handle run done!")
 
 
 def handle_clean(args):
     handle_check(args)
+    # 清理虚拟机配置，保留qcow2
+    if args.vm or args.all:
+        if not hasattr(args, "name"):
+            args.name = f"linux-{args.masterversion}-{args.arch}"
+        retcode, _ = do_exe_cmd(f"virsh domstate {args.name}", print_output=False)
+        if 0 == retcode:
+            retcode, _ = do_exe_cmd(f"virsh destroy {args.name}", print_output=True)
+            if 0 == retcode:
+                print(f" destroy vm {args.name} ok")
+            else:
+                print(f" destroy vm {args.name} failed!")
+                sys.exit(1)
+            retcode, _ = do_exe_cmd(f"virsh undefine {args.name}", print_output=True)
+            if 0 == retcode:
+                print(f" undefine vm {args.name} ok")
+            else:
+                print(f" undefine vm {args.name} failed!")
+                sys.exit(1)
+        else:
+            print(f"no vm {args.name} found! skip clean vm.")
+    # 清理qcow2，保留虚机配置
+    if args.qcow or args.all:
+        os.chdir(args.workdir)
+        for filename in os.listdir('.'):
+            if filename.endswith(".qcow2"):
+                filepath = os.path.join(args.workdir, filename)
+                os.remove(filepath)
+                print(f"Deleted {filepath}")
+    print("handle clean done!")
 
 
 def main():
@@ -771,12 +803,12 @@ def main():
     parser_run.add_argument('--vmcpu', help="setup vm vcpu number")
     parser_run.add_argument('--vmram', help="setup vm ram")
     parser_run.set_defaults(func=handle_run)
-    args = parser.parse_args()
 
     # 添加子命令 clean
     parser_clean = subparsers.add_parser('clean', parents=[parent_parser])
-    parser_clean.add_argument('--name', help="clean vm (destroy/undefine)")
-    parser_clean.add_argument('--qcow', help="delete qcow")
+    parser_clean.add_argument('--vm', action='store_true', help="clean vm (destroy/undefine)")
+    parser_clean.add_argument('--qcow', action='store_true', help="delete qcow")
+    parser_clean.add_argument('--all', action='store_true', help="clean all")
     parser_clean.set_defaults(func=handle_clean)
 
     # 开始解析命令
