@@ -5,6 +5,7 @@
  Authors:
    yifengyou <842056007@qq.com>
 """
+import glob
 import os
 import random
 import re
@@ -12,6 +13,7 @@ import shutil
 import subprocess
 import sys
 import argparse
+import time
 
 CURRENT_VERSION = "0.2.0"
 DEBUG = False
@@ -244,8 +246,8 @@ def check_arch(args):
 
 def check_src_hugefile(args):
     # github不支持直接推送100M+文件，尽量不要大文件
-    ret = do_exe_cmd(["find", args.sourcedir, "-name", ".git", "-prune", "-type", "f", "-size", "+100M"],
-                     capture_output=True, text=True)
+    ret, _, _ = do_exe_cmd(["find", args.sourcedir, "-name", ".git", "-prune", "-type", "f", "-size", "+100M"],
+                           capture_output=True, text=True)
     if ret == 0:
         print("Warnning!find file large than 100MB")
 
@@ -279,7 +281,8 @@ def check_qcow_image(args):
 
 
 def do_exe_cmd(cmd, enable_log=False, logfile="kernel.txt", capture_output=True, print_output=False, shell=False):
-    output = ''
+    stdout_output = ''
+    stderr_output = ''
     if isinstance(cmd, str):
         cmd = cmd.split()
     elif isinstance(cmd, list):
@@ -288,23 +291,35 @@ def do_exe_cmd(cmd, enable_log=False, logfile="kernel.txt", capture_output=True,
         raise Exception("unsupported type when run do_exec_cmd", type(cmd))
     if enable_log:
         log_file = open(logfile, "a")
+    pdebug("Run cmd:" + " ".join(cmd))
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=shell)
 
     while True:
-        line = p.stdout.readline()
-        if not line:
+        stdout_line = p.stdout.readline()
+        stderr_line = p.stderr.readline()
+        if not stdout_line and not stderr_line and p.poll() is not None:
             break
-        line = line.decode("utf-8").strip()
-        if print_output == True:
-            print(line)
-        if enable_log:
-            log_file.write(line + "\n")
-        output += line + '\n'
+
+        if stdout_line:
+            out_str = stdout_line.decode("utf-8").strip()
+            if print_output == True:
+                print(out_str)
+            if enable_log:
+                log_file.write(out_str + "\n")
+            stdout_output += out_str + '\n'
+        if stderr_line:
+            err_str = stderr_line.decode("utf-8").strip()
+            if print_output == True:
+                print(err_str)
+            if enable_log:
+                log_file.write(err_str + "\n")
+            stderr_output += err_str + '\n'
 
     if enable_log:
         log_file.close()
     return_code = p.wait()
-    return return_code, output
+    # pdebug("retcode %d" % return_code)
+    return return_code, stdout_output, stderr_output
 
 
 def perror(str):
@@ -325,7 +340,7 @@ def pdebug(params):
 def handle_init(args):
     check_arch(args)
     args.deplist = "git"
-    ret, _ = do_exe_cmd(f"apt-get install -y {args.deplist}", print_output=True)
+    ret, _, _ = do_exe_cmd(f"apt-get install -y {args.deplist}", print_output=True)
     if ret != 0:
         perror(f"install dependency failed!")
     print("handle init done!")
@@ -353,7 +368,7 @@ def handle_check(args):
         sys.exit(1)
 
     os.chdir(args.sourcedir)
-    ret, kernelversion = do_exe_cmd("make kernelversion")
+    ret, kernelversion, _ = do_exe_cmd("make kernelversion")
     if ret != 0:
         perror(f"Unsupported {kernelversion}")
 
@@ -470,7 +485,7 @@ JOB=%s
         os.chmod("build_in_host.sh", 0o755)
         host_cmd = "/bin/bash build_in_host.sh"
         print("run host build cmd:", host_cmd)
-        ret, output = do_exe_cmd(host_cmd, print_output=True)
+        ret, output, error = do_exe_cmd(host_cmd, print_output=True)
         if ret != 0:
             perror("host build failed!")
         print("host build ok with 0 retcode")
@@ -521,7 +536,7 @@ JOB=%s
                      f"{args.docker_image} " \
                      f"/bin/kdev"
         print("run docker build cmd:", docker_cmd)
-        ret, output = do_exe_cmd(docker_cmd, print_output=True)
+        ret, output, error = do_exe_cmd(docker_cmd, print_output=True)
         if ret != 0:
             perror("docker build failed!")
         print("docker build ok with 0 retcode")
@@ -542,68 +557,95 @@ def handle_rootfs(args):
     os.chdir(args.workdir)
     if not os.path.isfile(args.qcow2):
         print(f" start to download {args.qcow2_url}")
-        do_exe_cmd(["wget", "-c", args.qcow2_url], print_output=True)
+        retcode, _, _ = do_exe_cmd(["wget", "-c", args.qcow2_url], print_output=True)
+        if retcode != 0:
+            perror("Download qcow2 failed!")
     else:
         print(f" already exists {args.qcow2}, reusing it.")
         do_exe_cmd(["qemu-nbd", "--disconnect", args.qcow2], print_output=True)
-        do_exe_cmd(["modprobe", "nbd", "max_part=9"], print_output=True)
+        do_exe_cmd(["modprobe", "nbd", "max_part=19"], print_output=True)
 
-    args.nbd = None
-    for nbd in ["/dev/nbd" + str(i) for i in range(9)]:
-        ret, output = do_exe_cmd(["qemu-nbd", "--connect", nbd, args.qcow2])
-        if ret == 0:
-            args.nbd = nbd
-            break
+    # 如果参数或配置指定了nbd，则使用，否则挨个测试
+    if hasattr(args, 'nbd') and args.nbd is not None:
+        do_exe_cmd(f"qemu-nbd --disconnect {os.path.join('/dev/', args.nbd)}", print_output=True)
+        pdebug(f"try umount nbd /dev/{args.nbd}")
+        retcode, _, _ = do_exe_cmd(["qemu-nbd", "--connect", os.path.join("/dev/", args.nbd), args.qcow2],
+                                   print_output=True)
+        if retcode != 0:
+            perror("Connect nbd failed!")
+    else:
+        for nbd in ["/dev/nbd" + str(i) for i in range(9)]:
+            retcode, output, error = do_exe_cmd(["qemu-nbd", "--connect", nbd, args.qcow2], print_output=True)
+            if retcode == 0:
+                args.nbd = nbd
+                break
+        if not args.nbd:
+            perror("No available nbd found!")
 
-    if not args.nbd:
-        perror("No available nbd found!")
-
+    # 创建临时挂载点
     args.tmpdir = "/tmp/qcow2-" + str(random.randint(0, 9999))
     os.makedirs(args.tmpdir, exist_ok=True)
 
-    do_exe_cmd(["mount", "-o", "rw", args.nbd + "p1", args.tmpdir])
-    do_exe_cmd(["ls", args.tmpdir + "/boot/"], print_output=True)
+    retcode, _, _ = do_exe_cmd(f"mount -o rw /dev/{args.nbd}p1 {args.tmpdir}", print_output=True)
+    if retcode != 0:
+        perror("Mount qcow2 failed!")
 
+    do_exe_cmd("sync")
+    time.sleep(5)
     # 拷贝boot目录，包含linux vmlinuz config maps
-    copy_bootdir = os.path.join(args.workdir, "/boot")
-    qcow_bootdir = os.path.join(args.tmpdir, "/boot/")
-    if os.path.isdir(copy_bootdir) and copy_bootdir != "/boot":
-        shutil.copytree(copy_bootdir, qcow_bootdir)
-        print(f" copy vmlinuz、config done! {qcow_bootdir}")
+    copy_bootdir = os.path.join(args.workdir, "boot")
+    qcow_bootdir = os.path.join(args.tmpdir, "boot")
+    if os.path.isdir(copy_bootdir) and qcow_bootdir != "/boot":
+        copy_cmd = ["/usr/bin/cp", "-a"] + glob.glob(f"{copy_bootdir}/*") + [f"{qcow_bootdir}/"]
+        # retcode, _, error = do_exe_cmd(copy_cmd)
+        retcode, _, error = do_exe_cmd(copy_cmd)
+        if retcode == 0:
+            print(f" copy vmlinuz/config ok! {qcow_bootdir}")
+        else:
+            perror(f" copy vmlinuz/config failed!! {qcow_bootdir} {error}")
 
+    do_exe_cmd("sync")
     # 拷贝lib目录，包含inbox核外驱动
-    copy_libdir = os.path.join(args.workdir, "/lib/modules")
-    qcow_libdir = os.path.join(args.tmpdir, "/lib/modules")
-    if os.path.isdir(copy_libdir) and copy_libdir != "/lib/modules":
-        shutil.copytree(copy_libdir, qcow_libdir)
-        print(f" copy modules(stripped) done! {qcow_libdir}")
-
+    copy_libdir = os.path.join(args.workdir, "lib/modules")
+    qcow_libdir = os.path.join(args.tmpdir, "lib/modules")
+    if os.path.isdir(copy_libdir) and qcow_libdir != "/lib/modules":
+        copy_cmd = ["/usr/bin/cp", "-a"] + glob.glob(f"{copy_libdir}/*") + [f"{qcow_libdir}/"]
+        retcode, _, _ = do_exe_cmd(copy_cmd)
+        if retcode == 0:
+            print(f" copy modules(stripped) ok! {qcow_libdir}")
+        else:
+            perror(f" copy modules(stripped) failed!! {qcow_libdir}")
+    do_exe_cmd("sync")
     # 拷贝内核头文件
-    copy_headerdir = os.path.join(args.workdir, "/usr")
-    qcow_headerdir = os.path.join(args.tmpdir, "/usr")
-    if os.path.isdir(copy_headerdir) and copy_headerdir != "/usr":
-        shutil.copytree(copy_headerdir, qcow_headerdir)
-        print(f" copy headers done! {qcow_headerdir}")
-
+    copy_headerdir = os.path.join(args.workdir, "usr")
+    qcow_headerdir = os.path.join(args.tmpdir, "usr")
+    if os.path.isdir(copy_headerdir) and qcow_headerdir != "/usr":
+        copy_cmd = ["/usr/bin/cp", "-a"] + glob.glob(f"{copy_headerdir}/*") + [f"{qcow_headerdir}/"]
+        retcode, _, _ = do_exe_cmd(copy_cmd)
+        if retcode == 0:
+            print(f" copy headers ok! {qcow_headerdir}")
+        else:
+            perror(f" copy headers failed!! {qcow_headerdir}")
+    do_exe_cmd("sync")
     # 设置主机名
     args.hostname = args.qcow2.split(".")[0]
-    qcow_hostname = os.path.join(args.tmpdir, "/etc/hostname")
+    qcow_hostname = os.path.join(args.tmpdir, "etc/hostname")
     with open(qcow_hostname, "w") as f:
-        f.write(args.hostname)
+        f.write(args.hostname.strip())
     print(f" set hostname : {args.hostname}")
 
     # 检查cloud-init变关闭
-    qcow_cloudinitdir = os.path.join(args.tmpdir, "/etc/cloud")
+    qcow_cloudinitdir = os.path.join(args.tmpdir, "etc/cloud")
     if os.path.isdir(qcow_cloudinitdir):
         with open(os.path.join(args.tmpdir, "cloud-init.disabled"), "w") as f:
             f.write("")
-    if os.path.isfile(args.tmpdir + "/usr/bin/cloud-*"):
-        os.remove(args.tmpdir + "/usr/bin/cloud-*")
+    if os.path.isfile(os.path.join(args.tmpdir, "usr/bin/cloud-*")):
+        os.remove(os.path.join(args.tmpdir, "usr/bin/cloud-*"))
 
     # 写入初始化脚本，开机第一次执行
-    with open(os.path.join(args.tmpdir, "/etc/firstboot"), "w") as f:
+    with open(os.path.join(args.tmpdir, "etc/firstboot"), "w") as f:
         f.write("")
-    with open(os.path.join(args.tmpdir, "/etc/rc.local"), "w") as f:
+    with open(os.path.join(args.tmpdir, "etc/rc.local"), "w") as f:
         f.write("""#!/bin/bash
 
 if [ -f /etc/firstboot ]; then
@@ -638,12 +680,15 @@ fi
 exit 0
 
 """)
-    os.chmod(os.path.join(args.tmpdir, "/etc/rc.local"), 0o755)
+    os.chmod(os.path.join(args.tmpdir, "etc/rc.local"), 0o755)
     print(" set rc.local done!")
-
     print(" clean ...")
-    do_exe_cmd(f"umount -l {args.tmpdir}")
-    do_exe_cmd(f"qemu-nbd --disconnect {args.nbd}")
+    retcode, _, _ = do_exe_cmd(f"umount -l {args.tmpdir}", print_output=True)
+    if retcode != 0:
+        print("Umount failed!")
+    retcode, _, _ = do_exe_cmd(f"qemu-nbd --disconnect /dev/{args.nbd}", print_output=True)
+    if retcode != 0:
+        print("Disconnect nbd failed!")
     os.rmdir(args.tmpdir)
     print("handle rootfs done!")
 
@@ -695,12 +740,12 @@ def handle_run(args):
         args.name = f"linux-{args.masterversion}-{args.arch}"
 
     print(f" try startup {args.name}")
-    retcode, args.vmstat = do_exe_cmd(f"virsh domstate {args.name}", print_output=False)
+    retcode, args.vmstat, _ = do_exe_cmd(f"virsh domstate {args.name}", print_output=False)
     if 0 == retcode:
         if args.vmstat.strip() == "running":
             print(f"{args.name} already running")
             return
-        ret, _ = do_exe_cmd(f"virsh start {args.name}", print_output=True)
+        ret, _, _ = do_exe_cmd(f"virsh start {args.name}", print_output=True)
         if 0 == ret:
             print(f"start vm {args.name} ok, enjoy it.")
         else:
@@ -737,7 +782,7 @@ def handle_run(args):
                f"  --graphics spice,listen=0.0.0.0" \
                f"  --noautoconsole"
 
-    retcode, _ = do_exe_cmd(qemu_cmd, print_output=True)
+    retcode, _, _ = do_exe_cmd(qemu_cmd, print_output=True)
     if 0 == retcode:
         print(f" start {args.name} success! enjoy it~~")
     else:
@@ -751,15 +796,15 @@ def handle_clean(args):
     if args.vm or args.all:
         if not hasattr(args, "name"):
             args.name = f"linux-{args.masterversion}-{args.arch}"
-        retcode, _ = do_exe_cmd(f"virsh domstate {args.name}", print_output=False)
+        retcode, _, _ = do_exe_cmd(f"virsh domstate {args.name}", print_output=False)
         if 0 == retcode:
-            retcode, _ = do_exe_cmd(f"virsh destroy {args.name}", print_output=True)
+            retcode, _, _ = do_exe_cmd(f"virsh destroy {args.name}", print_output=True)
             if 0 == retcode:
                 print(f" destroy vm {args.name} ok")
             else:
                 print(f" destroy vm {args.name} failed!")
                 sys.exit(1)
-            retcode, _ = do_exe_cmd(f"virsh undefine {args.name}", print_output=True)
+            retcode, _, _ = do_exe_cmd(f"virsh undefine {args.name}", print_output=True)
             if 0 == retcode:
                 print(f" undefine vm {args.name} ok")
             else:
@@ -772,6 +817,7 @@ def handle_clean(args):
         os.chdir(args.workdir)
         for filename in os.listdir('.'):
             if filename.endswith(".qcow2"):
+                pdebug(f" Find qcow2 {filename}")
                 filepath = os.path.join(args.workdir, filename)
                 os.remove(filepath)
                 print(f"Deleted {filepath}")
