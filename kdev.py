@@ -5,7 +5,7 @@
  Authors:
    yifengyou <842056007@qq.com>
 """
-
+import configparser
 import os
 import random
 import shutil
@@ -14,6 +14,7 @@ import sys
 import argparse
 
 CURRENT_VERSION = "0.2.0"
+DEBUG = False
 
 KERNEL_BUILD_MAP = {
     "linux-1.0": {
@@ -230,15 +231,15 @@ def check_arch(args):
     print(" -> Step check environment")
     if args.arch:
         if args.arch == "x86_64":
-            print("The args.arch is x86_64")
+            print("The target arch is x86_64")
         elif args.arch == "arm64":
-            print("The args.arch is arm64")
+            print("The target arch is arm64")
         else:
             print(f"Unsupported arch {args.arch}", file=sys.stderr)
             sys.exit(1)
     else:
         args.arch = os.uname().machine
-        print(f"The args.arch is {args.arch} (auto-detect)")
+        print(f"The target arch is {args.arch} (auto-detect)")
 
 
 def check_src_hugefile(args):
@@ -313,6 +314,21 @@ def perror(str):
 
 def pwarn(str):
     print("Warn: ", str)
+
+
+def pdebug(str):
+    global DEBUG
+    if DEBUG:
+        print("DEBUG:", str)
+
+
+def handle_init(args):
+    check_arch(args)
+    args.deplist = "git"
+    ret, _ = do_exe_cmd(f"apt-get install -y {args.deplist}", print_output=True)
+    if ret != 0:
+        perror(f"install dependency failed!")
+    print("handle init done!")
 
 
 def handle_check(args):
@@ -763,38 +779,50 @@ def handle_clean(args):
 
 
 def main():
+    global DEBUG, CURRENT_VERSION
     check_python_version()
 
     # 顶层解析
     parser = argparse.ArgumentParser(add_help=False)
-    parser.add_argument("-v", "--version", action="store_true", help="show program's version number and exit")
-    parser.add_argument("-h", "--help", action="store_true", help="show this help message and exit")
+    parser.add_argument("-v", "--version", action="store_true",
+                        help="show program's version number and exit")
+    parser.add_argument("-h", "--help", action="store_true",
+                        help="show this help message and exit")
     subparsers = parser.add_subparsers()
 
     # 定义base命令用于集成
     parent_parser = argparse.ArgumentParser(add_help=False, description="kdev - a tool for kernel development")
-    parent_parser.add_argument("-V", "--verbose", action="store_true", help="show verbose output")
+    parent_parser.add_argument("-V", "--verbose", default=None, action="store_true",
+                               help="show verbose output")
     parent_parser.add_argument("-s", "--sourcedir", help="set kernel source dir")
     parent_parser.add_argument("-a", "--arch", help="set arch, default is x86_64")
     parent_parser.add_argument("-w", "--workdir", help="setup workdir")
-    parent_parser.add_argument('-l', '--log', default='/var/log/kdev.log')
-    parent_parser.add_argument('-d', '--daemon', action='store_true')
+    parent_parser.add_argument('-l', '--log', default=None, help="log file path")
+    parent_parser.add_argument('-d', '--debug', default=None, action="store_true", help="enable debug output")
+
+    # 添加子命令 init
+    parser_check = subparsers.add_parser('init', parents=[parent_parser])
+    parser_check.add_argument("-i", "--aptinstall", default=None, action="store_true",
+                              help="install dependency packages")
+    parser_check.set_defaults(func=handle_init)
 
     # 添加子命令 check
     parser_check = subparsers.add_parser('check', parents=[parent_parser])
-    parser_check.add_argument("-i", "--aptinstall", action="store_true", help="install dependency packages")
+    parser_check.add_argument("-i", "--aptinstall", default=None, action="store_true",
+                              help="install dependency packages")
     parser_check.set_defaults(func=handle_check)
 
     # 添加子命令 kernel
     parser_kernel = subparsers.add_parser('kernel', parents=[parent_parser])
-    parser_kernel.add_argument("--nodocker", action="store_true", help="build kernel without docker environment")
+    parser_kernel.add_argument("--nodocker", default=None, action="store_true",
+                               help="build kernel without docker environment")
     parser_kernel.add_argument("-j", "--job", default=os.cpu_count(), help="setup compile job number")
     parser_kernel.add_argument("-c", "--clean", help="clean docker when exit")
     parser_kernel.set_defaults(func=handle_kernel)
 
     # 添加子命令 rootfs
     parser_rootfs = subparsers.add_parser('rootfs', parents=[parent_parser])
-    parser_rootfs.add_argument('-r', '--release', action='store_true')
+    parser_rootfs.add_argument('-r', '--release', default=None, action="store_true")
     parser_rootfs.set_defaults(func=handle_rootfs)
 
     # 添加子命令 run
@@ -806,13 +834,37 @@ def main():
 
     # 添加子命令 clean
     parser_clean = subparsers.add_parser('clean', parents=[parent_parser])
-    parser_clean.add_argument('--vm', action='store_true', help="clean vm (destroy/undefine)")
-    parser_clean.add_argument('--qcow', action='store_true', help="delete qcow")
-    parser_clean.add_argument('--all', action='store_true', help="clean all")
+    parser_clean.add_argument('--vm', default=None, action="store_true", help="clean vm (destroy/undefine)")
+    parser_clean.add_argument('--qcow', default=None, action="store_true", help="delete qcow")
+    parser_clean.add_argument('--all', default=None, action="store_true", help="clean all")
     parser_clean.set_defaults(func=handle_clean)
 
     # 开始解析命令
     args = parser.parse_args()
+
+    # 解析命令后解析配置文件，合并两者
+    config = configparser.ConfigParser()
+    for filename in os.listdir('.'):
+        if filename.endswith(".kdev"):
+            config.read(filename)
+            for section in config.sections():
+                # 忽略节，只考虑键值对
+                for key, value in config.items(section):
+                    print(f"{key} = {value}")
+                    # 如果命令行没有定义key，则使用配置中的KV
+                    if not hasattr(args, key):
+                        setattr(args, key, value)
+                    # 如果命令行未打开选项，但配置中打开，则使用配置中的KV
+                    if getattr(args, key) is None:
+                        setattr(args, key, value)
+
+    if hasattr(args, "debug") and True == args.debug:
+        DEBUG = True
+        pdebug("Enable debug output")
+        ns_dict = vars(args)
+        pdebug("Parser and config:")
+        for key, value in ns_dict.items():
+            pdebug("  %s = %s" % (key, value))
 
     if args.version:
         print("kdev %s" % CURRENT_VERSION)
