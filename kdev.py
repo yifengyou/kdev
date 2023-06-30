@@ -244,19 +244,36 @@ def check_arch(args):
 def check_src_hugefile(args):
     # github不支持直接推送100M+文件，尽量不要大文件
     ret = do_exe_cmd(["find", args.sourcedir, "-name", ".git", "-prune", "-type", "f", "-size", "+100M"],
-                     capture_output=True, text=True).stdout.strip()
+                     capture_output=True, text=True)
     if ret == 0:
         print("Warnning!find file large than 100MB")
 
 
 def check_docker_image(args):
     linux_version = "linux-%s.0" % args.masterversion
-    if linux_version in KERNEL_BUILD_MAP:
-        if "docker" not in KERNEL_BUILD_MAP[linux_version]:
-            return False, ''
-        if len(KERNEL_BUILD_MAP[linux_version]["docker"]) == 0:
-            return False, ''
-        return True, KERNEL_BUILD_MAP[linux_version]["docker"][0]
+    try:
+        docker_img_list = KERNEL_BUILD_MAP[linux_version]["docker"]
+    except KeyError:
+        return False, ''
+    if len(docker_img_list) == 0:
+        return False, ''
+    return True, docker_img_list[0]
+
+
+def check_qcow_image(args):
+    linux_version = "linux-%s.0" % args.masterversion
+    try:
+        qcow_img_list = KERNEL_BUILD_MAP[linux_version]["image"][args.arch]
+    except KeyError:
+        return False, ''
+    if "debian" in qcow_img_list and len(qcow_img_list["debian"]) != 0:
+        return True, qcow_img_list["debian"][0]
+    elif "ubuntu" in qcow_img_list and len(qcow_img_list["ubuntu"]) != 0:
+        return True, qcow_img_list["ubuntu"][0]
+    elif "centos" in qcow_img_list and len(qcow_img_list["centos"]) != 0:
+        return True, qcow_img_list["centos"][0]
+    elif "fedora" in qcow_img_list and len(qcow_img_list["fedora"]) != 0:
+        return True, qcow_img_list["fedora"][0]
     return False, ''
 
 
@@ -348,12 +365,7 @@ def handle_kernel(args):
 echo "run body"
 
 cd ${SOURCEDIR}
-# echo "start do build kernel binary..."
-# if [ "`uname -m`" != ${ARCH} ]; then
-#     if [ "${ARCH}" == "arm64" ]; then
-#         CROSS_COMPILE="aarch64-linux-gnu-"
-#     fi
-# fi
+
 mkdir -p ${WORKDIR}/build || :
 make O=${WORKDIR}/build mrproper
 make O=${WORKDIR}/build ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} debian_${ARCH}_defconfig
@@ -363,7 +375,7 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 ls -alh ${WORKDIR}/build/.config
-make O=${WORKDIR}/build ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} -j "${JOBNUM}"
+make O=${WORKDIR}/build ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} -j "${JOB}"
 if [ $? -ne 0 ]; then
     echo "Build kernel binary failed!"
     exit 1
@@ -380,10 +392,10 @@ if [ $? -ne 0 ]; then
 fi
 
 echo " kernel modules install to ${WORKDIR}"
-make O=${WORKDIR}/build ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} INSTALL_MOD_STRIP=1 modules_install -j ${JOBNUM} INSTALL_MOD_PATH=${WORKDIR}
+make O=${WORKDIR}/build ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} INSTALL_MOD_STRIP=1 modules_install -j ${JOB} INSTALL_MOD_PATH=${WORKDIR}
 if [ $? -ne 0 ]; then
     # try again
-    make O=${WORKDIR}/build ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} INSTALL_MOD_STRIP=1 modules_install -j ${JOBNUM} INSTALL_MOD_PATH=${WORKDIR}
+    make O=${WORKDIR}/build ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} INSTALL_MOD_STRIP=1 modules_install -j ${JOB} INSTALL_MOD_PATH=${WORKDIR}
     if [ $? -ne 0 ]; then
         echo "make modules_install to ${WORKDIR} failed!"
         exit 1
@@ -402,11 +414,17 @@ if [ $? -ne 0 ]; then
     echo "make headers_install to ${WORKDIR} failed!"
     exit 1
 fi
-	
+
 """
 
     if args.nodocker:
         print("build kernel in host")
+
+        args.cross_compile = ''
+        if os.uname().machine != args.arch:
+            if args.arch == "arm64":
+                args.cross_compile = "aarch64-linux-gnu-"
+
         head = """
 #!/bin/bash
 
@@ -420,7 +438,7 @@ SOURCEDIR=%s
 ARCH=%s
 CROSS_COMPILE=%s
 KERNEL_HEADER_INSTALL=%s
-JOBNUM=%s
+JOB=%s
 """ % (
             args.workdir,
             args.sourcedir,
@@ -433,7 +451,7 @@ JOBNUM=%s
         with open("build_in_host.sh", "w") as script:
             script.write(head + body)
 
-        os.chmod("build_in_host.sh", 0o100 | 0o200 | 0o400 | 0o010 | 0o040 | 0o001 | 0o004)
+        os.chmod("build_in_host.sh", 0o755)
         host_cmd = "/bin/bash build_in_host.sh"
         print("run host build cmd:", host_cmd)
         ret, output = do_exe_cmd(host_cmd, print_output=True)
@@ -466,8 +484,8 @@ SOURCEDIR=%s
 ARCH=%s
 CROSS_COMPILE=%s
 KERNEL_HEADER_INSTALL=%s
-JOBNUM=%s
-# %s
+JOB=%s
+
 """ % (
             "/work",
             "/kernel",
@@ -478,7 +496,7 @@ JOBNUM=%s
         )
         with open("build_in_docker.sh", "w") as script:
             script.write(head + body)
-        os.chmod("build_in_docker.sh", 0o100 | 0o200 | 0o400 | 0o010 | 0o040 | 0o001 | 0o004)
+        os.chmod("build_in_docker.sh", 0o755)
         docker_cmd = f"docker run -t " \
                      f" -v {args.workdir}/build_in_docker.sh:/bin/kdev  " \
                      f" -v {args.sourcedir}:/kernel  " \
@@ -494,92 +512,80 @@ JOBNUM=%s
 
 
 def handle_rootfs(args):
-    if args.arch == "x86_64":
-        QCOW2URL = ROOTFS_AMD64_QCOW2[args.masterversion]
-    elif args.arch == "arm64":
-        QCOW2URL = ROOTFS_ARM64_QCOW2[args.masterversion]
-    else:
-        print(f"Unsupported arch {args.arch}", file=sys.stderr)
-        sys.exit(1)
+    handle_check(args)
+    ok, image_url = check_qcow_image(args)
+    if not ok:
+        perror(" no available image found!")
+    print(f" using qcows url {image_url}")
 
-    if not QCOW2URL:
-        print(" no qcow2 support current kernel version")
-        sys.exit(1)
-    else:
-        print(f" using qcow2 {QCOW2URL}")
-
-    QCOW2 = os.path.basename(QCOW2URL)
-    print(f" select QCOW2 {QCOW2}")
+    args.qcow2_url = image_url
+    args.qcow2 = os.path.basename(image_url)
+    print(f" qcow2 name : {args.qcow2}")
     os.chdir(args.workdir)
-    if not os.path.isfile(QCOW2):
-        print(f" start to download {QCOW2URL}")
-        do_exe_cmd(["wget", "-c", QCOW2URL], check=True)
+    if not os.path.isfile(args.qcow2):
+        print(f" start to download {args.qcow2_url}")
+        do_exe_cmd(["wget", "-c", args.qcow2_url], print_output=True)
     else:
-        print(f" already exists {QCOW2}, reusing it.")
-        do_exe_cmd(["qemu-nbd", "--disconnect", QCOW2])
-        do_exe_cmd(["modprobe", "nbd", "max_part=9"])
+        print(f" already exists {args.qcow2}, reusing it.")
+        do_exe_cmd(["qemu-nbd", "--disconnect", args.qcow2], print_output=True)
+        do_exe_cmd(["modprobe", "nbd", "max_part=9"], print_output=True)
 
-    NBD = None
+    args.nbd = None
     for nbd in ["/dev/nbd" + str(i) for i in range(9)]:
-        if do_exe_cmd(["qemu-nbd", "--connect", nbd, QCOW2]).returncode == 0:
-            do_exe_cmd(["sync"])
-            NBD = nbd
+        ret, output = do_exe_cmd(["qemu-nbd", "--connect", nbd, args.qcow2])
+        if ret == 0:
+            args.nbd = nbd
             break
 
-    if not NBD:
-        print("No available nbd found!")
-        sys.exit(1)
+    if not args.nbd:
+        perror("No available nbd found!")
 
-    TMPMNT = "/tmp/qcow2-" + str(random.randint(0, 9999))
-    os.makedirs(TMPMNT, exist_ok=True)
-    do_exe_cmd(["mount", "-o", "rw", NBD + "p1", TMPMNT], check=True)
-    do_exe_cmd(["ls", TMPMNT + "/boot/"])
+    args.tmpdir = "/tmp/qcow2-" + str(random.randint(0, 9999))
+    os.makedirs(args.tmpdir, exist_ok=True)
 
-    # copy linux vmlinuz
-    if os.path.isdir(args.workdir + "/boot") and args.workdir + "/boot" != "/boot":
-        shutil.copytree(args.workdir + "/boot/", TMPMNT + "/boot/")
-        print(" copy vmlinuz done!")
+    do_exe_cmd(["mount", "-o", "rw", args.nbd + "p1", args.tmpdir])
+    do_exe_cmd(["ls", args.tmpdir + "/boot/"], print_output=True)
 
-    # copy linux modules
-    if os.path.isdir(args.workdir + "/lib/modules") and args.workdir + "/lib" != "/lib":
-        shutil.copytree(args.workdir + "/lib/modules/", TMPMNT + "/lib/modules/")
-        print(f" copy modules(stripped) done! {TMPMNT}/lib/modules/")
+    # 拷贝boot目录，包含linux vmlinuz config maps
+    copy_bootdir = os.path.join(args.workdir, "/boot")
+    qcow_bootdir = os.path.join(args.tmpdir, "/boot/")
+    if os.path.isdir(copy_bootdir) and copy_bootdir != "/boot":
+        shutil.copytree(copy_bootdir, qcow_bootdir)
+        print(f" copy vmlinuz、config done! {qcow_bootdir}")
 
-    # copy linux headers
-    if os.path.isdir(args.workdir + "/usr/src") and args.workdir + "/usr" != "/usr":
-        shutil.copytree(args.workdir + "/usr/src/", TMPMNT + "/usr/src/")
-        print(f" copy headers done! {TMPMNT}/usr/src")
+    # 拷贝lib目录，包含inbox核外驱动
+    copy_libdir = os.path.join(args.workdir, "/lib/modules")
+    qcow_libdir = os.path.join(args.tmpdir, "/lib/modules")
+    if os.path.isdir(copy_libdir) and copy_libdir != "/lib/modules":
+        shutil.copytree(copy_libdir, qcow_libdir)
+        print(f" copy modules(stripped) done! {qcow_libdir}")
 
-    # set passwd
-    # if TMPMNT != "/":
-    #	NEWPASSWD='root:$y$j9T$LVUsOCwrorSF0vX0oHD1g1$64jSrSnxxzwDHPQ0j6/AT0OgpgeKI7zIuUdtBxzT6hA:19531:0:99999:7:::'
-    #	with open(TMPMNT + "/etc/shadow") as f:
-    #		lines = f.readlines()
-    #	lines[0] = NEWPASSWD + "\n"
-    #	with open(TMPMNT + "/etc/shadow", "w") as f:
-    #		f.writelines(lines)
-    #	print(" set root passwd : linux")
+    # 拷贝内核头文件
+    copy_headerdir = os.path.join(args.workdir, "/usr")
+    qcow_headerdir = os.path.join(args.tmpdir, "/usr")
+    if os.path.isdir(copy_headerdir) and copy_headerdir != "/usr":
+        shutil.copytree(copy_headerdir, qcow_headerdir)
+        print(f" copy headers done! {qcow_headerdir}")
 
-    # set hostname
-    HOSTNAME = QCOW2.split(".")[0]
-    with open(TMPMNT + "/etc/hostname", "w") as f:
-        f.write(HOSTNAME + "\n")
-    print(f" set hostname : {HOSTNAME}")
+    # 设置主机名
+    args.hostname = args.qcow2.split(".")[0]
+    qcow_hostname = os.path.join(args.tmpdir, "/etc/hostname")
+    with open(qcow_hostname, "w") as f:
+        f.write(args.hostname)
+    print(f" set hostname : {args.hostname}")
 
-    # disable cloud init
-    if os.path.isdir(TMPMNT + "/etc/cloud"):
-        with open(TMPMNT + "/etc/cloud/cloud-init.disabled", "w") as f:
+    # 检查cloud-init变关闭
+    qcow_cloudinitdir = os.path.join(args.tmpdir, "/etc/cloud")
+    if os.path.isdir(qcow_cloudinitdir):
+        with open(os.path.join(args.tmpdir, "cloud-init.disabled"), "w") as f:
             f.write("")
-        print(" disable cloud init")
+    if os.path.isfile(args.tmpdir + "/usr/bin/cloud-*"):
+        os.remove(args.tmpdir + "/usr/bin/cloud-*")
 
-    if os.path.isfile(TMPMNT + "/usr/bin/cloud-*"):
-        os.remove(TMPMNT + "/usr/bin/cloud-*")
-
-    with open(TMPMNT + "/etc/firstboot", "w") as f:
+    # 写入初始化脚本，开机第一次执行
+    with open(os.path.join(args.tmpdir, "/etc/firstboot"), "w") as f:
         f.write("")
-
-    # set first boot script
-    with open(TMPMNT + "/etc/rc.local", "w") as f:
+    with open(os.path.join(args.tmpdir, "/etc/rc.local"), "w") as f:
         f.write("""#!/bin/bash
 
 if [ -f /etc/firstboot ]; then
@@ -589,7 +595,9 @@ if [ -f /etc/firstboot ]; then
 		KERNEL=${k//vmlinuz-/}
 		update-initramfs -k ${KERNEL} -c
 	done
-	update-grub2
+	if which update-grub2 &> /dev/null ; then
+	    update-grub2
+	fi
 	sync
 	if which chpasswd &> /dev/null ; then
 		echo root:linux | chpasswd
@@ -602,107 +610,124 @@ if [ -f /etc/firstboot ]; then
 		touch /etc/cloud/cloud-init.disabled
 		rm -f /usr/bin/cloud-*
 	fi
-	ssh-keygen -A
+	if which ssh-keygen &> /dev/null ; then
+	    ssh-keygen -A
+	fi
+	sync
 	reboot -f
 fi
 
 exit 0
 
 """)
-    os.chmod(TMPMNT + "/etc/rc.local", 0o755)
+    os.chmod(os.path.join(args.tmpdir, "/etc/rc.local"), 0o755)
     print(" set rc.local done!")
 
-    print(" All setting done. clean...")
-    do_exe_cmd(["umount", TMPMNT], check=True)
-    do_exe_cmd(["sync"])
-    do_exe_cmd(["qemu-nbd", "--disconnect", NBD], check=True)
-    do_exe_cmd(["sync"])
-    os.rmdir(TMPMNT)
-    do_exe_cmd(["sync"])
+    print(" clean ...")
+    do_exe_cmd(f"umount -l {args.tmpdir}")
+    do_exe_cmd(f"qemu-nbd --disconnect {args.nbd}")
+    os.rmdir(args.tmpdir)
+    print(" handle rootfs done!")
 
 
-def handle_qemu(args):
-    if os.path.isfile("/.dockerenv"):
-        print("must not run in docker!")
-        sys.exit(1)
+def handle_run(args):
+    handle_check(args)
     if args.arch == "x86_64":
-        QEMUAPP = "qemu-system-x86_64"
+        args.qemuapp = "qemu-system-x86_64"
     elif args.arch == "arm64":
-        QEMUAPP = "qemu-system-aarch64"
+        args.qemuapp = "qemu-system-aarch64"
     else:
-        print(f"Unsupported arch {args.arch}", file=sys.stderr)
-        sys.exit(1)
-    QEMUAPP = do_exe_cmd(["which", QEMUAPP], capture_output=True, text=True).stdout.strip()
-    print(QEMUAPP)
-    do_exe_cmd([QEMUAPP, "--version"], check=True)
-    if do_exe_cmd([QEMUAPP, "--version"]).returncode != 0:
-        print(f"you need install qemu-system-{args.arch} at first")
-        print("Tips: run `kdev -i`")
-        sys.exit(1)
-    if do_exe_cmd(["virsh", "--version"]).returncode != 0:
-        print("you need install libvirt-clients at first")
-        print("Tips: run `kdev -i`")
-        sys.exit(1)
-    if args.arch == "x86_64":
-        QCOW2URL = ROOTFS_AMD64_QCOW2[args.masterversion]
-    elif args.arch == "arm64":
-        QCOW2URL = ROOTFS_ARM64_QCOW2[args.masterversion]
-    else:
-        print(f"Unsupported arch {args.arch}", file=sys.stderr)
-        sys.exit(1)
+        perror(f"unsupported arch {args.arch}")
 
-    if not QCOW2URL:
-        print(" no qcow2 support current kernel version")
-        sys.exit(1)
+    path = shutil.which(args.qemuapp)
+    # 判断路径是否为None，输出结果
+    if path is None:
+        print(f"{args.qemuapp} is not found in the system.")
+        print("")
     else:
-        print(f" using qcow2 {QCOW2URL}")
+        print(f"{args.qemuapp} is found in the system at {path}.")
 
-    QCOW2 = os.path.basename(QCOW2URL)
+    path = shutil.which("virsh")
+    # 判断路径是否为None，输出结果
+    if path is None:
+        print(f"virsh is not found in the system.")
+        print("")
+    else:
+        print(f"virsh is found in the system at {path}.")
+
+    # 检查是否有可用的QCOW2文件
+    ok, image_url = check_qcow_image(args)
+    if not ok:
+        perror(" no available image found!")
+    print(f" using qcows url {image_url}")
+
+    args.qcow2_url = image_url
+    args.qcow2 = os.path.basename(image_url)
+    print(f" qcow2 name : {args.qcow2}")
+
     os.chdir(args.workdir)
-    QCOW2 = os.path.realpath(QCOW2)
-    if not os.path.isfile(QCOW2):
+    if not os.path.isfile(args.qcow2):
         print(" no qcow2 found!")
-        print("Tips: run `kdev -i`")
+        print("Tips: run `kdev rootfs`")
         sys.exit(1)
     else:
-        print(f" found QCOW2 {QCOW2} in workdir, using it.")
+        print(f" found qcow2 {args.qcow2} in workdir, using it.")
 
-    if not VMNAME:
-        VMNAME = f"linux-{args.masterversion}-{args.arch}"
+    if not args.name:
+        args.name = f"linux-{args.masterversion}-{args.arch}"
 
-    print(f" try startup {VMNAME}")
-    VMSTAT = do_exe_cmd(["virsh", "domstate", VMNAME], capture_output=True, text=True).stdout.strip()
-    if VMSTAT:
-        if VMSTAT == "running":
-            print(f"{VMNAME} already running")
+    print(f" try startup {args.name}")
+    retcode, args.vmstat = do_exe_cmd(f"virsh domstate {args.name}", print_output=False)
+    if 0 == retcode:
+        if args.vmstat.strip() == "running":
+            print(f"{args.name} already running")
             return
-        do_exe_cmd(["virsh", "start", VMNAME], check=True)
-        return
+        ret, _ = do_exe_cmd(f"virsh start {args.name}", print_output=True)
+        if 0 == ret:
+            print(f"start vm {args.name} ok, enjoy it.")
+        else:
+            perror(f"start vm {args.name} failed,check it.")
+        sys.exit(0)
 
-    print(f" {VMNAME} does't exists! create new vm")
+    print(f" {args.name} does't exists! create new vm")
+
     if args.arch == "x86_64":
-        VIRSHARCH = "x86_64"
+        args.vmarch = "x86_64"
+        if not args.vmcpu:
+            args.vmcpu = "8"
+        if not args.vmram:
+            args.vmram = "8192"
     elif args.arch == "arm64":
-        VIRSHARCH = "aarch64"
-        VIRSHVCPU = "2"
-        VIRSHRAM = "4096"
+        args.vmarch = "aarch64"
+        if not args.vmcpu:
+            args.vmcpu = "2"
+        if not args.vmram:
+            args.vmram = "4096"
     else:
-        print(f"Unsupported arch {args.arch}", file=sys.stderr)
-        sys.exit(1)
+        perror(f"unsupported arch {args.arch}")
 
-    if not VIRSHVCPU:
-        VIRSHVCPU = "8"
+    qemu_cmd = f"virt-install " \
+               f"  --name {args.name}" \
+               f"  --arch {args.vmarch}" \
+               f"  --ram {args.vmram}" \
+               f"  --os-type=linux" \
+               f"  --video=vga" \
+               f"  --vcpus {args.vmcpu} " \
+               f"  --disk path={os.path.join(args.workdir, args.qcow2)},format=qcow2,bus=scsi" \
+               f"  --network bridge=br0,virtualport_type=openvswitch" \
+               f"  --import" \
+               f"  --graphics spice,listen=0.0.0.0" \
+               f"  --noautoconsole"
 
-    if not VIRSHRAM:
-        VIRSHRAM = "8192"
+    retcode, _ = do_exe_cmd(qemu_cmd, print_output=True)
+    if 0 == retcode:
+        print(f" start {args.name} success! enjoy it~~")
+    else:
+        print(f" start {args.name} failed!")
 
-    do_exe_cmd(
-        ["virt-install", "--name", VMNAME, "--arch", VIRSHARCH, "--ram", VIRSHRAM, "--os-type=linux", "--video=vga",
-         "--vcpus", VIRSHVCPU, "--disk", f"path={QCOW2},format=qcow2,bus=scsi", "--network",
-         "bridge=br0,virtualport_type=openvswitch", "--import", "--graphics", "spice,listen=0.0.0.0",
-         "--noautoconsole"], check=True)
 
-    print(f" start {VMNAME} success! enjoy it~~")
+def handle_clean(args):
+    handle_check(args)
 
 
 def main():
@@ -723,27 +748,38 @@ def main():
     parent_parser.add_argument('-l', '--log', default='/var/log/kdev.log')
     parent_parser.add_argument('-d', '--daemon', action='store_true')
 
-    # subcommand check
+    # 添加子命令 check
     parser_check = subparsers.add_parser('check', parents=[parent_parser])
     parser_check.add_argument("-i", "--aptinstall", action="store_true", help="install dependency packages")
     parser_check.set_defaults(func=handle_check)
 
-    # subcommand kernel
+    # 添加子命令 kernel
     parser_kernel = subparsers.add_parser('kernel', parents=[parent_parser])
     parser_kernel.add_argument("--nodocker", action="store_true", help="build kernel without docker environment")
     parser_kernel.add_argument("-j", "--job", default=os.cpu_count(), help="setup compile job number")
-    parser_kernel.add_argument("-c", "--clean", help="clean docker when exit"
-                                                     "")
+    parser_kernel.add_argument("-c", "--clean", help="clean docker when exit")
     parser_kernel.set_defaults(func=handle_kernel)
 
-    # subcommand rootfs
+    # 添加子命令 rootfs
     parser_rootfs = subparsers.add_parser('rootfs', parents=[parent_parser])
     parser_rootfs.add_argument('-r', '--release', action='store_true')
     parser_rootfs.set_defaults(func=handle_rootfs)
 
-    # subcommand qemu
-    parser_qemu = subparsers.add_parser('qemu', parents=[parent_parser])
-    parser_qemu.set_defaults(func=handle_qemu)
+    # 添加子命令 run
+    parser_run = subparsers.add_parser('run', parents=[parent_parser])
+    parser_run.add_argument('-n', '--name', help="setup vm name")
+    parser_run.add_argument('--vmcpu', help="setup vm vcpu number")
+    parser_run.add_argument('--vmram', help="setup vm ram")
+    parser_run.set_defaults(func=handle_run)
+    args = parser.parse_args()
+
+    # 添加子命令 clean
+    parser_clean = subparsers.add_parser('clean', parents=[parent_parser])
+    parser_clean.add_argument('--name', help="clean vm (destroy/undefine)")
+    parser_clean.add_argument('--qcow', help="delete qcow")
+    parser_clean.set_defaults(func=handle_clean)
+
+    # 开始解析命令
     args = parser.parse_args()
 
     if args.version:
