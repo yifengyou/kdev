@@ -205,33 +205,6 @@ KERNEL_BUILD_MAP = {
 }
 
 
-def do_exe_cmd(cmd, enable_log=False, logfile="kernel.txt", capture_output=True, print_output=False):
-    output = ''
-    if isinstance(cmd, str):
-        cmd = cmd.split()
-    elif isinstance(cmd, list):
-        pass
-    else:
-        raise Exception("unsupported type when run do_exec_cmd", type(cmd))
-    if enable_log:
-        log_file = open(logfile, "a")
-    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    while True:
-        line = p.stdout.readline()
-        if not line:
-            break
-        line = line.decode("utf-8").rstrip()
-        if print_output == True:
-            print(line)
-        if enable_log:
-            log_file.write(line + "\n")
-        output += line + '\n'
-    if enable_log:
-        log_file.close()
-    return_code = p.wait()
-    return return_code, output
-
-
 def find_docker_img(args):
     return None
 
@@ -254,6 +227,7 @@ def check_privilege():
 
 
 def check_arch(args):
+    print(" -> Step check environment")
     if args.arch:
         if args.arch == "x86_64":
             print("The args.arch is x86_64")
@@ -276,18 +250,67 @@ def check_src_hugefile(args):
 
 
 def check_docker_image(args):
-    pass
+    linux_version = "linux-%s.0" % args.masterversion
+    if linux_version in KERNEL_BUILD_MAP:
+        if "docker" not in KERNEL_BUILD_MAP[linux_version]:
+            return False, ''
+        if len(KERNEL_BUILD_MAP[linux_version]["docker"]) == 0:
+            return False, ''
+        return True, KERNEL_BUILD_MAP[linux_version]["docker"][0]
+    return False, ''
+
+
+def do_exe_cmd(cmd, enable_log=False, logfile="kernel.txt", capture_output=True, print_output=False, shell=False):
+    output = ''
+    if isinstance(cmd, str):
+        cmd = cmd.split()
+    elif isinstance(cmd, list):
+        pass
+    else:
+        raise Exception("unsupported type when run do_exec_cmd", type(cmd))
+    if enable_log:
+        log_file = open(logfile, "a")
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=shell)
+
+    while True:
+        line = p.stdout.readline()
+        if not line:
+            break
+        line = line.decode("utf-8").strip()
+        if print_output == True:
+            print(line)
+        if enable_log:
+            log_file.write(line + "\n")
+        output += line + '\n'
+
+    if enable_log:
+        log_file.close()
+    return_code = p.wait()
+    return return_code, output
+
+
+def perror(str):
+    print("Error: ", str)
+    sys.exit(1)
+
+
+def pwarn(str):
+    print("Warn: ", str)
 
 
 def handle_check(args):
     check_arch(args)
+    if not args.workdir:
+        args.workdir = os.getcwd()
+    print(f"workdir : {args.workdir}")
+
     if args.sourcedir:
         if not os.path.isdir(args.sourcedir):
             print(f"dir {args.sourcedir} does't exists!")
             sys.exit(1)
     else:
         args.sourcedir = os.getcwd()
-        print(f"The source dir is {args.sourcedir}")
+        print(f"sourcedir is {args.sourcedir}")
 
     if os.path.isfile(os.path.join(args.sourcedir, "Makefile")) and \
             os.path.isfile(os.path.join(args.sourcedir, "Kbuild")):
@@ -297,92 +320,177 @@ def handle_check(args):
         sys.exit(1)
 
     os.chdir(args.sourcedir)
-    ret, args.kernelversion = do_exe_cmd("ls -alh")
-    print(args.kernelversion)
-    if args.kernelversion:
-        print(f"Unsupported {args.kernelversion}")
-    else:
-        print(f"kernel version : {args.kernelversion}")
-    sys.exit(0)
+    ret, kernelversion = do_exe_cmd("make kernelversion")
+    if ret != 0:
+        perror(f"Unsupported {kernelversion}")
+
+    args.kernelversion = kernelversion.strip()
+    print(f"kernel version : {args.kernelversion}")
+
     args.masterversion = args.kernelversion[0]
+    if args.masterversion not in [str(i) for i in range(1, 7)]:
+        perror("unsupoorted masterversion", args.masterversion)
     print(f"master version : {args.masterversion}")
-    if os.path.isfile("/.dockerenv"):
-        print("current is in docker, all is ok!")
-        return
-    if args.nodocker is None and not check_docker_image(args):
-        print(" no docker image support current kernel version")
-        sys.exit(1)
-    # check docker environment
-    if not args.nodocker:
-        if do_exe_cmd(["docker", "version"], capture_output=True).returncode != 0:
-            print("you need install docker at first")
-            print("Tips: run `kdev -i`")
-            sys.exit(1)
 
-
-def do_build_kernel(args):
-    os.chdir(args.sourcedir)
-    print("start do build kernel binary...")
-    if os.uname().machine != args.arch:
-        if args.arch == "arm64":
-            CROSS_COMPILE = "aarch64-linux-gnu-"
-
-    os.makedirs(args.workdir + "/build", exist_ok=True)
-    do_exe_cmd(["make", "O=" + args.workdir + "/build", "mrproper"], check=True)
-    do_exe_cmd(["make", "O=" + args.workdir + "/build", "args.arch=" + args.arch, "CROSS_COMPILE=" + CROSS_COMPILE,
-                "debian_" + args.arch + "_defconfig"], check=True)
-    shutil.copyfile(args.workdir + "/build/.config", os.getcwd() + "/.config")
-    print(f"ls -alh {args.workdir}/build/.config")
-    do_exe_cmd(["ls", "-alh", args.workdir + "/build/.config"])
-    do_exe_cmd(
-        ["make", "O=" + args.workdir + "/build", "args.arch=" + args.arch, "CROSS_COMPILE=" + CROSS_COMPILE, "-j",
-         str(JOBNUM)],
-        check=True)
-
-    print(f" kernel install to {args.workdir}/boot")
-    os.makedirs(args.workdir + "/boot", exist_ok=True)
-    do_exe_cmd(
-        ["make", "O=" + args.workdir + "/build", "args.arch=" + args.arch, "CROSS_COMPILE=" + CROSS_COMPILE, "install",
-         "INSTALL_PATH=" + args.workdir + "/boot"], check=True)
-
-    print(f" kernel modules install to {args.workdir}")
-    do_exe_cmd(
-        ["make", "O=" + args.workdir + "/build", "args.arch=" + args.arch, "CROSS_COMPILE=" + CROSS_COMPILE,
-         "INSTALL_MOD_STRIP=1",
-         "modules_install", "-j", str(JOBNUM), "INSTALL_MOD_PATH=" + args.workdir], check=True)
-
-    os.chdir(args.sourcedir)
-    KERNELRELEASE = do_exe_cmd(
-        ["make", "-s", "--no-print-directory", "O=" + args.workdir + "/build", "args.arch=" + args.arch,
-         "CROSS_COMPILE=" + CROSS_COMPILE, "kernelrelease"], capture_output=True,
-        text=True).stdout.strip()
-    KERNEL_HEADER_INSTALL = args.workdir + "/usr/src/linux-headers-" + KERNELRELEASE
-    print(f" kernel headers install to {KERNEL_HEADER_INSTALL}")
-    os.makedirs(KERNEL_HEADER_INSTALL, exist_ok=True)
-    do_exe_cmd(
-        ["make", "O=" + args.workdir + "/build", "args.arch=" + args.arch, "CROSS_COMPILE=" + CROSS_COMPILE,
-         "headers_install",
-         "INSTALL_HDR_PATH=" + KERNEL_HEADER_INSTALL], check=True)
+    print("check all ok!")
 
 
 def handle_kernel(args):
-    if args.nodocker == "YES":
-        print("build kernel without docker environment")
-        do_build_kernel()
+    handle_check(args)
+    print(" -> Step build kernel")
+    os.chdir(args.workdir)
+
+    # 生产编译脚本，因为不同环境对python版本有依赖要求，暂时不考虑规避，脚本万能
+    body = """
+    
+## body
+
+echo "run body"
+
+cd ${SOURCEDIR}
+# echo "start do build kernel binary..."
+# if [ "`uname -m`" != ${ARCH} ]; then
+#     if [ "${ARCH}" == "arm64" ]; then
+#         CROSS_COMPILE="aarch64-linux-gnu-"
+#     fi
+# fi
+mkdir -p ${WORKDIR}/build || :
+make O=${WORKDIR}/build mrproper
+make O=${WORKDIR}/build ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} debian_${ARCH}_defconfig
+
+if [ $? -ne 0 ]; then
+    echo "make debian_${ARCH}_defconfig failed!"
+    exit 1
+fi
+ls -alh ${WORKDIR}/build/.config
+make O=${WORKDIR}/build ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} -j "${JOBNUM}"
+if [ $? -ne 0 ]; then
+    echo "Build kernel binary failed!"
+    exit 1
+fi
+
+echo " kernel install to ${WORKDIR}/boot"
+if [ ! -d "${WORKDIR}/boot" ]; then
+    mkdir -p ${WORKDIR}/boot
+fi
+make O=${WORKDIR}/build ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} install INSTALL_PATH=${WORKDIR}/boot
+if [ $? -ne 0 ]; then
+    echo "make install to ${WORKDIR}/boot failed!"
+    exit 1
+fi
+
+echo " kernel modules install to ${WORKDIR}"
+make O=${WORKDIR}/build ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} INSTALL_MOD_STRIP=1 modules_install -j ${JOBNUM} INSTALL_MOD_PATH=${WORKDIR}
+if [ $? -ne 0 ]; then
+    # try again
+    make O=${WORKDIR}/build ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} INSTALL_MOD_STRIP=1 modules_install -j ${JOBNUM} INSTALL_MOD_PATH=${WORKDIR}
+    if [ $? -ne 0 ]; then
+        echo "make modules_install to ${WORKDIR} failed!"
+        exit 1
+    fi
+fi
+
+cd ${SOURCEDIR}
+KERNELRELEASE=$( make -s --no-print-directory O=${WORKDIR}/build ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} kernelrelease 2>/dev/null )
+KERNEL_HEADER_INSTALL=${WORKDIR}/usr/src/linux-headers-${KERNELRELEASE}
+echo " kernel headers install to ${KERNEL_HEADER_INSTALL}"
+if [ ! -d "${KERNEL_HEADER_INSTALL}" ]; then
+    mkdir -p ${KERNEL_HEADER_INSTALL}
+fi
+make O=${WORKDIR}/build ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} headers_install INSTALL_HDR_PATH=${KERNEL_HEADER_INSTALL}
+if [ $? -ne 0 ]; then
+    echo "make headers_install to ${WORKDIR} failed!"
+    exit 1
+fi
+	
+"""
+
+    if args.nodocker:
+        print("build kernel in host")
+        head = """
+#!/bin/bash
+
+if [ -f /.dockerenv ]; then
+    echo "should run in host, not in docker"
+    exit 1
+fi
+
+WORKDIR=%s
+SOURCEDIR=%s
+ARCH=%s
+CROSS_COMPILE=%s
+KERNEL_HEADER_INSTALL=%s
+JOBNUM=%s
+""" % (
+            args.workdir,
+            args.sourcedir,
+            args.arch,
+            args.cross_compile,
+            args.kernelversion,
+            args.job,
+
+        )
+        with open("build_in_host.sh", "w") as script:
+            script.write(head + body)
+
+        os.chmod("build_in_host.sh", 0o100 | 0o200 | 0o400 | 0o010 | 0o040 | 0o001 | 0o004)
+        host_cmd = "/bin/bash build_in_host.sh"
+        print("run host build cmd:", host_cmd)
+        ret, output = do_exe_cmd(host_cmd, print_output=True)
+        if ret != 0:
+            perror("host build failed!")
+        print("host build ok with 0 retcode")
     else:
-        if not os.path.isfile("/.dockerenv"):
-            if not os.path.isfile("/bin/kdev"):
-                print("kdev not found in /bin/")
-                sys.exit(1)
-            print("start docker environment")
-            print(f" using docker image:{KERNEL_BUILD_DOCKERIMAGE[args.masterversion]}")
-            do_exe_cmd(
-                ["docker", "run", "-it", "-v", "/bin/kdev:/bin/kdev", "-v", args.sourcedir + ":/kernel", "-v",
-                 args.workdir + ":/workdir", "-w", "/workdir", KERNEL_BUILD_DOCKERIMAGE[args.masterversion],
-                 "/bin/kdev", "-a", args.arch, "-k", "-s", "/kernel"], check=True)
-            sys.exit(0)
-        else:
-            do_build_kernel(args)
+        print("build kernel in docker")
+        ok, image = check_docker_image(args)
+        if not ok:
+            perror("not useable docker image found!")
+        print(f" using docker image : {image} ")
+        args.docker_image = image
+
+        args.cross_compile = ''
+        if os.uname().machine != args.arch:
+            if args.arch == "arm64":
+                args.cross_compile = "aarch64-linux-gnu-"
+
+        head = """#!/bin/bash
+set -x
+
+if [ ! -f /.dockerenv ]; then
+    echo "should run in docker, not in host"
+    exit 1
+fi
+
+WORKDIR=%s
+SOURCEDIR=%s
+ARCH=%s
+CROSS_COMPILE=%s
+KERNEL_HEADER_INSTALL=%s
+JOBNUM=%s
+# %s
+""" % (
+            "/work",
+            "/kernel",
+            args.arch,
+            args.cross_compile,
+            args.kernelversion,
+            args.job,
+        )
+        with open("build_in_docker.sh", "w") as script:
+            script.write(head + body)
+        os.chmod("build_in_docker.sh", 0o100 | 0o200 | 0o400 | 0o010 | 0o040 | 0o001 | 0o004)
+        docker_cmd = f"docker run -t " \
+                     f" -v {args.workdir}/build_in_docker.sh:/bin/kdev  " \
+                     f" -v {args.sourcedir}:/kernel  " \
+                     f" -v {args.workdir}:/workdir  " \
+                     f" -w /workdir  " \
+                     f"{args.docker_image} " \
+                     f"/bin/kdev"
+        print("run docker build cmd:", docker_cmd)
+        ret, output = do_exe_cmd(docker_cmd, print_output=True)
+        if ret != 0:
+            perror("docker build failed!")
+        print("docker build ok with 0 retcode")
 
 
 def handle_rootfs(args):
@@ -623,7 +731,7 @@ def main():
     # subcommand kernel
     parser_kernel = subparsers.add_parser('kernel', parents=[parent_parser])
     parser_kernel.add_argument("--nodocker", action="store_true", help="build kernel without docker environment")
-    parser_kernel.add_argument("-j", "--job", help="setup compile job number")
+    parser_kernel.add_argument("-j", "--job", default=os.cpu_count(), help="setup compile job number")
     parser_kernel.add_argument("-c", "--clean", help="clean docker when exit"
                                                      "")
     parser_kernel.set_defaults(func=handle_kernel)
