@@ -582,29 +582,33 @@ def handle_rootfs(args):
         if not args.nbd:
             perror("No available nbd found!")
 
+    # 稍作延迟
+    do_exe_cmd("sync")
+
     # 创建临时挂载点
     args.tmpdir = "/tmp/qcow2-" + str(random.randint(0, 9999))
     os.makedirs(args.tmpdir, exist_ok=True)
-
     retcode, _, _ = do_exe_cmd(f"mount -o rw /dev/{args.nbd}p1 {args.tmpdir}", print_output=True)
     if retcode != 0:
         perror("Mount qcow2 failed!")
 
+    # 稍作延迟
     do_exe_cmd("sync")
-    time.sleep(5)
+
     # 拷贝boot目录，包含linux vmlinuz config maps
     copy_bootdir = os.path.join(args.workdir, "boot")
     qcow_bootdir = os.path.join(args.tmpdir, "boot")
     if os.path.isdir(copy_bootdir) and qcow_bootdir != "/boot":
         copy_cmd = ["/usr/bin/cp", "-a"] + glob.glob(f"{copy_bootdir}/*") + [f"{qcow_bootdir}/"]
-        # retcode, _, error = do_exe_cmd(copy_cmd)
         retcode, _, error = do_exe_cmd(copy_cmd)
         if retcode == 0:
             print(f" copy vmlinuz/config ok! {qcow_bootdir}")
         else:
             perror(f" copy vmlinuz/config failed!! {qcow_bootdir} {error}")
 
+    # 稍作延迟
     do_exe_cmd("sync")
+
     # 拷贝lib目录，包含inbox核外驱动
     copy_libdir = os.path.join(args.workdir, "lib/modules")
     qcow_libdir = os.path.join(args.tmpdir, "lib/modules")
@@ -615,7 +619,10 @@ def handle_rootfs(args):
             print(f" copy modules(stripped) ok! {qcow_libdir}")
         else:
             perror(f" copy modules(stripped) failed!! {qcow_libdir}")
+
+    # 稍作延迟
     do_exe_cmd("sync")
+
     # 拷贝内核头文件
     copy_headerdir = os.path.join(args.workdir, "usr")
     qcow_headerdir = os.path.join(args.tmpdir, "usr")
@@ -626,7 +633,10 @@ def handle_rootfs(args):
             print(f" copy headers ok! {qcow_headerdir}")
         else:
             perror(f" copy headers failed!! {qcow_headerdir}")
+
+    # 稍作延迟
     do_exe_cmd("sync")
+
     # 设置主机名
     args.hostname = args.qcow2.split(".")[0]
     qcow_hostname = os.path.join(args.tmpdir, "etc/hostname")
@@ -640,7 +650,15 @@ def handle_rootfs(args):
         with open(os.path.join(args.tmpdir, "cloud-init.disabled"), "w") as f:
             f.write("")
     if os.path.isfile(os.path.join(args.tmpdir, "usr/bin/cloud-*")):
+        pdebug("remove /usr/bin/cloud-*")
         os.remove(os.path.join(args.tmpdir, "usr/bin/cloud-*"))
+
+    TMP_USRBIN = os.path.join(args.tmpdir, "usr/bin/")
+    for item in os.listdir(TMP_USRBIN):
+        if item.startswith("cloud-"):
+            new_item = "bak-" + item
+            os.rename(os.path.join(TMP_USRBIN, item), os.path.join(TMP_USRBIN, new_item))
+            print(f"Renamed {item} to {new_item}")
 
     # 写入初始化脚本，开机第一次执行
     with open(os.path.join(args.tmpdir, "etc/firstboot"), "w") as f:
@@ -736,7 +754,7 @@ def handle_run(args):
     else:
         print(f" found qcow2 {args.qcow2} in workdir, using it.")
 
-    if not hasattr(args, "name"):
+    if not hasattr(args, "name") or args.name is None:
         args.name = f"linux-{args.masterversion}-{args.arch}"
 
     print(f" try startup {args.name}")
@@ -803,13 +821,11 @@ def handle_clean(args):
                 print(f" destroy vm {args.name} ok")
             else:
                 print(f" destroy vm {args.name} failed!")
-                sys.exit(1)
             retcode, _, _ = do_exe_cmd(f"virsh undefine {args.name}", print_output=True)
             if 0 == retcode:
                 print(f" undefine vm {args.name} ok")
             else:
                 print(f" undefine vm {args.name} failed!")
-                sys.exit(1)
         else:
             print(f"no vm {args.name} found! skip clean vm.")
     # 清理qcow2，保留虚机配置
