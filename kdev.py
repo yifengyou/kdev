@@ -5,9 +5,9 @@
  Authors:
    yifengyou <842056007@qq.com>
 """
-import configparser
 import os
 import random
+import re
 import shutil
 import subprocess
 import sys
@@ -316,10 +316,10 @@ def pwarn(str):
     print("Warn: ", str)
 
 
-def pdebug(str):
+def pdebug(params):
     global DEBUG
     if DEBUG:
-        print("DEBUG:", str)
+        print("DEBUG:", params)
 
 
 def handle_init(args):
@@ -792,11 +792,10 @@ def main():
 
     # 定义base命令用于集成
     parent_parser = argparse.ArgumentParser(add_help=False, description="kdev - a tool for kernel development")
-    parent_parser.add_argument("-V", "--verbose", default=None, action="store_true",
-                               help="show verbose output")
-    parent_parser.add_argument("-s", "--sourcedir", help="set kernel source dir")
-    parent_parser.add_argument("-a", "--arch", help="set arch, default is x86_64")
-    parent_parser.add_argument("-w", "--workdir", help="setup workdir")
+    parent_parser.add_argument("-V", "--verbose", default=None, action="store_true", help="show verbose output")
+    parent_parser.add_argument("-s", "--sourcedir", default=None, help="set kernel source dir")
+    parent_parser.add_argument("-a", "--arch", default=None, help="set arch, default is x86_64")
+    parent_parser.add_argument("-w", "--workdir", default=None, help="setup workdir")
     parent_parser.add_argument('-l', '--log', default=None, help="log file path")
     parent_parser.add_argument('-d', '--debug', default=None, action="store_true", help="enable debug output")
 
@@ -843,28 +842,32 @@ def main():
     args = parser.parse_args()
 
     # 解析命令后解析配置文件，合并两者
-    config = configparser.ConfigParser()
     for filename in os.listdir('.'):
         if filename.endswith(".kdev"):
-            config.read(filename)
-            for section in config.sections():
-                # 忽略节，只考虑键值对
-                for key, value in config.items(section):
-                    print(f"{key} = {value}")
-                    # 如果命令行没有定义key，则使用配置中的KV
-                    if not hasattr(args, key):
-                        setattr(args, key, value)
-                    # 如果命令行未打开选项，但配置中打开，则使用配置中的KV
-                    if getattr(args, key) is None:
-                        setattr(args, key, value)
+            pdebug("load config file %s" % filename)
+            with open(filename, 'r', encoding='utf8') as f:
+                for line in f:
+                    line = line.strip()
+                    if not line or line.startswith('#'):
+                        continue
+                    match = re.match(r'(\w+)\s*=\s*([\w/.-]+)', line)
+                    if match:
+                        key = match.group(1)
+                        value = match.group(2)
+                        # 如果命令行没有定义key，则使用配置中的KV
+                        if not hasattr(args, key):
+                            setattr(args, key, value)
+                        # 如果命令行未打开选项，但配置中打开，则使用配置中的KV
+                        if getattr(args, key) is None:
+                            setattr(args, key, value)
 
-    if hasattr(args, "debug") and True == args.debug:
+    # 参数解析后开始具备debug output能力
+    if hasattr(args, "debug") and args.debug is not None:
         DEBUG = True
         pdebug("Enable debug output")
-        ns_dict = vars(args)
-        pdebug("Parser and config:")
-        for key, value in ns_dict.items():
-            pdebug("  %s = %s" % (key, value))
+    pdebug("Parser and config:")
+    for key, value in vars(args).items():
+        pdebug("  %s = %s" % (key, value))
 
     if args.version:
         print("kdev %s" % CURRENT_VERSION)
