@@ -15,6 +15,8 @@ import sys
 import argparse
 import time
 
+import select
+
 CURRENT_VERSION = "0.2.0"
 DEBUG = False
 
@@ -280,7 +282,7 @@ def check_qcow_image(args):
     return False, ''
 
 
-def do_exe_cmd(cmd, enable_log=False, logfile="kernel.txt", capture_output=True, print_output=False, shell=False):
+def do_exe_cmd(cmd, enable_log=False, logfile="kernel.txt", print_output=False, shell=False):
     stdout_output = ''
     stderr_output = ''
     if isinstance(cmd, str):
@@ -293,33 +295,37 @@ def do_exe_cmd(cmd, enable_log=False, logfile="kernel.txt", capture_output=True,
         log_file = open(logfile, "a")
     pdebug("Run cmd:" + " ".join(cmd))
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=shell)
-
     while True:
-        stdout_line = p.stdout.readline()
-        stderr_line = p.stderr.readline()
-        if not stdout_line and not stderr_line and p.poll() is not None:
+        # 使用select模块，监控stdout和stderr的可读性，设置超时时间为0.1秒
+        rlist, _, _ = select.select([p.stdout, p.stderr], [], [], 0.1)
+        # 遍历可读的文件对象
+        for f in rlist:
+            # 读取一行内容，解码为utf-8
+            line = f.readline().decode('utf-8').strip()
+            # 如果有内容，判断是stdout还是stderr，并打印到屏幕，并刷新缓冲区
+            if line:
+                if f == p.stdout:
+                    if print_output == True:
+                        print("STDOUT", line)
+                    if enable_log:
+                        log_file.write(line + "\n")
+                    stdout_output += line + '\n'
+                    sys.stdout.flush()
+                elif f == p.stderr:
+                    if print_output == True:
+                        print("STDERR", line)
+                    if enable_log:
+                        log_file.write(line + "\n")
+                    stderr_output += line + '\n'
+                    sys.stderr.flush()
+        if p.poll() is not None:
             break
 
-        if stdout_line:
-            out_str = stdout_line.decode("utf-8").strip()
-            if print_output == True:
-                print(out_str)
-            if enable_log:
-                log_file.write(out_str + "\n")
-            stdout_output += out_str + '\n'
-        if stderr_line:
-            err_str = stderr_line.decode("utf-8").strip()
-            if print_output == True:
-                print(err_str)
-            if enable_log:
-                log_file.write(err_str + "\n")
-            stderr_output += err_str + '\n'
-
+    # 关闭日志描述符
     if enable_log:
         log_file.close()
-    return_code = p.wait()
-    # pdebug("retcode %d" % return_code)
-    return return_code, stdout_output, stderr_output
+
+    return p.returncode, stdout_output, stderr_output
 
 
 def perror(str):
@@ -536,7 +542,7 @@ JOB=%s
                      f"{args.docker_image} " \
                      f"/bin/kdev"
         print("run docker build cmd:", docker_cmd)
-        ret, output, error = do_exe_cmd(docker_cmd, print_output=True)
+        ret, output, error = do_exe_cmd(docker_cmd, print_output=True, shell=False)
         if ret != 0:
             perror("docker build failed!")
         print("docker build ok with 0 retcode")
