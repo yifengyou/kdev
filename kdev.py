@@ -868,10 +868,10 @@ def main():
     parent_parser.add_argument('-d', '--debug', default=None, action="store_true", help="enable debug output")
 
     # 添加子命令 init
-    parser_check = subparsers.add_parser('init', parents=[parent_parser])
-    parser_check.add_argument("-i", "--aptinstall", default=None, action="store_true",
-                              help="install dependency packages")
-    parser_check.set_defaults(func=handle_init)
+    parser_init = subparsers.add_parser('init', parents=[parent_parser])
+    parser_init.add_argument("-i", "--aptinstall", default=None, action="store_true",
+                             help="install dependency packages")
+    parser_init.set_defaults(func=handle_init)
 
     # 添加子命令 check
     parser_check = subparsers.add_parser('check', parents=[parent_parser])
