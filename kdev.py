@@ -328,6 +328,19 @@ def do_exe_cmd(cmd, enable_log=False, logfile="kernel.txt", print_output=False, 
     return p.returncode, stdout_output, stderr_output
 
 
+def do_clean_nbd():
+    for entry in os.listdir("/sys/block/"):
+        full_path = os.path.join("/sys/block/", entry)
+        if os.path.isdir(full_path) and os.path.basename(full_path).startswith("nbd"):
+            if os.path.exists(os.path.join(full_path, "pid")):
+                nbd_name = os.path.basename(full_path)
+                retcode, _, _ = do_exe_cmd(f"qemu-nbd -d /dev/{nbd_name}", print_output=True)
+                if 0 != retcode:
+                    print(f"umount {nbd_name} failed! retcode={retcode}")
+                else:
+                    print(f"umount {nbd_name} done!")
+
+
 def perror(str):
     print("Error: ", str)
     sys.exit(1)
@@ -846,6 +859,71 @@ def handle_clean(args):
     print("handle clean done!")
 
 
+def handle_image(args):
+    check_privilege()
+
+    # 定义一个函数，判断一个路径是否是nbd开头的目录
+    def is_nbd_dir(path):
+        return os.path.isdir(path) and os.path.basename(path).startswith("nbd")
+
+    def find_free_nbd():
+        for entry in os.listdir("/sys/block/"):
+            full_path = os.path.join("/sys/block/", entry)
+            if is_nbd_dir(full_path):
+                if not os.path.exists(os.path.join(full_path, "pid")):
+                    return os.path.basename(full_path)
+        return ''
+
+    if args.mount:
+        print("mount file :", args.mount)
+        # 检查文件是否存在
+        if os.path.isfile(args.mount):
+            # 获取文件的绝对路径
+            file = os.path.abspath(args.mount)
+
+            nbd = find_free_nbd()
+            if '' == nbd:
+                perror("no available /dev/nbd found!")
+            print(f"try mount {file} to /dev/{nbd}")
+            ok, _, _ = do_exe_cmd(f"qemu-nbd -c /dev/{nbd} {file}", print_output=True)
+            if 0 != ok:
+                perror(f"qemu-nbd bind {file} failed! retcode={ok}")
+            else:
+                print(f"qemu-nbd bind {file} done!")
+            mntdir = file + '-mnt'
+            os.makedirs(mntdir, exist_ok=True)
+            time.sleep(3)
+            ok, _, _ = do_exe_cmd(f"mount /dev/{nbd}p1 {mntdir}", print_output=True)
+            if 0 != ok:
+                perror(f"mount {file} failed! retcode={ok}")
+            else:
+                print(f"mount {args.mount} to {mntdir} done!")
+        else:
+            # 打印错误信息
+            print(f"File {args.umount} does not exist")
+
+    elif args.umount:
+        print("umount file :", args.umount)
+        # 检查文件是否存在
+        if os.path.isfile(args.umount):
+            # 获取文件的绝对路径
+            file = os.path.abspath(args.umount)
+            # 获取挂载目录的绝对路径
+            mnt_dir = file + "-mnt"
+            if os.path.isdir(mnt_dir):
+                retcode, _, _ = do_exe_cmd(f"umount {mnt_dir}")
+                time.sleep(1)
+                print(f"try umount {file} ret={retcode}")
+                if len(os.listdir(mnt_dir)) != 0:
+                    perror(f"{mnt_dir} is not empty! umount failed! keep mount dir empty!")
+                print(f"{mnt_dir} is already empty!")
+            # disconnect nbd
+            do_clean_nbd()
+        else:
+            # 打印错误信息
+            print(f"File {args.umount} does not exist")
+
+
 def main():
     global DEBUG, CURRENT_VERSION
     check_python_version()
@@ -905,6 +983,14 @@ def main():
     parser_clean.add_argument('--qcow', default=None, action="store_true", help="delete qcow")
     parser_clean.add_argument('--all', default=None, action="store_true", help="clean all")
     parser_clean.set_defaults(func=handle_clean)
+
+    # 添加子命令 image
+    parser_image = subparsers.add_parser('image')
+    # 添加一个互斥组，用于指定-u或-m参数，但不能同时指定
+    parser_image_group = parser_image.add_mutually_exclusive_group(required=True)
+    parser_image_group.add_argument('-m', '--mount', metavar='QCOW2_FILE_PATH', help="mount qcow2")
+    parser_image_group.add_argument('-u', '--umount', metavar='QCOW2_FILE_PATH', help="umount qcow2")
+    parser_image_group.set_defaults(func=handle_image)
 
     # 开始解析命令
     args = parser.parse_args()
