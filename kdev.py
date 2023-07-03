@@ -439,6 +439,12 @@ def handle_kernel(args):
     print(" -> Step build kernel")
     os.chdir(args.workdir)
 
+    if args.config:
+        print(f" set kenrel config from cmdline {args.config}")
+        kernel_config = args.config
+    else:
+        kernel_config = f"debian_{args.arch}_defconfig"
+
     # 生产编译脚本，因为不同环境对python版本有依赖要求，暂时不考虑规避，脚本万能
     body = """
     
@@ -450,10 +456,10 @@ cd ${SOURCEDIR}
 
 mkdir -p ${WORKDIR}/build || :
 make O=${WORKDIR}/build mrproper
-make O=${WORKDIR}/build ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} debian_${ARCH}_defconfig
+make O=${WORKDIR}/build ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} """ + kernel_config + """
 
 if [ $? -ne 0 ]; then
-    echo "make debian_${ARCH}_defconfig failed!"
+    echo "make  """ + kernel_config + """ failed!"
     exit 1
 fi
 ls -alh ${WORKDIR}/build/.config
@@ -990,6 +996,7 @@ def main():
                                help="build kernel without docker environment")
     parser_kernel.add_argument("-j", "--job", default=os.cpu_count(), help="setup compile job number")
     parser_kernel.add_argument("-c", "--clean", help="clean docker when exit")
+    parser_kernel.add_argument("--config", help="setup kernel build config")
     parser_kernel.set_defaults(func=handle_kernel)
 
     # 添加子命令 rootfs
