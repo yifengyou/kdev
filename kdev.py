@@ -53,6 +53,7 @@ KERNEL_BUILD_MAP = {
             {
                 "x86_64": {
                     "ubuntu": [
+                        "http://cloud-images-archive.ubuntu.com/releases/precise/release-20170502/ubuntu-12.04-server-cloudimg-amd64-disk1.img",
                         "http://cloud-images.ubuntu.com/releases/trusty/release/ubuntu-14.04-server-cloudimg-amd64-disk1.img",
                         "http://cloud-images.ubuntu.com/releases/trusty/release/ubuntu-14.04-server-cloudimg-amd64-uefi1.img",
                     ],
@@ -665,7 +666,7 @@ def handle_rootfs(args):
     # 检查cloud-init变关闭
     qcow_cloudinitdir = os.path.join(args.tmpdir, "etc/cloud")
     if os.path.isdir(qcow_cloudinitdir):
-        with open(os.path.join(args.tmpdir, "cloud-init.disabled"), "w") as f:
+        with open(os.path.join(qcow_cloudinitdir, "cloud-init.disabled"), "w") as f:
             f.write("")
     if os.path.isfile(os.path.join(args.tmpdir, "usr/bin/cloud-*")):
         pdebug("remove /usr/bin/cloud-*")
@@ -855,6 +856,13 @@ def handle_clean(args):
                 filepath = os.path.join(args.workdir, filename)
                 os.remove(filepath)
                 print(f"Deleted {filepath}")
+    if args.docker or args.all:
+        retcode, _, _ = do_exe_cmd(f"docker container prune -f", print_output=True)
+        if 0 == retcode:
+            print("clean docker container done!")
+        else:
+            print(f"clean docker container failed! retcode={retcode}")
+
     print("handle clean done!")
 
 
@@ -976,6 +984,7 @@ def main():
     parser_clean = subparsers.add_parser('clean', parents=[parent_parser])
     parser_clean.add_argument('--vm', default=None, action="store_true", help="clean vm (destroy/undefine)")
     parser_clean.add_argument('--qcow', default=None, action="store_true", help="delete qcow")
+    parser_clean.add_argument('--docker', default=None, action="store_true", help="clean docker")
     parser_clean.add_argument('--all', default=None, action="store_true", help="clean all")
     parser_clean.set_defaults(func=handle_clean)
 
