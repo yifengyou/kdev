@@ -358,10 +358,42 @@ def pdebug(params):
 
 def handle_init(args):
     check_arch(args)
-    args.deplist = "git"
-    ret, _, _ = do_exe_cmd(f"apt-get install -y {args.deplist}", print_output=True)
+    deplist = "git  " \
+              "wget  " \
+              "vim " \
+              "flex " \
+              "bison " \
+              "build-essential " \
+              "tmux " \
+              "qemu-system-x86 libvirt-clients libvirt-daemon-system bridge-utils virtinst libvirt-daemon virt-manager " \
+              "openvswitch-common openvswitch-dev openvswitch-switch " \
+              "firmware-misc-nonfree " \
+              "ipxe-qemu " \
+              "libvirt-daemon-driver-qemu " \
+              "qemu " \
+              "qemu-efi " \
+              "qemu-efi-aarch64 " \
+              "qemu-efi-arm " \
+              "qemu-system " \
+              "qemu-system-arm " \
+              "qemu-system-common " \
+              "qemu-system-data " \
+              "qemu-system-gui:amd64 " \
+              "qemu-system-mips " \
+              "qemu-system-misc " \
+              "qemu-system-ppc " \
+              "qemu-system-sparc " \
+              "qemu-system-x86 " \
+              "qemu-user " \
+              "qemu-user-binfmt " \
+              "qemu-utils " \
+              "sysstat " \
+              "python3-pip " \
+              "curl " \
+              "docker-ce"
+    ret, _, stderr = do_exe_cmd(f"sudo apt-get install -y {deplist}", print_output=True)
     if ret != 0:
-        perror(f"install dependency failed!")
+        perror(f"install dependency failed! \n{stderr}")
     print("handle init done!")
 
 
@@ -547,12 +579,12 @@ JOB=%s
         with open("build_in_docker.sh", "w") as script:
             script.write(head + body)
         os.chmod("build_in_docker.sh", 0o755)
-        docker_cmd = f"docker run -t " \
-                     f" -v {args.workdir}/build_in_docker.sh:/bin/kdev  " \
-                     f" -v {args.sourcedir}:/kernel  " \
-                     f" -v {args.workdir}:/workdir  " \
-                     f" -w /workdir  " \
-                     f"{args.docker_image} " \
+        docker_cmd = f"docker run -t  " \
+                     f" -v {args.workdir}/build_in_docker.sh:/bin/kdev   " \
+                     f" -v {args.sourcedir}:/kernel   " \
+                     f" -v {args.workdir}:/workdir   " \
+                     f" -w /workdir   " \
+                     f"{args.docker_image}  " \
                      f"/bin/kdev"
         print("run docker build cmd:", docker_cmd)
         ret, output, error = do_exe_cmd(docker_cmd, print_output=True, shell=False)
@@ -806,17 +838,17 @@ def handle_run(args):
     else:
         perror(f"unsupported arch {args.arch}")
 
-    qemu_cmd = f"virt-install " \
-               f"  --name {args.name}" \
-               f"  --arch {args.vmarch}" \
-               f"  --ram {args.vmram}" \
-               f"  --os-type=linux" \
-               f"  --video=vga" \
-               f"  --vcpus {args.vmcpu} " \
-               f"  --disk path={os.path.join(args.workdir, args.qcow2)},format=qcow2,bus=scsi" \
-               f"  --network bridge=br0,virtualport_type=openvswitch" \
-               f"  --import" \
-               f"  --graphics spice,listen=0.0.0.0" \
+    qemu_cmd = f"virt-install  " \
+               f"  --name {args.name} " \
+               f"  --arch {args.vmarch} " \
+               f"  --ram {args.vmram} " \
+               f"  --os-type=linux " \
+               f"  --video=vga " \
+               f"  --vcpus {args.vmcpu}  " \
+               f"  --disk path={os.path.join(args.workdir, args.qcow2)},format=qcow2,bus=scsi " \
+               f"  --network bridge=br0,virtualport_type=openvswitch " \
+               f"  --import " \
+               f"  --graphics spice,listen=0.0.0.0 " \
                f"  --noautoconsole"
 
     retcode, _, _ = do_exe_cmd(qemu_cmd, print_output=True)
@@ -901,7 +933,6 @@ def handle_image(args):
         else:
             # 打印错误信息
             print(f"File {args.umount} does not exist")
-
     elif args.umount:
         print("umount file :", args.umount)
         # 检查文件是否存在
@@ -947,14 +978,10 @@ def main():
 
     # 添加子命令 init
     parser_init = subparsers.add_parser('init', parents=[parent_parser])
-    parser_init.add_argument("-i", "--aptinstall", default=None, action="store_true",
-                             help="install dependency packages")
     parser_init.set_defaults(func=handle_init)
 
     # 添加子命令 check
     parser_check = subparsers.add_parser('check', parents=[parent_parser])
-    parser_check.add_argument("-i", "--aptinstall", default=None, action="store_true",
-                              help="install dependency packages")
     parser_check.set_defaults(func=handle_check)
 
     # 添加子命令 kernel
