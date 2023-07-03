@@ -21,49 +21,15 @@ CURRENT_VERSION = "0.2.0"
 DEBUG = False
 
 KERNEL_BUILD_MAP = {
-    "linux-1.0": {
-        "docker": [
-            "dockerproxy.com/yifengyou/linux1.0:latest"
-        ],
-        "config": {
-            "x86_64": [],
-            "arm64": [],
-        },
-        "image":
-            {
-                "x86_64": {
-                    "ubuntu": [
-                        "http://cloud-images-archive.ubuntu.com/releases/lucid/release-20150427/ubuntu-10.04-server-cloudimg-amd64-disk1.img"
-                    ],
-                    "debian": [],
-                    "centos": [],
-                    "fedora": [],
-                },
-                "arm64": {
-                    "ubuntu": [
-                        "http://cloud-images-archive.ubuntu.com/releases/lucid/release-20150427/ubuntu-10.04-server-cloudimg-amd64-disk1.img",
-                    ],
-                    "debian": [
-                        "https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-nocloud-amd64.qcow2",
-                    ],
-                    "centos": [],
-                    "fedora": [],
-                }
-            }
-    },
     "linux-2.0": {
         "docker": [
             "dockerproxy.com/yifengyou/linux2.0:latest"
         ],
-        "config": {
-            "x86_64": [],
-            "arm64": [],
-        },
         "image":
             {
                 "x86_64": {
                     "ubuntu": [
-                        "http://cloud-images-archive.ubuntu.com/releases/lucid/release-20150427/ubuntu-10.04-server-cloudimg-amd64-disk1.img"
+                        "http://cloud-images.ubuntu.com/releases/lucid/release-20150427/ubuntu-10.04-server-cloudimg-amd64-disk1.img"
                     ],
                     "debian": [],
                     "centos": [],
@@ -71,11 +37,9 @@ KERNEL_BUILD_MAP = {
                 },
                 "arm64": {
                     "ubuntu": [
-                        "http://cloud-images-archive.ubuntu.com/releases/lucid/release-20150427/ubuntu-10.04-server-cloudimg-amd64-disk1.img",
+                        "http://cloud-images.ubuntu.com/releases/lucid/release-20150427/ubuntu-10.04-server-cloudimg-amd64-disk1.img",
                     ],
-                    "debian": [
-                        "https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-nocloud-amd64.qcow2",
-                    ],
+                    "debian": [],
                     "centos": [],
                     "fedora": [],
                 }
@@ -85,16 +49,12 @@ KERNEL_BUILD_MAP = {
         "docker": [
             "dockerproxy.com/yifengyou/linux3.0:latest"
         ],
-        "config": {
-            "x86_64": [],
-            "arm64": [],
-        },
         "image":
             {
                 "x86_64": {
                     "ubuntu": [
-                        "http://cloud-images-archive.ubuntu.com/releases/lucid/release-20150427/ubuntu-10.04-server-cloudimg-amd64-disk1.img",
-                        "https://cloud-images.ubuntu.com/releases/xenial/release/ubuntu-16.04-server-cloudimg-amd64-disk1.img",
+                        "http://cloud-images.ubuntu.com/releases/trusty/release/ubuntu-14.04-server-cloudimg-amd64-disk1.img",
+                        "http://cloud-images.ubuntu.com/releases/trusty/release/ubuntu-14.04-server-cloudimg-amd64-uefi1.img",
                     ],
                     "debian": [
                     ],
@@ -103,7 +63,8 @@ KERNEL_BUILD_MAP = {
                 },
                 "arm64": {
                     "ubuntu": [
-                        "https://cloud-images.ubuntu.com/releases/xenial/release/ubuntu-16.04-server-cloudimg-arm64-uefi1.img",
+                        "http://cloud-images.ubuntu.com/releases/trusty/release/ubuntu-14.04-server-cloudimg-arm64-disk1.img",
+                        "http://cloud-images.ubuntu.com/releases/trusty/release/ubuntu-14.04-server-cloudimg-arm64-uefi1.img",
                     ],
                     "debian": [],
                     "centos": [],
@@ -115,15 +76,11 @@ KERNEL_BUILD_MAP = {
         "docker": [
             "dockerproxy.com/yifengyou/linux4.0:latest"
         ],
-        "config": {
-            "x86_64": [],
-            "arm64": [],
-        },
         "image":
             {
                 "x86_64": {
                     "ubuntu": [
-                        "http://cloud-images-archive.ubuntu.com/releases/lucid/release-20150427/ubuntu-10.04-server-cloudimg-amd64-disk1.img"
+                        "http://cloud-images.ubuntu.com/releases/bionic/release/ubuntu-18.04-server-cloudimg-amd64.img"
                     ],
                     "debian": [
                         "https://cloud.debian.org/images/cloud/buster/latest/debian-10-nocloud-amd64.qcow2",
@@ -133,7 +90,7 @@ KERNEL_BUILD_MAP = {
                 },
                 "arm64": {
                     "ubuntu": [
-                        "http://cloud-images-archive.ubuntu.com/releases/lucid/release-20150427/ubuntu-10.04-server-cloudimg-arm64-disk1.img",
+                        "http://cloud-images.ubuntu.com/releases/bionic/release/ubuntu-18.04-server-cloudimg-arm64.img",
                     ],
                     "debian": [
                         "https://cloud.debian.org/images/cloud/bookworm/latest/debian-10-nocloud-arm64.qcow2",
@@ -147,15 +104,11 @@ KERNEL_BUILD_MAP = {
         "docker": [
             "dockerproxy.com/yifengyou/linux5.0:latest"
         ],
-        "config": {
-            "x86_64": [],
-            "arm64": [],
-        },
         "image":
             {
                 "x86_64": {
                     "ubuntu": [
-                        "http://cloud-images-archive.ubuntu.com/releases/lucid/release-20150427/ubuntu-10.04-server-cloudimg-amd64-disk1.img",
+                        "http://cloud-images.ubuntu.com//releases/focal/release/ubuntu-20.04-server-cloudimg-amd64.img",
                     ],
                     "debian": [
                         "https://cloud.debian.org/images/cloud/bullseye/latest/debian-11-nocloud-amd64.qcow2",
@@ -165,7 +118,7 @@ KERNEL_BUILD_MAP = {
                 },
                 "arm64": {
                     "ubuntu": [
-                        "http://cloud-images-archive.ubuntu.com/releases/lucid/release-20150427/ubuntu-10.04-server-cloudimg-arm64-disk1.img",
+                        "http://cloud-images.ubuntu.com//releases/focal/release/ubuntu-20.04-server-cloudimg-arm64.img",
                     ],
                     "debian": [
                         "https://cloud.debian.org/images/cloud/bookworm/latest/debian-11-nocloud-arm64.qcow2",
@@ -179,15 +132,11 @@ KERNEL_BUILD_MAP = {
         "docker": [
             "dockerproxy.com/yifengyou/linux6.0:latest"
         ],
-        "config": {
-            "x86_64": [],
-            "arm64": [],
-        },
         "image":
             {
                 "x86_64": {
                     "ubuntu": [
-                        "http://cloud-images-archive.ubuntu.com/releases/lucid/release-20150427/ubuntu-10.04-server-cloudimg-amd64-disk1.img",
+                        "https://cloud-images.ubuntu.com/releases/jammy/release/ubuntu-22.04-server-cloudimg-amd64.img",
                     ],
                     "debian": [
                         "https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-nocloud-amd64.qcow2",
@@ -197,7 +146,7 @@ KERNEL_BUILD_MAP = {
                 },
                 "arm64": {
                     "ubuntu": [
-                        "http://cloud-images-archive.ubuntu.com/releases/lucid/release-20150427/ubuntu-10.04-server-cloudimg-arm64-disk1.img",
+                        "https://cloud-images.ubuntu.com/releases/jammy/release/ubuntu-22.04-server-cloudimg-arm64.img",
                     ],
                     "debian": [
                         "https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-nocloud-arm64.qcow2",
@@ -208,10 +157,6 @@ KERNEL_BUILD_MAP = {
             }
     }
 }
-
-
-def find_docker_img(args):
-    return None
 
 
 def check_python_version():
@@ -603,8 +548,9 @@ JOB=%s
                                         enable_log=True,
                                         logfile="build_kernel_in_docker.log")
         if ret != 0:
-            perror("docker build failed!")
-        print("docker build ok with 0 retcode")
+            perror(f"docker build failed! retcode={ret}")
+        else:
+            print("docker build ok with 0 retcode, exit docker.")
 
     print("handle kernel done!")
 
@@ -622,7 +568,11 @@ def handle_rootfs(args):
     os.chdir(args.workdir)
     if not os.path.isfile(args.qcow2):
         print(f" start to download {args.qcow2_url}")
-        retcode, _, _ = do_exe_cmd(["wget", "-c", args.qcow2_url], print_output=True)
+        retcode, _, _ = do_exe_cmd(["wget", "-c", args.qcow2_url],
+                                   print_output=True,
+                                   enable_log=True,
+                                   logfile="kdev-download.log"
+                                   )
         if retcode != 0:
             perror("Download qcow2 failed!")
     else:
@@ -639,12 +589,15 @@ def handle_rootfs(args):
         if retcode != 0:
             perror("Connect nbd failed!")
     else:
-        for nbd in ["/dev/nbd" + str(i) for i in range(9)]:
-            retcode, output, error = do_exe_cmd(["qemu-nbd", "--connect", nbd, args.qcow2], print_output=True)
+        for nbd in ["nbd" + str(i) for i in range(9)]:
+            retcode, output, error = do_exe_cmd(
+                ["qemu-nbd", "--connect", "/dev/" + nbd,
+                 args.qcow2],
+                print_output=True)
             if retcode == 0:
                 args.nbd = nbd
                 break
-        if not args.nbd:
+        if not hasattr(args, 'nbd'):
             perror("No available nbd found!")
 
     # 稍作延迟
