@@ -282,7 +282,7 @@ def check_qcow_image(args):
     return False, ''
 
 
-def do_exe_cmd(cmd, enable_log=False, logfile="kernel.txt", print_output=False, shell=False):
+def do_exe_cmd(cmd, enable_log=False, logfile="build-kernel.log", print_output=False, shell=False):
     stdout_output = ''
     stderr_output = ''
     if isinstance(cmd, str):
@@ -292,7 +292,7 @@ def do_exe_cmd(cmd, enable_log=False, logfile="kernel.txt", print_output=False, 
     else:
         raise Exception("unsupported type when run do_exec_cmd", type(cmd))
     if enable_log:
-        log_file = open(logfile, "a")
+        log_file = open(logfile, "w+")
     pdebug("Run cmd:" + " ".join(cmd))
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=shell)
     while True:
@@ -542,10 +542,14 @@ JOB=%s
         os.chmod("build_in_host.sh", 0o755)
         host_cmd = "/bin/bash build_in_host.sh"
         print("run host build cmd:", host_cmd)
-        ret, output, error = do_exe_cmd(host_cmd, print_output=True)
+        ret, output, error = do_exe_cmd(host_cmd,
+                                        print_output=True,
+                                        enable_log=True,
+                                        logfile="build_kernel_in_host.log")
         if ret != 0:
             perror("host build failed!")
         print("host build ok with 0 retcode")
+
     else:
         print("build kernel in docker")
         ok, image = check_docker_image(args)
@@ -593,7 +597,11 @@ JOB=%s
                      f"{args.docker_image}  " \
                      f"/bin/kdev"
         print("run docker build cmd:", docker_cmd)
-        ret, output, error = do_exe_cmd(docker_cmd, print_output=True, shell=False)
+        ret, output, error = do_exe_cmd(docker_cmd,
+                                        print_output=True,
+                                        shell=False,
+                                        enable_log=True,
+                                        logfile="build_kernel_in_docker.log")
         if ret != 0:
             perror("docker build failed!")
         print("docker build ok with 0 retcode")
