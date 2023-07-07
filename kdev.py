@@ -5,6 +5,7 @@
  Authors:
    yifengyou <842056007@qq.com>
 """
+
 import glob
 import os
 import random
@@ -535,6 +536,19 @@ JOB=%s
         with open("build_in_docker.sh", "w") as script:
             script.write(head + body)
         os.chmod("build_in_docker.sh", 0o755)
+
+        if args.bash:
+            docker_cmd = f"\n\ndocker run -it  " \
+                         f" -v {args.workdir}/build_in_docker.sh:/bin/kdev   " \
+                         f" --hostname linux{args.masterversion}_docker  " \
+                         f" -v {args.sourcedir}:/kernel   " \
+                         f" -v {args.workdir}:/workdir   " \
+                         f" -w /workdir   " \
+                         f"{args.docker_image}  " \
+                         f"/bin/bash\n\n"
+            print("you can run command:\n", docker_cmd)
+            exit(0)
+
         docker_cmd = f"docker run -t  " \
                      f" -v {args.workdir}/build_in_docker.sh:/bin/kdev   " \
                      f" -v {args.sourcedir}:/kernel   " \
@@ -542,6 +556,7 @@ JOB=%s
                      f" -w /workdir   " \
                      f"{args.docker_image}  " \
                      f"/bin/kdev"
+
         print("run docker build cmd:", docker_cmd)
         ret, output, error = do_exe_cmd(docker_cmd,
                                         print_output=True,
@@ -966,6 +981,7 @@ def main():
     parser_kernel.add_argument("-j", "--job", default=os.cpu_count(), help="setup compile job number")
     parser_kernel.add_argument("-c", "--clean", help="clean docker when exit")
     parser_kernel.add_argument("--config", help="setup kernel build config")
+    parser_kernel.add_argument("--bash", action="store_true", help="break before build")
     parser_kernel.set_defaults(func=handle_kernel)
 
     # 添加子命令 rootfs
