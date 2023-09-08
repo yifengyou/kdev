@@ -20,7 +20,6 @@ import select
 from logging.handlers import RotatingFileHandler
 
 CURRENT_VERSION = "0.2.0"
-DEBUG = False
 
 timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H%M%S")
 log = logging.getLogger("kdev")
@@ -31,7 +30,7 @@ logfile = os.path.join("kdev.log")
 file_handler = RotatingFileHandler(
     filename=logfile,
     encoding='UTF-8',
-    maxBytes=1024000,
+    maxBytes=(1024 * 1024 * 1024),
     backupCount=10
 )
 file_handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] %(name)s: %(message)s'))
@@ -196,18 +195,18 @@ def check_privilege():
 
 
 def check_arch(args):
-    log.info(" -> Step check environment")
+    log.info("-> Step check environment")
     if args.arch:
         if args.arch == "x86_64":
-            log.info("The target arch is x86_64")
+            log.info("Target arch = [ x86_64 ]")
         elif args.arch == "arm64":
-            log.info("The target arch is arm64")
+            log.info("Target arch = [ arm64 ]")
         else:
             log.info(f"Unsupported arch {args.arch}", file=sys.stderr)
             sys.exit(1)
     else:
         args.arch = os.uname().machine
-        log.info(f"The target arch is {args.arch} (auto-detect)")
+        log.info(f"Target arch = [ {args.arch} ] (auto-detect)")
 
 
 def check_src_hugefile(args):
@@ -215,7 +214,7 @@ def check_src_hugefile(args):
     ret, _, _ = do_exe_cmd(["find", args.sourcedir, "-name", ".git", "-prune", "-type", "f", "-size", "+100M"],
                            capture_output=True, text=True)
     if ret == 0:
-        log.info("Warnning!find file large than 100MB")
+        log.warning("Warnning!find file large than 100MB")
 
 
 def check_docker_image(args):
@@ -257,11 +256,15 @@ def do_exe_cmd(cmd, enable_log=False, logfile="build-kernel.log", print_output=F
         raise Exception("unsupported type when run do_exec_cmd", type(cmd))
     if enable_log:
         log_file = open(logfile, "w+")
-    log.debug("Run cmd:" + " ".join(cmd))
+    log.info("-> Exe cmd:" + " ".join(cmd))
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=shell)
     while True:
-        # 使用select模块，监控stdout和stderr的可读性，设置超时时间为0.1秒
-        rlist, _, _ = select.select([p.stdout, p.stderr], [], [], 0.1)
+        try:
+            # 使用select模块，监控stdout和stderr的可读性，设置超时时间为0.1秒
+            rlist, _, _ = select.select([p.stdout, p.stderr], [], [], 0.1)
+        except KeyboardInterrupt:
+            log.info("* cancel by user interrupt")
+            sys.exit(1)
         # 遍历可读的文件对象
         for f in rlist:
             # 读取一行内容，解码为utf-8
@@ -270,14 +273,14 @@ def do_exe_cmd(cmd, enable_log=False, logfile="build-kernel.log", print_output=F
             if line:
                 if f == p.stdout:
                     if print_output == True:
-                        log.info("STDOUT", line.strip())
+                        log.info(f"STDOUT {line.strip()}")
                     if enable_log:
                         log_file.write(line.strip() + "\n")
                     stdout_output += line.strip() + '\n'
                     sys.stdout.flush()
                 elif f == p.stderr:
                     if print_output == True:
-                        log.info("STDERR", line.strip())
+                        log.info(f"STDERR {line.strip()}")
                     if enable_log:
                         log_file.write(line.strip() + "\n")
                     stderr_output += line.strip() + '\n'
@@ -311,7 +314,8 @@ def timer(func):
         result = func(*args, **kwargs)
         end = time.time()
         elapsed = end - start
-        log.info(f"{func.__name__} took {elapsed} seconds")
+        log.info(f"-> {func.__name__} Done! Ret=[ {result} ] Runtime=[ {format(elapsed / 60, '.3f')} min ]")
+        log.info(f"-> Repeat Build Options [{' '.join(sys.argv)}]")
         return result
 
     return wrapper
@@ -357,8 +361,9 @@ def handle_init(args):
     ret, _, stderr = do_exe_cmd(f"sudo apt-get install -y {deplist}", print_output=False)
     if ret != 0:
         log.error(f"install dependency failed! \n{stderr}")
-
-    log.info("handle init done!")
+        return 1
+    log.info(f"install {deplist} success!")
+    return 0
 
 
 @timer
@@ -371,7 +376,7 @@ def handle_check(args):
     if args.sourcedir:
         if not os.path.isdir(args.sourcedir):
             log.info(f"dir {args.sourcedir} does't exists!")
-            sys.exit(1)
+            return 1
     else:
         args.sourcedir = os.getcwd()
         log.info(f"sourcedir is {args.sourcedir}")
@@ -381,7 +386,7 @@ def handle_check(args):
         log.info(f"Check {args.sourcedir} ok! It's kernel source directory.")
     else:
         log.info(f"Check {args.sourcedir} failed! It's not a kernel source directory.")
-        sys.exit(1)
+        return 1
 
     os.chdir(args.sourcedir)
     ret, kernelversion, _ = do_exe_cmd("make kernelversion")
@@ -402,7 +407,7 @@ def handle_check(args):
 @timer
 def handle_kernel(args):
     handle_check(args)
-    log.info(" -> Step build kernel")
+    log.info("-> Step build kernel")
     os.chdir(args.workdir)
 
     if args.config:
@@ -410,6 +415,10 @@ def handle_kernel(args):
         kernel_config = args.config
     else:
         kernel_config = f"debian_{args.arch}_defconfig"
+
+    mrproper = ""
+    if args.mrproper:
+        mrproper = "make O=${WORKDIR}/build mrproper"
 
     # 生产编译脚本，因为不同环境对python版本有依赖要求，暂时不考虑规避，脚本万能
     body = """
@@ -421,7 +430,9 @@ echo "run body"
 cd ${SOURCEDIR}
 
 mkdir -p ${WORKDIR}/build || :
-make O=${WORKDIR}/build mrproper
+
+""" + mrproper + """
+
 make O=${WORKDIR}/build ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} """ + kernel_config + """
 
 if [ $? -ne 0 ]; then
@@ -471,7 +482,7 @@ fi
 
 """
 
-    if args.nodocker:
+    if args.nodocker and ('True' == args.nodocker or '1' == args.nodocker):
         log.info("build kernel in host")
 
         args.cross_compile = ''
@@ -507,20 +518,21 @@ JOB=%s
 
         os.chmod("build_in_host.sh", 0o755)
         host_cmd = "/bin/bash build_in_host.sh"
-        log.info("run host build cmd:", host_cmd)
         ret, output, error = do_exe_cmd(host_cmd,
                                         print_output=True,
                                         enable_log=True,
                                         logfile="build_kernel_in_host.log")
         if ret != 0:
             log.error("host build failed!")
-        log.info("host build ok with 0 retcode")
+            return 1
+        return 0
 
     else:
         log.info("build kernel in docker")
         ok, image = check_docker_image(args)
         if not ok:
             log.error("not useable docker image found!")
+            return 1
         log.info(f" using docker image : {image} ")
         args.docker_image = image
 
@@ -545,7 +557,7 @@ KERNEL_HEADER_INSTALL=%s
 JOB=%s
 
 """ % (
-            "/work",
+            "/workdir",
             "/kernel",
             args.arch,
             args.cross_compile,
@@ -557,26 +569,26 @@ JOB=%s
         os.chmod("build_in_docker.sh", 0o755)
 
         if args.bash:
-            docker_cmd = f"\n\ndocker run -it  " \
-                         f" -v {args.workdir}/build_in_docker.sh:/bin/kdev   " \
-                         f" --hostname linux{args.masterversion}_docker  " \
-                         f" -v {args.sourcedir}:/kernel   " \
-                         f" -v {args.workdir}:/workdir   " \
-                         f" -w /workdir   " \
+            docker_cmd = f"\n\ndocker run -it " \
+                         f" -v {args.workdir}/build_in_docker.sh:/bin/kdev " \
+                         f" --hostname linux{args.masterversion}_docker " \
+                         f" -v {args.sourcedir}:/kernel " \
+                         f" -v {args.workdir}:/workdir " \
+                         f" -w /workdir " \
                          f"{args.docker_image}  " \
                          f"/bin/bash\n\n"
-            log.info("you can run command:\n", docker_cmd)
-            exit(0)
+            log.info(f"-> Exe cmd:\n{docker_cmd}")
+            os.system(docker_cmd)
+            return 1
 
-        docker_cmd = f"docker run -t  " \
-                     f" -v {args.workdir}/build_in_docker.sh:/bin/kdev   " \
-                     f" -v {args.sourcedir}:/kernel   " \
-                     f" -v {args.workdir}:/workdir   " \
+        docker_cmd = f"docker run -t " \
+                     f" -v {args.workdir}/build_in_docker.sh:/bin/kdev " \
+                     f" -v {args.sourcedir}:/kernel " \
+                     f" -v {args.workdir}:/workdir " \
                      f" -w /workdir   " \
                      f"{args.docker_image}  " \
                      f"/bin/kdev"
 
-        log.info("run docker build cmd:", docker_cmd)
         ret, output, error = do_exe_cmd(docker_cmd,
                                         print_output=True,
                                         shell=False,
@@ -584,10 +596,8 @@ JOB=%s
                                         logfile="build_kernel_in_docker.log")
         if ret != 0:
             log.error(f"docker build failed! retcode={ret}")
-        else:
-            log.info("docker build ok with 0 retcode, exit docker.")
-
-    log.info("handle kernel done!")
+            return 1
+        return 0
 
 
 @timer
@@ -645,6 +655,7 @@ def handle_rootfs(args):
     retcode, _, _ = do_exe_cmd(f"mount -o rw /dev/{args.nbd}p1 {args.tmpdir}", print_output=True)
     if retcode != 0:
         log.error("Mount qcow2 failed!")
+        return 1
 
     # 稍作延迟
     do_exe_cmd("sync")
@@ -759,12 +770,12 @@ exit 0
     log.info(" clean ...")
     retcode, _, _ = do_exe_cmd(f"umount -l {args.tmpdir}", print_output=True)
     if retcode != 0:
-        log.info("Umount failed!")
+        log.error("Umount failed!")
     retcode, _, _ = do_exe_cmd(f"qemu-nbd --disconnect /dev/{args.nbd}", print_output=True)
     if retcode != 0:
-        log.info("Disconnect nbd failed!")
+        log.error("Disconnect nbd failed!")
     os.rmdir(args.tmpdir)
-    log.info("handle rootfs done!")
+    return 0
 
 
 @timer
@@ -776,6 +787,7 @@ def handle_run(args):
         args.qemuapp = "qemu-system-aarch64"
     else:
         log.error(f"unsupported arch {args.arch}")
+        return 1
 
     path = shutil.which(args.qemuapp)
     # 判断路径是否为None，输出结果
@@ -807,7 +819,7 @@ def handle_run(args):
     if not os.path.isfile(args.qcow2):
         log.info(" no qcow2 found!")
         log.info("Tips: run `kdev rootfs`")
-        sys.exit(1)
+        return 1
     else:
         log.info(f" found qcow2 {args.qcow2} in workdir, using it.")
 
@@ -821,11 +833,11 @@ def handle_run(args):
             log.info(f"{args.name} already running")
             return
         ret, _, _ = do_exe_cmd(f"virsh start {args.name}", print_output=True)
-        if 0 == ret:
-            log.info(f"start vm {args.name} ok, enjoy it.")
-        else:
+        if 0 != ret:
             log.error(f"start vm {args.name} failed,check it.")
-        sys.exit(0)
+            return 1
+        log.info(f"start vm {args.name} ok, enjoy it.")
+        return 0
 
     log.info(f" {args.name} does't exists! create new vm")
 
@@ -843,6 +855,7 @@ def handle_run(args):
             args.vmram = "4096"
     else:
         log.error(f"unsupported arch {args.arch}")
+        return 1
 
     qemu_cmd = f"virt-install  " \
                f"  --name {args.name} " \
@@ -857,12 +870,12 @@ def handle_run(args):
                f"  --graphics spice,listen=0.0.0.0 " \
                f"  --noautoconsole"
 
-    retcode, _, _ = do_exe_cmd(qemu_cmd, print_output=True)
-    if 0 == retcode:
-        log.info(f" start {args.name} success! enjoy it~~")
-    else:
-        log.info(f" start {args.name} failed!")
-    log.info("handle run done!")
+    retcode, _, stderr = do_exe_cmd(qemu_cmd, print_output=True)
+    if 0 != retcode:
+        log.info(f" start {args.name} failed! {stderr}")
+        return 1
+    log.info(f" start {args.name} success! enjoy it~~")
+    return 0
 
 
 @timer
@@ -971,7 +984,7 @@ def handle_image(args):
 
 
 def main():
-    global DEBUG, CURRENT_VERSION
+    global CURRENT_VERSION
     check_python_version()
 
     # 顶层解析
@@ -988,41 +1001,43 @@ def main():
     parent_parser.add_argument("-s", "--sourcedir", default=None, help="set kernel source dir")
     parent_parser.add_argument("-a", "--arch", default=None, help="set arch, default is x86_64")
     parent_parser.add_argument("-w", "--workdir", default=None, help="setup workdir")
-    parent_parser.add_argument('-l', '--log', default=None, help="log file path")
     parent_parser.add_argument('--debug', default=None, action="store_true", help="enable debug")
 
     # 添加子命令 init
-    parser_init = subparsers.add_parser('init', parents=[parent_parser])
+    parser_init = subparsers.add_parser('init', parents=[parent_parser], help="install dependency")
     parser_init.set_defaults(func=handle_init)
 
     # 添加子命令 check
-    parser_check = subparsers.add_parser('check', parents=[parent_parser])
+    parser_check = subparsers.add_parser('check', parents=[parent_parser], help="check kdev config")
     parser_check.set_defaults(func=handle_check)
 
     # 添加子命令 kernel
-    parser_kernel = subparsers.add_parser('kernel', parents=[parent_parser])
-    parser_kernel.add_argument("--nodocker", default=None, action="store_true",
+    parser_kernel = subparsers.add_parser('kernel', parents=[parent_parser], help="build kernel")
+    parser_kernel.add_argument("--nodocker", "--host", dest="nodocker", default=None, action="store_true",
                                help="build kernel without docker environment")
     parser_kernel.add_argument("-j", "--job", default=os.cpu_count(), help="setup compile job number")
     parser_kernel.add_argument("-c", "--clean", help="clean docker when exit")
     parser_kernel.add_argument("--config", help="setup kernel build config")
-    parser_kernel.add_argument("--bash", action="store_true", help="break before build")
+    parser_kernel.add_argument("--bash", dest="bash", default=None, action="store_true",
+                               help="break before build(just for docker build)")
+    parser_kernel.add_argument("--mrproper", dest="mrproper", default=None, action="store_true",
+                               help="make mrproper before build")
     parser_kernel.set_defaults(func=handle_kernel)
 
     # 添加子命令 rootfs
-    parser_rootfs = subparsers.add_parser('rootfs', parents=[parent_parser])
+    parser_rootfs = subparsers.add_parser('rootfs', parents=[parent_parser], help="build rootfs")
     parser_rootfs.add_argument('-r', '--release', default=None, action="store_true")
     parser_rootfs.set_defaults(func=handle_rootfs)
 
     # 添加子命令 run
-    parser_run = subparsers.add_parser('run', parents=[parent_parser])
+    parser_run = subparsers.add_parser('run', parents=[parent_parser], help="run kernel in qemu-kvm")
     parser_run.add_argument('-n', '--name', help="setup vm name")
     parser_run.add_argument('--vmcpu', help="setup vm vcpu number")
     parser_run.add_argument('--vmram', help="setup vm ram")
     parser_run.set_defaults(func=handle_run)
 
     # 添加子命令 clean
-    parser_clean = subparsers.add_parser('clean', parents=[parent_parser])
+    parser_clean = subparsers.add_parser('clean', parents=[parent_parser], help="clean buile environment")
     parser_clean.add_argument('--vm', default=None, action="store_true", help="clean vm (destroy/undefine)")
     parser_clean.add_argument('--qcow', default=None, action="store_true", help="delete qcow")
     parser_clean.add_argument('--docker', default=None, action="store_true", help="clean docker")
@@ -1030,7 +1045,7 @@ def main():
     parser_clean.set_defaults(func=handle_clean)
 
     # 添加子命令 image
-    parser_image = subparsers.add_parser('image')
+    parser_image = subparsers.add_parser('image', help="tackle image")
     # 添加一个互斥组，用于指定-u或-m参数，但不能同时指定
     parser_image_group = parser_image.add_mutually_exclusive_group(required=True)
     parser_image_group.add_argument('-m', '--mount', metavar='QCOW2_FILE_PATH', help="mount qcow2")
@@ -1062,7 +1077,7 @@ def main():
 
     # 参数解析后开始具备debug output能力
     if hasattr(args, "debug") and (args.debug == 'True' or args.debug == '1'):
-        DEBUG = True
+        log.setLevel(logging.DEBUG)
         log.debug("Enable debug output")
     log.debug("Parser and config:")
     for key, value in vars(args).items():
