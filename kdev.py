@@ -5,8 +5,9 @@
  Authors:
    yifengyou <842056007@qq.com>
 """
-
+import datetime
 import glob
+import logging
 import os
 import random
 import re
@@ -15,11 +16,27 @@ import subprocess
 import sys
 import argparse
 import time
-
 import select
+from logging.handlers import RotatingFileHandler
 
 CURRENT_VERSION = "0.2.0"
 DEBUG = False
+
+timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H%M%S")
+log = logging.getLogger("kdev")
+console_handler = logging.StreamHandler(sys.stderr)
+console_handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] %(name)s: %(message)s'))
+log.addHandler(console_handler)
+logfile = os.path.join("kdev.log")
+file_handler = RotatingFileHandler(
+    filename=logfile,
+    encoding='UTF-8',
+    maxBytes=1024000,
+    backupCount=10
+)
+file_handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] %(name)s: %(message)s'))
+log.addHandler(file_handler)
+log.setLevel(logging.INFO)
 
 KERNEL_BUILD_MAP = {
     "linux-2.0": {
@@ -173,24 +190,24 @@ def check_privilege():
     if os.getuid() == 0:
         return
     else:
-        print("superuser root privileges are required to run")
-        print(f"  sudo kdev {' '.join(sys.argv[1:])}")
+        log.info("superuser root privileges are required to run")
+        log.info(f"  sudo kdev {' '.join(sys.argv[1:])}")
         sys.exit(1)
 
 
 def check_arch(args):
-    print(" -> Step check environment")
+    log.info(" -> Step check environment")
     if args.arch:
         if args.arch == "x86_64":
-            print("The target arch is x86_64")
+            log.info("The target arch is x86_64")
         elif args.arch == "arm64":
-            print("The target arch is arm64")
+            log.info("The target arch is arm64")
         else:
-            print(f"Unsupported arch {args.arch}", file=sys.stderr)
+            log.info(f"Unsupported arch {args.arch}", file=sys.stderr)
             sys.exit(1)
     else:
         args.arch = os.uname().machine
-        print(f"The target arch is {args.arch} (auto-detect)")
+        log.info(f"The target arch is {args.arch} (auto-detect)")
 
 
 def check_src_hugefile(args):
@@ -198,7 +215,7 @@ def check_src_hugefile(args):
     ret, _, _ = do_exe_cmd(["find", args.sourcedir, "-name", ".git", "-prune", "-type", "f", "-size", "+100M"],
                            capture_output=True, text=True)
     if ret == 0:
-        print("Warnning!find file large than 100MB")
+        log.info("Warnning!find file large than 100MB")
 
 
 def check_docker_image(args):
@@ -240,7 +257,7 @@ def do_exe_cmd(cmd, enable_log=False, logfile="build-kernel.log", print_output=F
         raise Exception("unsupported type when run do_exec_cmd", type(cmd))
     if enable_log:
         log_file = open(logfile, "w+")
-    pdebug("Run cmd:" + " ".join(cmd))
+    log.debug("Run cmd:" + " ".join(cmd))
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=shell)
     while True:
         # 使用select模块，监控stdout和stderr的可读性，设置超时时间为0.1秒
@@ -248,22 +265,22 @@ def do_exe_cmd(cmd, enable_log=False, logfile="build-kernel.log", print_output=F
         # 遍历可读的文件对象
         for f in rlist:
             # 读取一行内容，解码为utf-8
-            line = f.readline().decode('utf-8').strip()
+            line = f.read1(1 * 1024 * 1024).decode('utf8').strip()
             # 如果有内容，判断是stdout还是stderr，并打印到屏幕，并刷新缓冲区
             if line:
                 if f == p.stdout:
                     if print_output == True:
-                        print("STDOUT", line)
+                        log.info("STDOUT", line.strip())
                     if enable_log:
-                        log_file.write(line + "\n")
-                    stdout_output += line + '\n'
+                        log_file.write(line.strip() + "\n")
+                    stdout_output += line.strip() + '\n'
                     sys.stdout.flush()
                 elif f == p.stderr:
                     if print_output == True:
-                        print("STDERR", line)
+                        log.info("STDERR", line.strip())
                     if enable_log:
-                        log_file.write(line + "\n")
-                    stderr_output += line + '\n'
+                        log_file.write(line.strip() + "\n")
+                    stderr_output += line.strip() + '\n'
                     sys.stderr.flush()
         if p.poll() is not None:
             break
@@ -283,26 +300,24 @@ def do_clean_nbd():
                 nbd_name = os.path.basename(full_path)
                 retcode, _, _ = do_exe_cmd(f"qemu-nbd -d /dev/{nbd_name}", print_output=True)
                 if 0 != retcode:
-                    print(f"umount {nbd_name} failed! retcode={retcode}")
+                    log.info(f"umount {nbd_name} failed! retcode={retcode}")
                 else:
-                    print(f"umount {nbd_name} done!")
+                    log.info(f"umount {nbd_name} done!")
 
 
-def perror(str):
-    print("Error: ", str)
-    sys.exit(1)
+def timer(func):
+    def wrapper(*args, **kwargs):
+        start = time.time()
+        result = func(*args, **kwargs)
+        end = time.time()
+        elapsed = end - start
+        log.info(f"{func.__name__} took {elapsed} seconds")
+        return result
+
+    return wrapper
 
 
-def pwarn(str):
-    print("Warn: ", str)
-
-
-def pdebug(params):
-    global DEBUG
-    if DEBUG:
-        print("DEBUG:", params)
-
-
+@timer
 def handle_init(args):
     check_arch(args)
     deplist = "git  " \
@@ -337,57 +352,61 @@ def handle_init(args):
               "sysstat " \
               "python3-pip " \
               "curl " \
+              "file " \
               "docker-ce"
-    ret, _, stderr = do_exe_cmd(f"sudo apt-get install -y {deplist}", print_output=True)
+    ret, _, stderr = do_exe_cmd(f"sudo apt-get install -y {deplist}", print_output=False)
     if ret != 0:
-        perror(f"install dependency failed! \n{stderr}")
-    print("handle init done!")
+        log.error(f"install dependency failed! \n{stderr}")
+
+    log.info("handle init done!")
 
 
+@timer
 def handle_check(args):
     check_arch(args)
     if not args.workdir:
         args.workdir = os.getcwd()
-    print(f"workdir : {args.workdir}")
+    log.info(f"workdir : {args.workdir}")
 
     if args.sourcedir:
         if not os.path.isdir(args.sourcedir):
-            print(f"dir {args.sourcedir} does't exists!")
+            log.info(f"dir {args.sourcedir} does't exists!")
             sys.exit(1)
     else:
         args.sourcedir = os.getcwd()
-        print(f"sourcedir is {args.sourcedir}")
+        log.info(f"sourcedir is {args.sourcedir}")
 
     if os.path.isfile(os.path.join(args.sourcedir, "Makefile")) and \
             os.path.isfile(os.path.join(args.sourcedir, "Kbuild")):
-        print(f"Check {args.sourcedir} ok! It's kernel source directory.")
+        log.info(f"Check {args.sourcedir} ok! It's kernel source directory.")
     else:
-        print(f"Check {args.sourcedir} failed! It's not a kernel source directory.")
+        log.info(f"Check {args.sourcedir} failed! It's not a kernel source directory.")
         sys.exit(1)
 
     os.chdir(args.sourcedir)
     ret, kernelversion, _ = do_exe_cmd("make kernelversion")
     if ret != 0:
-        perror(f"Unsupported {kernelversion}")
+        log.error(f"Unsupported {kernelversion}")
 
     args.kernelversion = kernelversion.strip()
-    print(f"kernel version : {args.kernelversion}")
+    log.info(f"kernel version : {args.kernelversion}")
 
     args.masterversion = args.kernelversion[0]
     if args.masterversion not in [str(i) for i in range(1, 7)]:
-        perror("unsupoorted masterversion", args.masterversion)
-    print(f"master version : {args.masterversion}")
+        log.error("unsupoorted masterversion", args.masterversion)
+    log.info(f"master version : {args.masterversion}")
 
-    print("handle check done!")
+    log.info("handle check done!")
 
 
+@timer
 def handle_kernel(args):
     handle_check(args)
-    print(" -> Step build kernel")
+    log.info(" -> Step build kernel")
     os.chdir(args.workdir)
 
     if args.config:
-        print(f" set kenrel config from cmdline {args.config}")
+        log.info(f" set kenrel config from cmdline {args.config}")
         kernel_config = args.config
     else:
         kernel_config = f"debian_{args.arch}_defconfig"
@@ -453,7 +472,7 @@ fi
 """
 
     if args.nodocker:
-        print("build kernel in host")
+        log.info("build kernel in host")
 
         args.cross_compile = ''
         if os.uname().machine != args.arch:
@@ -488,21 +507,21 @@ JOB=%s
 
         os.chmod("build_in_host.sh", 0o755)
         host_cmd = "/bin/bash build_in_host.sh"
-        print("run host build cmd:", host_cmd)
+        log.info("run host build cmd:", host_cmd)
         ret, output, error = do_exe_cmd(host_cmd,
                                         print_output=True,
                                         enable_log=True,
                                         logfile="build_kernel_in_host.log")
         if ret != 0:
-            perror("host build failed!")
-        print("host build ok with 0 retcode")
+            log.error("host build failed!")
+        log.info("host build ok with 0 retcode")
 
     else:
-        print("build kernel in docker")
+        log.info("build kernel in docker")
         ok, image = check_docker_image(args)
         if not ok:
-            perror("not useable docker image found!")
-        print(f" using docker image : {image} ")
+            log.error("not useable docker image found!")
+        log.info(f" using docker image : {image} ")
         args.docker_image = image
 
         args.cross_compile = ''
@@ -546,7 +565,7 @@ JOB=%s
                          f" -w /workdir   " \
                          f"{args.docker_image}  " \
                          f"/bin/bash\n\n"
-            print("you can run command:\n", docker_cmd)
+            log.info("you can run command:\n", docker_cmd)
             exit(0)
 
         docker_cmd = f"docker run -t  " \
@@ -557,53 +576,54 @@ JOB=%s
                      f"{args.docker_image}  " \
                      f"/bin/kdev"
 
-        print("run docker build cmd:", docker_cmd)
+        log.info("run docker build cmd:", docker_cmd)
         ret, output, error = do_exe_cmd(docker_cmd,
                                         print_output=True,
                                         shell=False,
                                         enable_log=True,
                                         logfile="build_kernel_in_docker.log")
         if ret != 0:
-            perror(f"docker build failed! retcode={ret}")
+            log.error(f"docker build failed! retcode={ret}")
         else:
-            print("docker build ok with 0 retcode, exit docker.")
+            log.info("docker build ok with 0 retcode, exit docker.")
 
-    print("handle kernel done!")
+    log.info("handle kernel done!")
 
 
+@timer
 def handle_rootfs(args):
     handle_check(args)
     ok, image_url = check_qcow_image(args)
     if not ok:
-        perror(" no available image found!")
-    print(f" using qcows url {image_url}")
+        log.error(" no available image found!")
+    log.info(f" using qcows url {image_url}")
 
     args.qcow2_url = image_url
     args.qcow2 = os.path.basename(image_url)
-    print(f" qcow2 name : {args.qcow2}")
+    log.info(f" qcow2 name : {args.qcow2}")
     os.chdir(args.workdir)
     if not os.path.isfile(args.qcow2):
-        print(f" start to download {args.qcow2_url}")
+        log.info(f" start to download {args.qcow2_url}")
         retcode, _, _ = do_exe_cmd(["wget", "-c", args.qcow2_url],
                                    print_output=True,
                                    enable_log=True,
                                    logfile="kdev-download.log"
                                    )
         if retcode != 0:
-            perror("Download qcow2 failed!")
+            log.error("Download qcow2 failed!")
     else:
-        print(f" already exists {args.qcow2}, reusing it.")
+        log.info(f" already exists {args.qcow2}, reusing it.")
         do_exe_cmd(["qemu-nbd", "--disconnect", args.qcow2], print_output=True)
         do_exe_cmd(["modprobe", "nbd", "max_part=19"], print_output=True)
 
     # 如果参数或配置指定了nbd，则使用，否则挨个测试
     if hasattr(args, 'nbd') and args.nbd is not None:
         do_exe_cmd(f"qemu-nbd --disconnect {os.path.join('/dev/', args.nbd)}", print_output=True)
-        pdebug(f"try umount nbd /dev/{args.nbd}")
+        log.debug(f"try umount nbd /dev/{args.nbd}")
         retcode, _, _ = do_exe_cmd(["qemu-nbd", "--connect", os.path.join("/dev/", args.nbd), args.qcow2],
                                    print_output=True)
         if retcode != 0:
-            perror("Connect nbd failed!")
+            log.error("Connect nbd failed!")
     else:
         for nbd in ["nbd" + str(i) for i in range(9)]:
             retcode, output, error = do_exe_cmd(
@@ -614,7 +634,7 @@ def handle_rootfs(args):
                 args.nbd = nbd
                 break
         if not hasattr(args, 'nbd'):
-            perror("No available nbd found!")
+            log.error("No available nbd found!")
 
     # 稍作延迟
     do_exe_cmd("sync")
@@ -624,7 +644,7 @@ def handle_rootfs(args):
     os.makedirs(args.tmpdir, exist_ok=True)
     retcode, _, _ = do_exe_cmd(f"mount -o rw /dev/{args.nbd}p1 {args.tmpdir}", print_output=True)
     if retcode != 0:
-        perror("Mount qcow2 failed!")
+        log.error("Mount qcow2 failed!")
 
     # 稍作延迟
     do_exe_cmd("sync")
@@ -634,11 +654,13 @@ def handle_rootfs(args):
     qcow_bootdir = os.path.join(args.tmpdir, "boot")
     if os.path.isdir(copy_bootdir) and qcow_bootdir != "/boot":
         copy_cmd = ["/usr/bin/cp", "-a"] + glob.glob(f"{copy_bootdir}/*") + [f"{qcow_bootdir}/"]
+        log.info(" run cmd: %s" % ' '.join(copy_cmd))
         retcode, _, error = do_exe_cmd(copy_cmd)
+
         if retcode == 0:
-            print(f" copy vmlinuz/config ok! {qcow_bootdir}")
+            log.info(f" copy vmlinuz/config ok! {qcow_bootdir}")
         else:
-            perror(f" copy vmlinuz/config failed!! {qcow_bootdir} {error}")
+            log.error(f" copy vmlinuz/config failed!! {qcow_bootdir} {error}")
 
     # 稍作延迟
     do_exe_cmd("sync")
@@ -650,9 +672,9 @@ def handle_rootfs(args):
         copy_cmd = ["/usr/bin/cp", "-a"] + glob.glob(f"{copy_libdir}/*") + [f"{qcow_libdir}/"]
         retcode, _, _ = do_exe_cmd(copy_cmd)
         if retcode == 0:
-            print(f" copy modules(stripped) ok! {qcow_libdir}")
+            log.info(f" copy modules(stripped) ok! {qcow_libdir}")
         else:
-            perror(f" copy modules(stripped) failed!! {qcow_libdir}")
+            log.error(f" copy modules(stripped) failed!! {qcow_libdir}")
 
     # 稍作延迟
     do_exe_cmd("sync")
@@ -664,9 +686,9 @@ def handle_rootfs(args):
         copy_cmd = ["/usr/bin/cp", "-a"] + glob.glob(f"{copy_headerdir}/*") + [f"{qcow_headerdir}/"]
         retcode, _, _ = do_exe_cmd(copy_cmd)
         if retcode == 0:
-            print(f" copy headers ok! {qcow_headerdir}")
+            log.info(f" copy headers ok! {qcow_headerdir}")
         else:
-            perror(f" copy headers failed!! {qcow_headerdir}")
+            log.error(f" copy headers failed!! {qcow_headerdir}")
 
     # 稍作延迟
     do_exe_cmd("sync")
@@ -676,7 +698,7 @@ def handle_rootfs(args):
     qcow_hostname = os.path.join(args.tmpdir, "etc/hostname")
     with open(qcow_hostname, "w") as f:
         f.write(args.hostname.strip())
-    print(f" set hostname : {args.hostname}")
+    log.info(f" set hostname : {args.hostname}")
 
     # 检查cloud-init变关闭
     qcow_cloudinitdir = os.path.join(args.tmpdir, "etc/cloud")
@@ -684,7 +706,7 @@ def handle_rootfs(args):
         with open(os.path.join(qcow_cloudinitdir, "cloud-init.disabled"), "w") as f:
             f.write("")
     if os.path.isfile(os.path.join(args.tmpdir, "usr/bin/cloud-*")):
-        pdebug("remove /usr/bin/cloud-*")
+        log.debug("remove /usr/bin/cloud-*")
         os.remove(os.path.join(args.tmpdir, "usr/bin/cloud-*"))
 
     TMP_USRBIN = os.path.join(args.tmpdir, "usr/bin/")
@@ -692,7 +714,7 @@ def handle_rootfs(args):
         if item.startswith("cloud-"):
             new_item = "bak-" + item
             os.rename(os.path.join(TMP_USRBIN, item), os.path.join(TMP_USRBIN, new_item))
-            print(f"Renamed {item} to {new_item}")
+            log.info(f"Renamed {item} to {new_item}")
 
     # 写入初始化脚本，开机第一次执行
     with open(os.path.join(args.tmpdir, "etc/firstboot"), "w") as f:
@@ -733,18 +755,19 @@ exit 0
 
 """)
     os.chmod(os.path.join(args.tmpdir, "etc/rc.local"), 0o755)
-    print(" set rc.local done!")
-    print(" clean ...")
+    log.info(" set rc.local done!")
+    log.info(" clean ...")
     retcode, _, _ = do_exe_cmd(f"umount -l {args.tmpdir}", print_output=True)
     if retcode != 0:
-        print("Umount failed!")
+        log.info("Umount failed!")
     retcode, _, _ = do_exe_cmd(f"qemu-nbd --disconnect /dev/{args.nbd}", print_output=True)
     if retcode != 0:
-        print("Disconnect nbd failed!")
+        log.info("Disconnect nbd failed!")
     os.rmdir(args.tmpdir)
-    print("handle rootfs done!")
+    log.info("handle rootfs done!")
 
 
+@timer
 def handle_run(args):
     handle_check(args)
     if args.arch == "x86_64":
@@ -752,59 +775,59 @@ def handle_run(args):
     elif args.arch == "arm64":
         args.qemuapp = "qemu-system-aarch64"
     else:
-        perror(f"unsupported arch {args.arch}")
+        log.error(f"unsupported arch {args.arch}")
 
     path = shutil.which(args.qemuapp)
     # 判断路径是否为None，输出结果
     if path is None:
-        print(f"{args.qemuapp} is not found in the system.")
-        print("")
+        log.info(f"{args.qemuapp} is not found in the system.")
+        log.info("")
     else:
-        print(f"{args.qemuapp} is found in the system at {path}.")
+        log.info(f"{args.qemuapp} is found in the system at {path}.")
 
     path = shutil.which("virsh")
     # 判断路径是否为None，输出结果
     if path is None:
-        print(f"virsh is not found in the system.")
-        print("")
+        log.info(f"virsh is not found in the system.")
+        log.info("")
     else:
-        print(f"virsh is found in the system at {path}.")
+        log.info(f"virsh is found in the system at {path}.")
 
     # 检查是否有可用的QCOW2文件
     ok, image_url = check_qcow_image(args)
     if not ok:
-        perror(" no available image found!")
-    print(f" using qcows url {image_url}")
+        log.error(" no available image found!")
+    log.info(f" using qcows url {image_url}")
 
     args.qcow2_url = image_url
     args.qcow2 = os.path.basename(image_url)
-    print(f" qcow2 name : {args.qcow2}")
+    log.info(f" qcow2 name : {args.qcow2}")
 
     os.chdir(args.workdir)
     if not os.path.isfile(args.qcow2):
-        print(" no qcow2 found!")
-        print("Tips: run `kdev rootfs`")
+        log.info(" no qcow2 found!")
+        log.info("Tips: run `kdev rootfs`")
         sys.exit(1)
     else:
-        print(f" found qcow2 {args.qcow2} in workdir, using it.")
+        log.info(f" found qcow2 {args.qcow2} in workdir, using it.")
 
     if not hasattr(args, "name") or args.name is None:
         args.name = f"linux-{args.masterversion}-{args.arch}"
 
-    print(f" try startup {args.name}")
+    log.info(f" try startup {args.name}")
     retcode, args.vmstat, _ = do_exe_cmd(f"virsh domstate {args.name}", print_output=False)
     if 0 == retcode:
         if args.vmstat.strip() == "running":
-            print(f"{args.name} already running")
+            log.info(f"{args.name} already running")
             return
         ret, _, _ = do_exe_cmd(f"virsh start {args.name}", print_output=True)
         if 0 == ret:
-            print(f"start vm {args.name} ok, enjoy it.")
+            log.info(f"start vm {args.name} ok, enjoy it.")
         else:
-            perror(f"start vm {args.name} failed,check it.")
+            log.error(f"start vm {args.name} failed,check it.")
         sys.exit(0)
 
-    print(f" {args.name} does't exists! create new vm")
+    log.info(f" {args.name} does't exists! create new vm")
 
     if args.arch == "x86_64":
         args.vmarch = "x86_64"
@@ -819,7 +842,7 @@ def handle_run(args):
         if not args.vmram:
             args.vmram = "4096"
     else:
-        perror(f"unsupported arch {args.arch}")
+        log.error(f"unsupported arch {args.arch}")
 
     qemu_cmd = f"virt-install  " \
                f"  --name {args.name} " \
@@ -836,12 +859,13 @@ def handle_run(args):
 
     retcode, _, _ = do_exe_cmd(qemu_cmd, print_output=True)
     if 0 == retcode:
-        print(f" start {args.name} success! enjoy it~~")
+        log.info(f" start {args.name} success! enjoy it~~")
     else:
-        print(f" start {args.name} failed!")
-    print("handle run done!")
+        log.info(f" start {args.name} failed!")
+    log.info("handle run done!")
 
 
+@timer
 def handle_clean(args):
     handle_check(args)
     # 清理虚拟机配置，保留qcow2
@@ -852,35 +876,36 @@ def handle_clean(args):
         if 0 == retcode:
             retcode, _, _ = do_exe_cmd(f"virsh destroy {args.name}", print_output=True)
             if 0 == retcode:
-                print(f" destroy vm {args.name} ok")
+                log.info(f" destroy vm {args.name} ok")
             else:
-                print(f" destroy vm {args.name} failed!")
+                log.info(f" destroy vm {args.name} failed!")
             retcode, _, _ = do_exe_cmd(f"virsh undefine {args.name}", print_output=True)
             if 0 == retcode:
-                print(f" undefine vm {args.name} ok")
+                log.info(f" undefine vm {args.name} ok")
             else:
-                print(f" undefine vm {args.name} failed!")
+                log.info(f" undefine vm {args.name} failed!")
         else:
-            print(f"no vm {args.name} found! skip clean vm.")
+            log.info(f"no vm {args.name} found! skip clean vm.")
     # 清理qcow2，保留虚机配置
     if args.qcow or args.all:
         os.chdir(args.workdir)
         for filename in os.listdir('.'):
             if filename.endswith(".qcow2"):
-                pdebug(f" Find qcow2 {filename}")
+                log.debug(f" Find qcow2 {filename}")
                 filepath = os.path.join(args.workdir, filename)
                 os.remove(filepath)
-                print(f"Deleted {filepath}")
+                log.info(f"Deleted {filepath}")
     if args.docker or args.all:
         retcode, _, _ = do_exe_cmd(f"docker container prune -f", print_output=True)
         if 0 == retcode:
-            print("clean docker container done!")
+            log.info("clean docker container done!")
         else:
-            print(f"clean docker container failed! retcode={retcode}")
+            log.info(f"clean docker container failed! retcode={retcode}")
 
-    print("handle clean done!")
+    log.info("handle clean done!")
 
 
+@timer
 def handle_image(args):
     check_privilege()
 
@@ -897,7 +922,7 @@ def handle_image(args):
         return ''
 
     if args.mount:
-        print("mount file :", args.mount)
+        log.info("mount file :", args.mount)
         # 检查文件是否存在
         if os.path.isfile(args.mount):
             # 获取文件的绝对路径
@@ -905,26 +930,26 @@ def handle_image(args):
 
             nbd = find_free_nbd()
             if '' == nbd:
-                perror("no available /dev/nbd found!")
-            print(f"try mount {file} to /dev/{nbd}")
+                log.error("no available /dev/nbd found!")
+            log.info(f"try mount {file} to /dev/{nbd}")
             ok, _, _ = do_exe_cmd(f"qemu-nbd -c /dev/{nbd} {file}", print_output=True)
             if 0 != ok:
-                perror(f"qemu-nbd bind {file} failed! retcode={ok}")
+                log.error(f"qemu-nbd bind {file} failed! retcode={ok}")
             else:
-                print(f"qemu-nbd bind {file} done!")
+                log.info(f"qemu-nbd bind {file} done!")
             mntdir = file + '-mnt'
             os.makedirs(mntdir, exist_ok=True)
             time.sleep(3)
             ok, _, _ = do_exe_cmd(f"mount /dev/{nbd}p1 {mntdir}", print_output=True)
             if 0 != ok:
-                perror(f"mount {file} failed! retcode={ok}")
+                log.error(f"mount {file} failed! retcode={ok}")
             else:
-                print(f"mount {args.mount} to {mntdir} done!")
+                log.info(f"mount {args.mount} to {mntdir} done!")
         else:
             # 打印错误信息
-            print(f"File {args.umount} does not exist")
+            log.info(f"File {args.umount} does not exist")
     elif args.umount:
-        print("umount file :", args.umount)
+        log.info("umount file :", args.umount)
         # 检查文件是否存在
         if os.path.isfile(args.umount):
             # 获取文件的绝对路径
@@ -934,15 +959,15 @@ def handle_image(args):
             if os.path.isdir(mnt_dir):
                 retcode, _, _ = do_exe_cmd(f"umount {mnt_dir}")
                 time.sleep(1)
-                print(f"try umount {file} ret={retcode}")
+                log.info(f"try umount {file} ret={retcode}")
                 if len(os.listdir(mnt_dir)) != 0:
-                    perror(f"{mnt_dir} is not empty! umount failed! keep mount dir empty!")
-                print(f"{mnt_dir} is already empty!")
+                    log.error(f"{mnt_dir} is not empty! umount failed! keep mount dir empty!")
+                log.info(f"{mnt_dir} is already empty!")
             # disconnect nbd
             do_clean_nbd()
         else:
             # 打印错误信息
-            print(f"File {args.umount} does not exist")
+            log.info(f"File {args.umount} does not exist")
 
 
 def main():
@@ -964,7 +989,7 @@ def main():
     parent_parser.add_argument("-a", "--arch", default=None, help="set arch, default is x86_64")
     parent_parser.add_argument("-w", "--workdir", default=None, help="setup workdir")
     parent_parser.add_argument('-l', '--log', default=None, help="log file path")
-    parent_parser.add_argument('-d', '--debug', default=None, action="store_true", help="enable debug output")
+    parent_parser.add_argument('--debug', default=None, action="store_true", help="enable debug")
 
     # 添加子命令 init
     parser_init = subparsers.add_parser('init', parents=[parent_parser])
@@ -1018,7 +1043,7 @@ def main():
     # 解析命令后解析配置文件，合并两者
     for filename in os.listdir('.'):
         if filename.endswith(".kdev"):
-            pdebug("load config file %s" % filename)
+            log.debug("load config file %s" % filename)
             with open(filename, 'r', encoding='utf8') as f:
                 for line in f:
                     line = line.strip()
@@ -1036,15 +1061,15 @@ def main():
                             setattr(args, key, value)
 
     # 参数解析后开始具备debug output能力
-    if hasattr(args, "debug") and args.debug is not None:
+    if hasattr(args, "debug") and (args.debug == 'True' or args.debug == '1'):
         DEBUG = True
-        pdebug("Enable debug output")
-    pdebug("Parser and config:")
+        log.debug("Enable debug output")
+    log.debug("Parser and config:")
     for key, value in vars(args).items():
-        pdebug("  %s = %s" % (key, value))
+        log.debug("  %s = %s" % (key, value))
 
     if args.version:
-        print("kdev %s" % CURRENT_VERSION)
+        log.info("kdev %s" % CURRENT_VERSION)
         sys.exit(0)
     elif args.help or len(sys.argv) < 2:
         parser.print_help()

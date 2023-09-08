@@ -5,3 +5,4 @@ backup
 tmp
 output
 log
+*.log

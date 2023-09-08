@@ -6,6 +6,47 @@ First, please watch or star this repo, I'll be more happy if you follow me.
 Bug report, questions and discussion are welcome, you can post an issue or pull a request.
 ```
 
+## 项目描述
+
+本仓库提供kdev工具，用于快速构建内核测试环境（QEMU/KVM）。
+
+
+## 使用方式
+
+假设，内核源代码目录位于```/data/linux-4.git```目录
+
+```shell
+kdev init
+```
+
+init 子命令用于安装内核构建依赖
+
+```shell
+kdev kernel
+```
+
+kernel 子命令用于编译内核
+
+```shell
+kdev rootfs
+```
+
+rootfs 子命令用于构建根文件系统
+
+
+```shell
+kdev run
+```
+
+run 子命令运行虚拟机
+
+```shell
+kdev clean
+```
+
+clean 子命令用于清空编译
+
+
 
 ## Debian Distribution Release
 
