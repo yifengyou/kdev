@@ -8,18 +8,33 @@ Bug report, questions and discussion are welcome, you can post an issue or pull 
 
 ## 项目描述
 
-本仓库提供kdev工具，用于快速构建内核测试环境（QEMU/KVM）。
+本仓库提供kdev工具，用于快速构建内核编译环境、测试环境（QEMU/KVM）。
 
 
 ## 使用方式
 
-假设，内核源代码目录位于```/data/linux-4.git```目录
+假设，内核源代码目录位于```/data/linux-4.git```目录，
+工作目录位于```/data/linux-4.git-build-x86_64```，
+配置文件```linux4.kdev```位于工作目录中。
+
+```shell
+sourcedir = /kernel/linux-4.git
+arch = x86_64
+debug = True
+nodocker = True
+````
+
+```shell
+cd /data/linux-4.git-build-x86_64
+```
+
+切换到工作目录，执行如下命令：
 
 ```shell
 kdev init
 ```
 
-init 子命令用于安装内核构建依赖
+init 子命令用于安装内核构建依赖（执行apt-get install命令）
 
 ```shell
 kdev kernel
@@ -45,6 +60,57 @@ kdev clean
 ```
 
 clean 子命令用于清空编译
+
+
+
+
+## 子命令详解
+
+### kernel子命令
+
+```shell
+optional arguments:
+  -h, --help            show this help message and exit
+  -V, --verbose         show verbose output
+  -s SOURCEDIR, --sourcedir SOURCEDIR
+                        set kernel source dir
+  -a ARCH, --arch ARCH  set arch, default is x86_64
+  -w WORKDIR, --workdir WORKDIR
+                        setup workdir
+  --debug               enable debug
+  --nodocker, --host    build kernel without docker environment
+  -j JOB, --job JOB     setup compile job number
+  -c CLEAN, --clean CLEAN
+                        clean docker when exit
+  --config CONFIG       setup kernel build config
+  --bash                break before build(just for docker build)
+  --mrproper            make mrproper before build
+```
+
+* --mrproper 将清空工作目录进行完整编译，默认不清空，支持二次编译。经测试完整编译耗时6.36min，二次编译耗时0.63min
+* --nodocker 不使用docker编译，使用host编译环境
+* --bash 登陆 docker bash 终端
+* --config 指定config配置
+
+
+### rootfs子命令
+
+```shell
+usage: kdev rootfs [-h] [-V] [-s SOURCEDIR] [-a ARCH] [-w WORKDIR] [--debug] [-r]
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -V, --verbose         show verbose output
+  -s SOURCEDIR, --sourcedir SOURCEDIR
+                        set kernel source dir
+  -a ARCH, --arch ARCH  set arch, default is x86_64
+  -w WORKDIR, --workdir WORKDIR
+                        setup workdir
+  --debug               enable debug
+  -r, --release
+```
+
+
 
 
 

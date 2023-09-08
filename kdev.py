@@ -275,15 +275,15 @@ def do_exe_cmd(cmd, enable_log=False, logfile="build-kernel.log", print_output=F
                     if print_output == True:
                         log.info(f"STDOUT {line.strip()}")
                     if enable_log:
-                        log_file.write(line.strip() + "\n")
-                    stdout_output += line.strip() + '\n'
+                        log_file.write(line.strip())
+                    stdout_output += line.strip()
                     sys.stdout.flush()
                 elif f == p.stderr:
                     if print_output == True:
                         log.info(f"STDERR {line.strip()}")
                     if enable_log:
-                        log_file.write(line.strip() + "\n")
-                    stderr_output += line.strip() + '\n'
+                        log_file.write(line.strip())
+                    stderr_output += line.strip()
                     sys.stderr.flush()
         if p.poll() is not None:
             break
@@ -366,7 +366,6 @@ def handle_init(args):
     return 0
 
 
-@timer
 def handle_check(args):
     check_arch(args)
     if not args.workdir:
@@ -401,7 +400,7 @@ def handle_check(args):
         log.error("unsupoorted masterversion", args.masterversion)
     log.info(f"master version : {args.masterversion}")
 
-    log.info("handle check done!")
+    return 0
 
 
 @timer
@@ -600,6 +599,16 @@ JOB=%s
         return 0
 
 
+def is_file_locked(file_path):
+    locked = False
+    try:
+        with open(file_path, 'rb') as fp:
+            pass
+    except:
+        locked = True
+    return locked
+
+
 @timer
 def handle_rootfs(args):
     handle_check(args)
@@ -625,6 +634,11 @@ def handle_rootfs(args):
         log.info(f" already exists {args.qcow2}, reusing it.")
         do_exe_cmd(["qemu-nbd", "--disconnect", args.qcow2], print_output=True)
         do_exe_cmd(["modprobe", "nbd", "max_part=19"], print_output=True)
+
+    retcode, stdout, stderr = do_exe_cmd(f"qemu-img check {args.qcow2}", print_output=False)
+    if retcode != 0:
+        log.error(f"check qcow2 failed!\n{stderr.strip()}")
+        return 1
 
     # 如果参数或配置指定了nbd，则使用，否则挨个测试
     if hasattr(args, 'nbd') and args.nbd is not None:
@@ -875,6 +889,8 @@ def handle_run(args):
         log.info(f" start {args.name} failed! {stderr}")
         return 1
     log.info(f" start {args.name} success! enjoy it~~")
+
+    os.system(f"virsh console {args.name}")
     return 0
 
 
