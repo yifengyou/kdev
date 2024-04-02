@@ -621,6 +621,7 @@ def handle_rootfs(args):
     args.qcow2 = os.path.basename(image_url)
     log.info(f" qcow2 name : {args.qcow2}")
     os.chdir(args.workdir)
+
     if not os.path.isfile(args.qcow2):
         log.info(f" start to download {args.qcow2_url}")
         retcode, _, _ = do_exe_cmd(["wget", "-c", args.qcow2_url],
