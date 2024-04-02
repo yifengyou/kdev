@@ -40,7 +40,7 @@ log.setLevel(logging.INFO)
 KERNEL_BUILD_MAP = {
     "linux-2.0": {
         "docker": [
-            "dockerproxy.com/yifengyou/linux2.0:latest"
+            "yifengyou/linux2.0:latest"
         ],
         "image":
             {
@@ -64,7 +64,7 @@ KERNEL_BUILD_MAP = {
     },
     "linux-3.0": {
         "docker": [
-            "dockerproxy.com/yifengyou/linux3.0:latest"
+            "yifengyou/linux3.0:latest"
         ],
         "image":
             {
@@ -92,7 +92,7 @@ KERNEL_BUILD_MAP = {
     },
     "linux-4.0": {
         "docker": [
-            "dockerproxy.com/yifengyou/linux4.0:latest"
+            "yifengyou/linux4.0:latest"
         ],
         "image":
             {
@@ -120,7 +120,7 @@ KERNEL_BUILD_MAP = {
     },
     "linux-5.0": {
         "docker": [
-            "dockerproxy.com/yifengyou/linux5.0:latest"
+            "yifengyou/linux5.0:latest"
         ],
         "image":
             {
@@ -148,7 +148,7 @@ KERNEL_BUILD_MAP = {
     },
     "linux-6.0": {
         "docker": [
-            "dockerproxy.com/yifengyou/linux6.0:latest"
+            "yifengyou/linux6.0:latest"
         ],
         "image":
             {
@@ -1027,6 +1027,19 @@ def main():
     # 添加子命令 check
     parser_check = subparsers.add_parser('check', parents=[parent_parser], help="check kdev config")
     parser_check.set_defaults(func=handle_check)
+
+    # 添加子命令 bash
+    parser_bash = subparsers.add_parser('bash', parents=[parent_parser], help="build kernel")
+    parser_bash.add_argument("--nodocker", "--host", dest="nodocker", default=None, action="store_true",
+                               help="build kernel without docker environment")
+    parser_bash.add_argument("-j", "--job", default=os.cpu_count(), help="setup compile job number")
+    parser_bash.add_argument("-c", "--clean", help="clean docker when exit")
+    parser_bash.add_argument("--config", help="setup kernel build config")
+    parser_bash.add_argument("--bash", dest="bash", default=True, action="store_true",
+                               help="break before build(just for docker build)")
+    parser_bash.add_argument("--mrproper", dest="mrproper", default=None, action="store_true",
+                               help="make mrproper before build")
+    parser_bash.set_defaults(func=handle_kernel)
 
     # 添加子命令 kernel
     parser_kernel = subparsers.add_parser('kernel', parents=[parent_parser], help="build kernel")
