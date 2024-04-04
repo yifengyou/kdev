@@ -6,3 +6,5 @@ tmp
 output
 log
 *.log
+*.qcow2
+*.iso
