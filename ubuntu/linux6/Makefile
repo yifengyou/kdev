@@ -1,15 +1,41 @@
-default:
+.PHONY: default help build run pull push vm all
+
+TIMESTAMP=$(shell date +"%Y%m%d")
+
+default: help
+
+help:
 	@echo "build            build docker image"
 	@echo "pull             pull docker image"
 	@echo "push             push docker image"
+	@echo "run              just run up for test"
+	@echo "vm               build qcow2 image"
+	@echo "all              build docker and build vm"
+	@echo TIMESTAMP: $(TIMESTAMP)
 
 build:
-	docker build . -t yifengyou/linux6.0:latest
-	docker tag yifengyou/linux6.0:latest dockerproxy.com/yifengyou/linux6.0:latest 
+	cd docker && docker build -t yifengyou/linux6.0:latest  .
+	docker tag yifengyou/linux6.0:latest yifengyou/linux6.0:$(TIMESTAMP)
+	docker tag yifengyou/linux6.0:latest yifengyou/linux6.0-ubuntu:$(TIMESTAMP)
+	docker tag yifengyou/linux6.0:latest yifengyou/linux6.0-ubuntu24.04:$(TIMESTAMP)
+	@echo "Build docker done!"
+
+run:
+	docker run -it --rm yifengyou/linux6.0:latest /bin/bash
 
 pull:
-	docker pull dockerproxy.com/yifengyou/linux6.0:latest
-	docker tag dockerproxy.com/yifengyou/linux6.0:latest yifengyou/linux6.0:latest
+	docker pull yifengyou/linux6.0:latest
 
 push:
 	docker push yifengyou/linux6.0:latest
+	docker push yifengyou/linux6.0-ubuntu:$(TIMESTAMP)
+	docker push yifengyou/linux6.0-ubuntu24.04:$(TIMESTAMP)
+	docker push yifengyou/linux6.0:$(TIMESTAMP)
+	@echo "Push docker done!"
+
+vm:
+	cd vm && ./build-vm.sh
+	@echo "Build vm done!"
+
+all: build push vm
+	@echo "All done!All ok!"

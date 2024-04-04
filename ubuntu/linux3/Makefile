@@ -10,6 +10,7 @@ help:
 	@echo "push             push docker image"
 	@echo "run              just run up for test"
 	@echo "vm               build qcow2 image"
+	@echo "all              build docker and build vm"
 	@echo TIMESTAMP: $(TIMESTAMP)
 
 build:

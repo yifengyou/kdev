@@ -1,31 +1,11 @@
-FROM debian:bullseye
+FROM ubuntu:22.04 as base
 
 COPY bashrc /root/.bashrc
-COPY sources.list /etc/apt/sources.list
-RUN apt-get update \
-	&& apt-get install -y systemd systemd-sysv \
-	&& apt-get install -y \
-		vim \
-		gcc \
-		kmod \
-		dwarves \
-		cpio \
-		build-essential \
-		make \
-		libncurses-dev \
-		libmpc-dev \
-		apt-file \
-		xfsprogs \
-		file \
-		rsync \
-		bear \
-		git \
-		gcc-aarch64-linux-gnu \
-		flex \
-		bison \
-		bc \
-		libelf-dev \
-		libssl-dev \
-	&& rm -rf /etc/localtime \
-	&& ln -vfs /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
+RUN echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections \
+    && apt-get update \
+    && apt-get install -y -q apt-utils dialog \
+    && apt-get install -y -q sudo aptitude xz-utils flex bison libncurses5-dev make git exuberant-ctags bc libssl-dev libelf-dev \
+       gcc g++ vim tmux lrzsz
 
+
+CMD ["bash"]
