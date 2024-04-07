@@ -1,0 +1,12 @@
+[CentOS6]
+name=Tencent CentOS-6.10
+baseurl=https://mirrors.cloud.tencent.com/centos-vault/6.10/os/$basearch/
+gpgcheck=0
+gpgkey=https://mirrors.cloud.tencent.com/RPM-GPG-KEY-CentOS-6
+
+[CentOS6-source]
+name=Tencent CentOS-6.10-source
+baseurl=https://mirrors.cloud.tencent.com/centos-vault/6.10/os/Source/
+gpgcheck=0
+gpgkey=https://mirrors.cloud.tencent.com/RPM-GPG-KEY-CentOS-6
+

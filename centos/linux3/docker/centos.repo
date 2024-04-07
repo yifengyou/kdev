@@ -1,0 +1,18 @@
+[CentOS7]
+name=Aliyun CentOS-7.9.2009
+baseurl=https://mirrors.aliyun.com/centos/7.9.2009/os/$basearch/
+gpgcheck=0
+gpgkey=https://mirrors.aliyun.com/RPM-GPG-KEY-CentOS-7
+
+[CentOS7-update]
+name=Aliyun CentOS-7.9.2009-update
+baseurl=https://mirrors.aliyun.com/centos/7.9.2009/updates/$basearch/
+gpgcheck=0
+gpgkey=https://mirrors.aliyun.com/RPM-GPG-KEY-CentOS-7
+
+[CentOS7-extras]
+name=Aliyun CentOS-7.9.2009-extras
+baseurl=https://mirrors.aliyun.com/centos/7.9.2009/extras/$basearch/
+gpgcheck=0
+gpgkey=https://mirrors.aliyun.com/RPM-GPG-KEY-CentOS-7
+
