@@ -375,7 +375,7 @@ def handle_check(args):
     if args.sourcedir:
         if not os.path.isdir(args.sourcedir):
             log.info(f"dir {args.sourcedir} does't exists!")
-            return 1
+            exit(1)
     else:
         args.sourcedir = os.getcwd()
         log.info(f"sourcedir is {args.sourcedir}")
@@ -385,12 +385,13 @@ def handle_check(args):
         log.info(f"Check {args.sourcedir} ok! It's kernel source directory.")
     else:
         log.info(f"Check {args.sourcedir} failed! It's not a kernel source directory.")
-        return 1
+        exit(1)
 
     os.chdir(args.sourcedir)
     ret, kernelversion, _ = do_exe_cmd("make kernelversion")
     if ret != 0:
         log.error(f"Unsupported {kernelversion}")
+        exit(1)
 
     args.kernelversion = kernelversion.strip()
     log.info(f"kernel version : {args.kernelversion}")
@@ -421,8 +422,6 @@ def handle_kernel(args):
 
     # 生产编译脚本，因为不同环境对python版本有依赖要求，暂时不考虑规避，脚本万能
     body = """
-    
-## body
 
 echo "run body"
 
@@ -481,7 +480,7 @@ fi
 
 """
 
-    if hasattr(args, 'nodocker') and args.nodocker and ('True' == args.nodocker or '1' == args.nodocker):
+    if hasattr(args, 'nodocker') and ('True' == args.nodocker or '1' == args.nodocker):
         log.info("build kernel in host")
 
         args.cross_compile = ''
@@ -489,8 +488,7 @@ fi
             if args.arch == "arm64":
                 args.cross_compile = "aarch64-linux-gnu-"
 
-        head = """
-#!/bin/bash
+        head = """#!/bin/bash
 
 if [ -f /.dockerenv ]; then
     echo "should run in host, not in docker"
@@ -503,6 +501,7 @@ ARCH=%s
 CROSS_COMPILE=%s
 KERNEL_HEADER_INSTALL=%s
 JOB=%s
+
 """ % (
             args.workdir,
             args.sourcedir,
