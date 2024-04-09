@@ -8,3 +8,4 @@ log
 *.log
 *.qcow2
 *.iso
+ct*

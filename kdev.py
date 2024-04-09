@@ -414,29 +414,24 @@ def handle_kernel(args):
         log.info(f" set kenrel config from cmdline {args.config}")
         kernel_config = args.config
     else:
-        kernel_config = f"debian_{args.arch}_defconfig"
+        kernel_config = f"{args.arch}_defconfig"
 
     mrproper = ""
-    if hasattr(args, 'mrproper') and args.mrproper:
+    if hasattr(args, 'mrproper') and ('1' == args.mrproper or 'True' == args.mrproper):
         mrproper = "make O=${WORKDIR}/build mrproper"
 
     # 生产编译脚本，因为不同环境对python版本有依赖要求，暂时不考虑规避，脚本万能
     body = """
-
-echo "run body"
-
 cd ${SOURCEDIR}
 
-mkdir -p ${WORKDIR}/build || :
-
+mkdir -p ${WORKDIR}/build
 """ + mrproper + """
-
 make O=${WORKDIR}/build ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} """ + kernel_config + """
-
 if [ $? -ne 0 ]; then
     echo "make  """ + kernel_config + """ failed!"
     exit 1
 fi
+
 ls -alh ${WORKDIR}/build/.config
 make O=${WORKDIR}/build ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} -j "${JOB}"
 if [ $? -ne 0 ]; then
@@ -477,7 +472,6 @@ if [ $? -ne 0 ]; then
     echo "make headers_install to ${WORKDIR} failed!"
     exit 1
 fi
-
 """
 
     if hasattr(args, 'nodocker') and ('True' == args.nodocker or '1' == args.nodocker):
@@ -490,6 +484,8 @@ fi
 
         head = """#!/bin/bash
 
+set -x
+
 if [ -f /.dockerenv ]; then
     echo "should run in host, not in docker"
     exit 1
@@ -501,7 +497,6 @@ ARCH=%s
 CROSS_COMPILE=%s
 KERNEL_HEADER_INSTALL=%s
 JOB=%s
-
 """ % (
             args.workdir,
             args.sourcedir,
@@ -511,11 +506,11 @@ JOB=%s
             args.job,
 
         )
-        with open("build_in_host.sh", "w") as script:
+        with open("hostbuild.sh", "w") as script:
             script.write(head + body)
 
-        os.chmod("build_in_host.sh", 0o755)
-        host_cmd = "/bin/bash build_in_host.sh"
+        os.chmod("hostbuild.sh", 0o755)
+        host_cmd = "/bin/bash hostbuild.sh"
         ret, output, error = do_exe_cmd(host_cmd,
                                         print_output=True,
                                         enable_log=True,
@@ -553,7 +548,6 @@ ARCH=%s
 CROSS_COMPILE=%s
 KERNEL_HEADER_INSTALL=%s
 JOB=%s
-
 """ % (
             "/workdir",
             "/kernel",
@@ -562,13 +556,13 @@ JOB=%s
             args.kernelversion,
             args.job if hasattr(args, 'job') else os.cpu_count(),
         )
-        with open("build_in_docker.sh", "w") as script:
+        with open("dockerbuild.sh", "w") as script:
             script.write(head + body)
-        os.chmod("build_in_docker.sh", 0o755)
+        os.chmod("dockerbuild.sh", 0o755)
 
         if args.bash:
             docker_cmd = f"\n\ndocker run -it " \
-                         f" -v {args.workdir}/build_in_docker.sh:/bin/kdev " \
+                         f" -v {args.workdir}/dockerbuild.sh:/bin/kdev " \
                          f" --hostname linux{args.masterversion}_docker " \
                          f" -v {args.sourcedir}:/kernel " \
                          f" -v {args.workdir}:/workdir " \
@@ -580,7 +574,7 @@ JOB=%s
             return 1
 
         docker_cmd = f"docker run -t " \
-                     f" -v {args.workdir}/build_in_docker.sh:/bin/kdev " \
+                     f" -v {args.workdir}/dockerbuild.sh:/bin/kdev " \
                      f" -v {args.sourcedir}:/kernel " \
                      f" -v {args.workdir}:/workdir " \
                      f" -w /workdir   " \
@@ -1030,14 +1024,16 @@ def main():
     parser_check.set_defaults(func=handle_check)
 
     # 添加子命令 bash
-    parser_bash = subparsers.add_parser('bash', aliases=['shell', 'terminal'], parents=[parent_parser], help="enter build environment")
+    parser_bash = subparsers.add_parser('bash', aliases=['shell', 'terminal'], parents=[parent_parser],
+                                        help="enter build environment")
     parser_bash.add_argument("--config", help="setup kernel build config")
     parser_bash.add_argument("--bash", dest="bash", default=True, action="store_true",
-                               help="break before build(just for docker build)")
+                             help="break before build(just for docker build)")
     parser_bash.set_defaults(func=handle_kernel)
 
     # 添加子命令 kernel
-    parser_kernel = subparsers.add_parser('kernel', aliases=['build', 'compile'], parents=[parent_parser], help="build kernel")
+    parser_kernel = subparsers.add_parser('kernel', aliases=['build', 'compile'], parents=[parent_parser],
+                                          help="build kernel")
     parser_kernel.add_argument("--nodocker", "--host", dest="nodocker", default=None, action="store_true",
                                help="build kernel without docker environment")
     parser_kernel.add_argument("-j", "--job", default=os.cpu_count(), help="setup compile job number")
@@ -1050,12 +1046,14 @@ def main():
     parser_kernel.set_defaults(func=handle_kernel)
 
     # 添加子命令 rootfs
-    parser_rootfs = subparsers.add_parser('rootfs', aliases=['vm', 'qcow2'], parents=[parent_parser], help="build rootfs")
+    parser_rootfs = subparsers.add_parser('rootfs', aliases=['vm', 'qcow2'], parents=[parent_parser],
+                                          help="build rootfs")
     parser_rootfs.add_argument('-r', '--release', default=None, action="store_true")
     parser_rootfs.set_defaults(func=handle_rootfs)
 
     # 添加子命令 run
-    parser_run = subparsers.add_parser('run', aliases=['startup', 'start'], parents=[parent_parser], help="run kernel in qemu-kvm")
+    parser_run = subparsers.add_parser('run', aliases=['startup', 'start'], parents=[parent_parser],
+                                       help="run kernel in qemu-kvm")
     parser_run.add_argument('-n', '--name', help="setup vm name")
     parser_run.add_argument('--vmcpu', help="setup vm vcpu number")
     parser_run.add_argument('--vmram', help="setup vm ram")
