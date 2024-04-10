@@ -754,43 +754,57 @@ def handle_rootfs(args):
     # 写入初始化脚本，开机第一次执行
     with open(os.path.join(args.tmpdir, "etc/firstboot"), "w") as f:
         f.write("")
-    with open(os.path.join(args.tmpdir, "etc/rc.local"), "w") as f:
-        f.write("""#!/bin/bash
 
+    if hasattr(args, 'rclocal') and '' != args.rclocal:
+        log.info("using custom rclocal from config")
+        custom_rclocal = os.path.realpath(args.rclocal)
+        if os.path.isfile(custom_rclocal):
+            shutil.copy(custom_rclocal, os.path.join(args.tmpdir, "etc/rc.local"))
+        else:
+            log.error(f"{custom_rclocal} is not normal file!")
+            exit(1)
+    else:
+        log.info("using default rclocal config")
+        with open(os.path.join(args.tmpdir, "etc/rc.local"), "w") as f:
+            f.write("""#!/bin/bash
+    
 if [ -f /etc/firstboot ]; then
-	rm -f /etc/firstboot
-	cd /boot
-	for k in $(ls vmlinuz-*); do
-		KERNEL=${k//vmlinuz-/}
-		update-initramfs -k ${KERNEL} -c
-	done
-	if which update-grub2 &> /dev/null ; then
-	    update-grub2
-	fi
-	sync
-	if which chpasswd &> /dev/null ; then
-		echo root:linux | chpasswd
-	elif which passwd &> /dev/null ; then
-		echo linux | passwd -stdin root
-	else
-		echo "can't reset root passwd"
-	fi
-	if [ -d /etc/cloud/ ]; then
-		touch /etc/cloud/cloud-init.disabled
-		rm -f /usr/bin/cloud-*
-	fi
-	if which ssh-keygen &> /dev/null ; then
-	    ssh-keygen -A
-	fi
-	sync
-	reboot -f
+    mv /etc/firstboot /etc/firstboot-bak
+    cd /boot
+    for k in $(ls vmlinuz-*); do
+        KERNEL=${k//vmlinuz-/}
+        update-initramfs -k ${KERNEL} -c
+    done
+    if which update-grub2 &> /dev/null ; then
+        update-grub2
+    fi
+    sync
+    if which chpasswd &> /dev/null ; then
+        echo root:linux | chpasswd
+    elif which passwd &> /dev/null ; then
+        echo linux | passwd -stdin root
+    else
+        echo "can't reset root passwd"
+    fi
+    if [ -d /etc/cloud/ ]; then
+        touch /etc/cloud/cloud-init.disabled
+        rm -f /usr/bin/cloud-*
+    fi
+    if which ssh-keygen &> /dev/null ; then
+        ssh-keygen -A
+    fi
+    sync
+    reboot -f
 fi
 
 exit 0
+    
+    """)
 
-""")
+    # modify rootfs/etc/rc.local file mode
     os.chmod(os.path.join(args.tmpdir, "etc/rc.local"), 0o755)
     log.info(" set rc.local done!")
+
     log.info(" clean ...")
     retcode, _, _ = do_exe_cmd(f"umount -l {args.tmpdir}", print_output=True)
     if retcode != 0:
