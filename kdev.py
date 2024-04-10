@@ -607,31 +607,45 @@ def is_file_locked(file_path):
 @timer
 def handle_rootfs(args):
     handle_check(args)
-    ok, image_url = check_qcow_image(args)
-    if not ok:
-        log.error(" no available image found!")
-    log.info(f" using qcows url {image_url}")
 
-    args.qcow2_url = image_url
-    args.qcow2 = os.path.basename(image_url)
-    log.info(f" qcow2 name : {args.qcow2}")
-    os.chdir(args.workdir)
-
-    if not os.path.isfile(args.qcow2):
-        log.info(f" start to download {args.qcow2_url}")
-        retcode, _, _ = do_exe_cmd(["wget", "-c", args.qcow2_url],
-                                   print_output=True,
-                                   enable_log=True,
-                                   logfile="kdev-download.log"
-                                   )
-        if retcode != 0:
-            log.error("Download qcow2 failed!")
+    qcow2_image_f = ''
+    # try config qcow2
+    if hasattr(args, 'qcow2_image') and '' != args.qcow2_image:
+        log.info("using qcow2 from config")
+        qcow2_image_f = args.qcow2_image
     else:
-        log.info(f" already exists {args.qcow2}, reusing it.")
-        do_exe_cmd(["qemu-nbd", "--disconnect", args.qcow2], print_output=True)
-        do_exe_cmd(["modprobe", "nbd", "max_part=19"], print_output=True)
+        log.info("using qcow2 from downloading")
+        ok, image_url = check_qcow_image(args)
+        if not ok:
+            log.error(" no available image found!")
+        log.info(f" using qcows url {image_url}")
 
-    retcode, stdout, stderr = do_exe_cmd(f"qemu-img check {args.qcow2}", print_output=False)
+        args.qcow2_url = image_url
+        args.qcow2 = os.path.basename(image_url)
+        log.info(f" qcow2 name : {args.qcow2}")
+        os.chdir(args.workdir)
+
+        if not os.path.isfile(args.qcow2):
+            log.info(f" start to download {args.qcow2_url}")
+            retcode, _, _ = do_exe_cmd(["wget", "-c", args.qcow2_url],
+                                       print_output=True,
+                                       enable_log=True,
+                                       logfile="kdev-download.log"
+                                       )
+            if retcode != 0:
+                log.error("Download qcow2 failed!")
+        else:
+            log.info(f" already exists {args.qcow2}, reusing it.")
+            do_exe_cmd(["qemu-nbd", "--disconnect", args.qcow2], print_output=True)
+            do_exe_cmd(["modprobe", "nbd", "max_part=19"], print_output=True)
+        qcow2_image_f = args.qcow2
+
+    qcow2_image_f = os.path.realpath(qcow2_image_f)
+    if not os.path.exists(qcow2_image_f):
+        log.error(f"{qcow2_image_f} not found!")
+        exit(1)
+
+    retcode, stdout, stderr = do_exe_cmd(f"qemu-img check {qcow2_image_f}", print_output=False)
     if retcode != 0:
         log.error(f"check qcow2 failed!\n{stderr.strip()}")
         return 1
@@ -640,7 +654,7 @@ def handle_rootfs(args):
     if hasattr(args, 'nbd') and args.nbd is not None:
         do_exe_cmd(f"qemu-nbd --disconnect {os.path.join('/dev/', args.nbd)}", print_output=True)
         log.debug(f"try umount nbd /dev/{args.nbd}")
-        retcode, _, _ = do_exe_cmd(["qemu-nbd", "--connect", os.path.join("/dev/", args.nbd), args.qcow2],
+        retcode, _, _ = do_exe_cmd(["qemu-nbd", "--connect", os.path.join("/dev/", args.nbd), qcow2_image_f],
                                    print_output=True)
         if retcode != 0:
             log.error("Connect nbd failed!")
@@ -648,7 +662,7 @@ def handle_rootfs(args):
         for nbd in ["nbd" + str(i) for i in range(9)]:
             retcode, output, error = do_exe_cmd(
                 ["qemu-nbd", "--connect", "/dev/" + nbd,
-                 args.qcow2],
+                 qcow2_image_f],
                 print_output=True)
             if retcode == 0:
                 args.nbd = nbd
@@ -715,7 +729,7 @@ def handle_rootfs(args):
     do_exe_cmd("sync")
 
     # 设置主机名
-    args.hostname = args.qcow2.split(".")[0]
+    args.hostname = 'kdev'
     qcow_hostname = os.path.join(args.tmpdir, "etc/hostname")
     with open(qcow_hostname, "w") as f:
         f.write(args.hostname.strip())
@@ -791,65 +805,70 @@ exit 0
 @timer
 def handle_run(args):
     handle_check(args)
-    if args.arch == "x86_64":
-        args.qemuapp = "qemu-system-x86_64"
-    elif args.arch == "arm64":
-        args.qemuapp = "qemu-system-aarch64"
-    else:
-        log.error(f"unsupported arch {args.arch}")
-        return 1
 
-    path = shutil.which(args.qemuapp)
+    path = shutil.which("virt-install")
     # 判断路径是否为None，输出结果
     if path is None:
-        log.info(f"{args.qemuapp} is not found in the system.")
-        log.info("")
+        log.error(f"virt-install is not found in the system.")
+        exit(1)
     else:
-        log.info(f"{args.qemuapp} is found in the system at {path}.")
-
-    path = shutil.which("virsh")
-    # 判断路径是否为None，输出结果
-    if path is None:
-        log.info(f"virsh is not found in the system.")
-        log.info("")
-    else:
-        log.info(f"virsh is found in the system at {path}.")
+        log.info(f"virt-install is found in the system at {path}.")
 
     # 检查是否有可用的QCOW2文件
-    ok, image_url = check_qcow_image(args)
-    if not ok:
-        log.error(" no available image found!")
-    log.info(f" using qcows url {image_url}")
-
-    args.qcow2_url = image_url
-    args.qcow2 = os.path.basename(image_url)
-    log.info(f" qcow2 name : {args.qcow2}")
-
-    os.chdir(args.workdir)
-    if not os.path.isfile(args.qcow2):
-        log.info(" no qcow2 found!")
-        log.info("Tips: run `kdev rootfs`")
-        return 1
+    qcow2_image_f = ''
+    # try config qcow2
+    if hasattr(args, 'qcow2_image') and '' != args.qcow2_image:
+        log.info("using qcow2 from config")
+        qcow2_image_f = args.qcow2_image
     else:
-        log.info(f" found qcow2 {args.qcow2} in workdir, using it.")
+        log.info("using qcow2 from downloading")
+        ok, image_url = check_qcow_image(args)
+        if not ok:
+            log.error(" no available image found!")
+        log.info(f" using qcows url {image_url}")
 
-    if not hasattr(args, "name") or args.name is None:
-        args.name = f"linux-{args.masterversion}-{args.arch}"
+        args.qcow2_url = image_url
+        args.qcow2 = os.path.basename(image_url)
+        log.info(f" qcow2 name : {args.qcow2}")
+        os.chdir(args.workdir)
 
-    log.info(f" try startup {args.name}")
-    retcode, args.vmstat, _ = do_exe_cmd(f"virsh domstate {args.name}", print_output=False)
+        if not os.path.isfile(args.qcow2):
+            log.error(f" not qcow2 found! run 'kdev rootfs'")
+            exit(1)
+        else:
+            log.info(f" already exists {args.qcow2}, reusing it.")
+            do_exe_cmd(["qemu-nbd", "--disconnect", args.qcow2], print_output=True)
+            do_exe_cmd(["modprobe", "nbd", "max_part=19"], print_output=True)
+        qcow2_image_f = args.qcow2
+
+    qcow2_image_f = os.path.realpath(qcow2_image_f)
+    if not os.path.exists(qcow2_image_f):
+        log.error(f"{qcow2_image_f} not found!")
+        exit(1)
+
+    if hasattr(args, "vmname") or '' != args.vmname:
+        vmname = args.vmname
+    else:
+        vmname = f"linux-{args.masterversion}-{args.arch}"
+
+    log.info(f" try startup {vmname}")
+    retcode, args.vmstat, _ = do_exe_cmd(f"virsh domstate {vmname}", print_output=False)
     if 0 == retcode:
         if args.vmstat.strip() == "running":
-            log.info(f"{args.name} already running")
+            log.info(f"{vmname} already running")
+            os.system(f"virsh console {vmname}")
+            log.info(f"you can run 'virsh console {vmname}' to attach vm again~")
             return
-        ret, _, _ = do_exe_cmd(f"virsh start {args.name}", print_output=True)
+        ret, _, _ = do_exe_cmd(f"virsh start {vmname}", print_output=True)
         if 0 != ret:
-            log.error(f"start vm {args.name} failed,check it.")
+            log.error(f"start vm {vmname} failed,check it.")
             return 1
-        log.info(f"start vm {args.name} ok, enjoy it.")
+        log.info(f"start vm {vmname} ok, enjoy it.")
+        os.system(f"virsh console {vmname}")
+        log.info(f"you can run 'virsh console {vmname}' to attach vm again~")
         return 0
 
-    log.info(f" {args.name} does't exists! create new vm")
+    log.info(f" {vmname} does't exists! create new vm")
 
     if args.arch == "x86_64":
         args.vmarch = "x86_64"
@@ -860,33 +879,36 @@ def handle_run(args):
     elif args.arch == "arm64":
         args.vmarch = "aarch64"
         if not args.vmcpu:
-            args.vmcpu = "2"
+            args.vmcpu = "8"
         if not args.vmram:
-            args.vmram = "4096"
+            args.vmram = "8192"
     else:
         log.error(f"unsupported arch {args.arch}")
         return 1
 
     qemu_cmd = f"virt-install  " \
-               f"  --name {args.name} " \
+               f"  --name {vmname} " \
                f"  --arch {args.vmarch} " \
                f"  --ram {args.vmram} " \
-               f"  --os-type=linux " \
-               f"  --video=vga " \
+               f"  --os-type=generic " \
                f"  --vcpus {args.vmcpu}  " \
-               f"  --disk path={os.path.join(args.workdir, args.qcow2)},format=qcow2,bus=scsi " \
-               f"  --network bridge=br0,virtualport_type=openvswitch " \
-               f"  --import " \
+               f"  --disk path={os.path.join(args.workdir, qcow2_image_f)},format=qcow2,bus=scsi " \
+               f"  --network default " \
+               f"  --virt-type kvm " \
                f"  --graphics spice,listen=0.0.0.0 " \
-               f"  --noautoconsole"
+               f"  --video vga " \
+               f"  --boot hd " \
+               f"  --noautoconsole " \
+               f"  --import "
 
     retcode, _, stderr = do_exe_cmd(qemu_cmd, print_output=True)
     if 0 != retcode:
-        log.info(f" start {args.name} failed! {stderr}")
+        log.info(f" start {vmname} failed! {stderr}")
         return 1
-    log.info(f" start {args.name} success! enjoy it~~")
+    log.info(f" start {vmname} success! enjoy it~~")
 
-    os.system(f"virsh console {args.name}")
+    os.system(f"virsh console {vmname}")
+    log.info(f"you can run 'virsh console {vmname}' to attach vm again~")
     return 0
 
 
@@ -1049,6 +1071,7 @@ def main():
     parser_rootfs = subparsers.add_parser('rootfs', aliases=['vm', 'qcow2'], parents=[parent_parser],
                                           help="build rootfs")
     parser_rootfs.add_argument('-r', '--release', default=None, action="store_true")
+    parser_rootfs.add_argument('-q', '--qcow2', dest="qcow2_image", default=None)
     parser_rootfs.set_defaults(func=handle_rootfs)
 
     # 添加子命令 run
