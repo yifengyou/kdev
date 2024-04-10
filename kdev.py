@@ -645,6 +645,21 @@ def handle_rootfs(args):
         log.error(f"{qcow2_image_f} not found!")
         exit(1)
 
+    if hasattr(args, "vmname"):
+        vmname = args.vmname
+        retcode, _, _ = do_exe_cmd(f"virsh domstate {vmname}", print_output=False)
+        if 0 == retcode:
+            retcode, _, _ = do_exe_cmd(f"virsh destroy {vmname}", print_output=True)
+            if 0 == retcode:
+                log.info(f" destroy vm {vmname} ok")
+            else:
+                log.info(f" destroy vm {vmname} failed!")
+        else:
+            log.info(f"no vm {vmname} found! skip clean vm.")
+
+    # 稍作延迟
+    do_exe_cmd("sync")
+
     retcode, stdout, stderr = do_exe_cmd(f"qemu-img check {qcow2_image_f}", print_output=False)
     if retcode != 0:
         log.error(f"check qcow2 failed!\n{stderr.strip()}")
@@ -931,22 +946,25 @@ def handle_clean(args):
     handle_check(args)
     # 清理虚拟机配置，保留qcow2
     if args.vm or args.all:
-        if not hasattr(args, "name"):
-            args.name = f"linux-{args.masterversion}-{args.arch}"
-        retcode, _, _ = do_exe_cmd(f"virsh domstate {args.name}", print_output=False)
-        if 0 == retcode:
-            retcode, _, _ = do_exe_cmd(f"virsh destroy {args.name}", print_output=True)
-            if 0 == retcode:
-                log.info(f" destroy vm {args.name} ok")
-            else:
-                log.info(f" destroy vm {args.name} failed!")
-            retcode, _, _ = do_exe_cmd(f"virsh undefine {args.name}", print_output=True)
-            if 0 == retcode:
-                log.info(f" undefine vm {args.name} ok")
-            else:
-                log.info(f" undefine vm {args.name} failed!")
+
+        if hasattr(args, "vmname"):
+            vmname = args.vmname
         else:
-            log.info(f"no vm {args.name} found! skip clean vm.")
+            vmname = f"linux-{args.masterversion}-{args.arch}"
+        retcode, _, _ = do_exe_cmd(f"virsh domstate {vmname}", print_output=False)
+        if 0 == retcode:
+            retcode, _, _ = do_exe_cmd(f"virsh destroy {vmname}", print_output=True)
+            if 0 == retcode:
+                log.info(f" destroy vm {vmname} ok")
+            else:
+                log.info(f" destroy vm {vmname} failed!")
+            retcode, _, _ = do_exe_cmd(f"virsh undefine {vmname}", print_output=True)
+            if 0 == retcode:
+                log.info(f" undefine vm {vmname} ok")
+            else:
+                log.info(f" undefine vm {vmname} failed!")
+        else:
+            log.info(f"no vm {vmname} found! skip clean vm.")
     # 清理qcow2，保留虚机配置
     if args.qcow or args.all:
         os.chdir(args.workdir)
