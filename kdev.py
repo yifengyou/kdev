@@ -19,7 +19,7 @@ import time
 import select
 from logging.handlers import RotatingFileHandler
 
-CURRENT_VERSION = "0.2.0"
+CURRENT_VERSION = "0.2.0-20240410"
 
 timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H%M%S")
 log = logging.getLogger("kdev")
