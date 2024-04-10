@@ -637,8 +637,10 @@ def handle_rootfs(args):
         else:
             log.info(f" already exists {args.qcow2}, reusing it.")
             do_exe_cmd(["qemu-nbd", "--disconnect", args.qcow2], print_output=True)
-            do_exe_cmd(["modprobe", "nbd", "max_part=19"], print_output=True)
         qcow2_image_f = args.qcow2
+
+    # need nbd module
+    do_exe_cmd(["modprobe", "nbd", "max_part=19"], print_output=True)
 
     qcow2_image_f = os.path.realpath(qcow2_image_f)
     if not os.path.exists(qcow2_image_f):
