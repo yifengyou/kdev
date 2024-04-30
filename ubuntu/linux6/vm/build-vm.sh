@@ -14,8 +14,8 @@ fi
 sync
 sleep 1
 
-if [ ! -f noble-live-server-amd64.iso ]; then
-	wget -c http://cdimage.ubuntu.com/ubuntu-server/daily-live/pending/noble-live-server-amd64.iso
+if [ ! -f ubuntu-24.04-live-server-amd64.iso ]; then
+	wget -c https://mirrors.aliyun.com/ubuntu-releases/24.04/ubuntu-24.04-live-server-amd64.iso
 fi
 
 virt-install \
@@ -28,7 +28,7 @@ virt-install \
 	--controller type=scsi,model=virtio-scsi \
 	--initrd-inject user-data \
 	--initrd-inject meta-data \
-	--location /data/8T/img/iso/ubuntu/server/noble-live-server-amd64.iso,kernel=casper/vmlinuz,initrd=casper/initrd \
+	--location ubuntu-24.04-live-server-amd64.iso,kernel=casper/vmlinuz,initrd=casper/initrd \
 	--extra-args="priority=critical console=ttyS0,115200 autoinstall ds=nocloud-net;s=http://192.168.33.99/ks/ubuntu/ cloud-config-url=/dev/null  root=/dev/ram0" \
 	--check all=off
 

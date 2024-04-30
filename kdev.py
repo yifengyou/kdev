@@ -637,10 +637,8 @@ def handle_rootfs(args):
         else:
             log.info(f" already exists {args.qcow2}, reusing it.")
             do_exe_cmd(["qemu-nbd", "--disconnect", args.qcow2], print_output=True)
+            do_exe_cmd(["modprobe", "nbd", "max_part=19"], print_output=True)
         qcow2_image_f = args.qcow2
-
-    # need nbd module
-    do_exe_cmd(["modprobe", "nbd", "max_part=19"], print_output=True)
 
     qcow2_image_f = os.path.realpath(qcow2_image_f)
     if not os.path.exists(qcow2_image_f):
@@ -662,10 +660,11 @@ def handle_rootfs(args):
     # 稍作延迟
     do_exe_cmd("sync")
 
-    retcode, stdout, stderr = do_exe_cmd(f"qemu-img check {qcow2_image_f}", print_output=False)
-    if retcode != 0:
-        log.error(f"check qcow2 failed!\n{stderr.strip()}")
-        return 1
+    if not (hasattr(args, "skipimagecheck") and args.skipimagecheck is not None):
+        retcode, stdout, stderr = do_exe_cmd(f"qemu-img check {qcow2_image_f}", print_output=False)
+        if retcode != 0:
+            log.error(f"check qcow2 failed!\n{stderr.strip()}")
+            return 1
 
     # 如果参数或配置指定了nbd，则使用，否则挨个测试
     if hasattr(args, 'nbd') and args.nbd is not None:
