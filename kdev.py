@@ -694,8 +694,11 @@ def handle_rootfs(args):
     os.makedirs(args.tmpdir, exist_ok=True)
     retcode, _, _ = do_exe_cmd(f"mount -o rw /dev/{args.nbd}p1 {args.tmpdir}", print_output=True)
     if retcode != 0:
-        log.error("Mount qcow2 failed!")
-        return 1
+        log.info(f"Mount qcow2 /dev/{args.nbd}p1 failed! Try again.")
+        retcode, _, _ = do_exe_cmd(f"mount -o rw /dev/{args.nbd}p2 {args.tmpdir}", print_output=True)
+        if retcode != 0:
+            log.error(f"Mount qcow2 /dev/{args.nbd}p2 failed!")
+            return 1
 
     # 稍作延迟
     do_exe_cmd("sync")
