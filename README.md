@@ -6,13 +6,36 @@ First, please watch or star this repo, I'll be more happy if you follow me.
 Bug report, questions and discussion are welcome, you can post an issue or pull a request.
 ```
 
+## 目录
+
+<!-- MDTOC maxdepth:6 firsth1:1 numbering:0 flatten:0 bullets:1 updateOnSave:1 -->
+
+- [kdev (linux kernel development tools)](#kdev-linux-kernel-development-tools)   
+   - [目录](#目录)   
+   - [项目描述](#项目描述)   
+   - [极速入门](#极速入门)   
+      - [构建镜像](#构建镜像)   
+      - [添加配置文件](#添加配置文件)   
+      - [编译内核](#编译内核)   
+      - [构建rootfs](#构建rootfs)   
+      - [运行](#运行)   
+   - [TODO](#todo)   
+   - [详细说明](#详细说明)   
+      - [kdev kernel](#kdev-kernel)   
+      - [kdev rootfs](#kdev-rootfs)   
+      - [kdev run](#kdev-run)   
+   - [其他](#其他)   
+      - [待适配发行版信息](#待适配发行版信息)   
+
+<!-- /MDTOC -->
+
 ## 项目描述
 
-本仓库提供kdev工具，用于快速构建内核编译环境、测试环境（QEMU/KVM）。
+本仓库提供 kdev 工具，用于快速构建内核编译环境、测试环境（QEMU/KVM）。
 
-1. 使用Docker容器编译内核，规避编译环境差异（工具链，dwarves，python3，etc...）
-2. 使用Qemu-kvm虚机运行内核
-3. 适配linux 2/3/4/5/6内核版本，发行版默认使用Ubuntu
+1. 使用 Docker 容器编译内核，规避编译环境差异（工具链，dwarves，python3，etc...）
+2. 使用 Qemu-KVM 虚机运行内核
+3. 适配 Linux 2/3/4/5/6内核版本，发行版默认使用Ubuntu
 
 | Ubuntu 版本            | 代号                | 内核版本  | 源码仓库                                                |
 | ---------------------- | ------------------- | --------- | ------------------------------------------------------- |
@@ -22,8 +45,6 @@ Bug report, questions and discussion are welcome, you can post an issue or pull 
 | Ubuntu 14.04.5 **LTS** | **Trusty** Tahr     | 3.13.11   | [linux-3.git](https://github.com/yifengyou/linux-3.git) |
 | Ubuntu 10.04.X **LTS** | **Lucid** Lynx      | 2.6.32.63 | [linux-2.git](https://github.com/yifengyou/linux-2.git) |
 
-## 目录
-
 ## 极速入门
 
 以 Linux 6 （Ubuntu 24.04）为例，请先准备好内核源代码
@@ -32,7 +53,6 @@ Bug report, questions and discussion are welcome, you can post an issue or pull 
 ```
 git clone https://github.com/yifengyou/linux-6.git -b master linux-6.git
 ```
-
 
 
 ### 构建镜像
@@ -120,7 +140,7 @@ kdev run
 ## 详细说明
 
 
-## kdev kernel
+### kdev kernel
 
 ```
 [root@X99F8D /linux/linux-6.git-build-x86_64]# kdev kernel
@@ -200,7 +220,7 @@ kdev run
 ```
 
 
-## kdev rootfs
+### kdev rootfs
 
 ```
 # kdev rootfs
@@ -270,7 +290,7 @@ error: Requested operation is not valid: domain is not running
 ```
 
 
-## kdev run
+### kdev run
 
 ```
 [root@X99F8D /linux/linux-6.git-build-x86_64]# kdev run
