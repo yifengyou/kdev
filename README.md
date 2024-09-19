@@ -6,268 +6,368 @@ First, please watch or star this repo, I'll be more happy if you follow me.
 Bug report, questions and discussion are welcome, you can post an issue or pull a request.
 ```
 
+## 目录
+
+<!-- MDTOC maxdepth:6 firsth1:1 numbering:0 flatten:0 bullets:1 updateOnSave:1 -->
+
+- [kdev (linux kernel development tools)](#kdev-linux-kernel-development-tools)   
+   - [目录](#目录)   
+   - [项目描述](#项目描述)   
+   - [极速入门](#极速入门)   
+      - [构建镜像](#构建镜像)   
+      - [添加配置文件](#添加配置文件)   
+      - [编译内核](#编译内核)   
+      - [构建rootfs](#构建rootfs)   
+      - [运行](#运行)   
+   - [TODO](#todo)   
+   - [详细说明](#详细说明)   
+      - [kdev kernel](#kdev-kernel)   
+      - [kdev rootfs](#kdev-rootfs)   
+      - [kdev run](#kdev-run)   
+   - [其他](#其他)   
+      - [待适配发行版信息](#待适配发行版信息)   
+
+<!-- /MDTOC -->
+
 ## 项目描述
 
-本仓库提供kdev工具，用于快速构建内核编译环境、测试环境（QEMU/KVM）。
+本仓库提供 kdev 工具，用于快速构建内核编译环境、测试环境（QEMU/KVM）。
+
+1. 使用 Docker 容器编译内核，规避编译环境差异（工具链，dwarves，python3，etc...）
+2. 使用 Qemu-KVM 虚机运行内核
+3. 适配 Linux 2/3/4/5/6内核版本，发行版默认使用Ubuntu
+
+| Ubuntu 版本            | 代号                | 内核版本  | 源码仓库                                                |
+| ---------------------- | ------------------- | --------- | ------------------------------------------------------- |
+| Ubuntu 24.04.X **LTS** | **Noble** Numbat    | 6.8.4     | [linux-6.git](https://github.com/yifengyou/linux-6.git) |
+| Ubuntu 22.04.X **LTS** | **Jammy** Jellyfish | 5.15.60   | [linux-5.git](https://github.com/yifengyou/linux-5.git) |
+| Ubuntu 18.04.X **LTS** | **Bionic** Beaver   | 4.15.18   | [linux-4.git](https://github.com/yifengyou/linux-4.git) |
+| Ubuntu 14.04.5 **LTS** | **Trusty** Tahr     | 3.13.11   | [linux-3.git](https://github.com/yifengyou/linux-3.git) |
+| Ubuntu 10.04.X **LTS** | **Lucid** Lynx      | 2.6.32.63 | [linux-2.git](https://github.com/yifengyou/linux-2.git) |
+
+## 极速入门
+
+以 Linux 6 （Ubuntu 24.04）为例，请先准备好内核源代码
 
 
-## 使用方式
+```
+git clone https://github.com/yifengyou/linux-6.git -b master linux-6.git
+```
 
-假设，内核源代码目录位于```/data/linux-4.git```目录，
-工作目录位于```/data/linux-4.git-build-x86_64```，
-配置文件```linux4.kdev```位于工作目录中。
 
-```shell
-sourcedir = /kernel/linux-4.git
+### 构建镜像
+
+* 构建 Docker 镜像，用于内核编译
+
+```
+cd ubuntu/linux6 && make build
+```
+
+* 构建 qcow2 镜像，用于运行内核
+
+```
+cd ubuntu/linux6 && make vm
+```
+
+### 添加配置文件
+
+/linux/linux-6.git-build-x86_64/ 作为编译输出目录，配置文件放置于 `/linux/linux-6.git-build-x86_64/linux6.kdev` ， 其内容为：
+
+```
+sourcedir = /linux/linux-6.git
+nbd = nbd6
 arch = x86_64
 debug = True
-nodocker = True
-````
-
-```shell
-cd /data/linux-4.git-build-x86_64
+skipimagecheck = True
+vmname = kdev-linux6
+config = ubuntu24_x86_64_defconfig
+nodocker = False
+mrproper = False
+rclocal = /linux/linux-6.git-build-x86_64/rclocal
+qcow2_image = /linux/linux-6.git-build-x86_64/rootfs.qcow2
 ```
 
-切换到工作目录，执行如下命令：
+其中，关键参数：
 
-```shell
-kdev init
+* sourcedir : kernel源代码所在目录(完整路径)
+* config : 内核编译所使用的config配置，x86_64位于 `arch/x86/configs/` 目录下
+* qcow2_image : 用kdev构建的qcow2镜像完整路径
+* rclocal : 虚机第一次运行时执行的脚本
+* vmname : 虚机名称
+* mrproper : 是否彻底清空再编译内核
+
+
+### 编译内核
+
 ```
-
-init 子命令用于安装内核构建依赖（执行apt-get install命令）
-
-```shell
 kdev kernel
 ```
 
-kernel 子命令用于编译内核
+将内核源代码`/linux/linux-6.git` 编译输出到 `/linux/linux-6.git-build-x86_64/`目录下
 
-```shell
+编译输出内容包括：
+
+*. boot/{vmlinux, config, System.map} : 内核二进制，配置，地址表
+*. lib/modules : 内核模块
+*. usr/src/linux-headers : 内核头文件
+
+### 构建rootfs
+
+```
 kdev rootfs
 ```
 
-rootfs 子命令用于构建根文件系统
+将编译内容拷贝到目标qcow2镜像
 
 
-```shell
+### 运行
+
+```
 kdev run
 ```
 
-run 子命令运行虚拟机
+使用 qemu-kvm 将qcow2镜像运行起来
 
-```shell
-kdev clean
+
+## TODO
+
+1. 增加KGDB支持
+2. 增加CentOS系列发行版支持
+3. ...
+
+
+
+## 详细说明
+
+
+### kdev kernel
+
+```
+[root@X99F8D /linux/linux-6.git-build-x86_64]# kdev kernel
+2024-05-05 11:09:34,526 [DEBUG] kdev: Enable debug output
+2024-05-05 11:09:34,526 [DEBUG] kdev: Parser and config:
+2024-05-05 11:09:34,526 [DEBUG] kdev:   version = False
+2024-05-05 11:09:34,526 [DEBUG] kdev:   help = False
+2024-05-05 11:09:34,527 [DEBUG] kdev:   verbose = None
+2024-05-05 11:09:34,527 [DEBUG] kdev:   sourcedir = /kernel/linux-6.git
+2024-05-05 11:09:34,527 [DEBUG] kdev:   arch = x86_64
+2024-05-05 11:09:34,527 [DEBUG] kdev:   workdir = None
+2024-05-05 11:09:34,527 [DEBUG] kdev:   debug = True
+2024-05-05 11:09:34,527 [DEBUG] kdev:   nodocker = False
+2024-05-05 11:09:34,527 [DEBUG] kdev:   job = 56
+2024-05-05 11:09:34,527 [DEBUG] kdev:   clean = None
+2024-05-05 11:09:34,527 [DEBUG] kdev:   config = ubuntu24_x86_64_defconfig
+2024-05-05 11:09:34,528 [DEBUG] kdev:   bash = None
+2024-05-05 11:09:34,528 [DEBUG] kdev:   mrproper = False
+2024-05-05 11:09:34,528 [DEBUG] kdev:   func = <function timer.<locals>.wrapper at 0x7f713a97b940>
+2024-05-05 11:09:34,528 [DEBUG] kdev:   nbd = nbd6
+2024-05-05 11:09:34,528 [DEBUG] kdev:   skipimagecheck = True
+2024-05-05 11:09:34,528 [DEBUG] kdev:   vmname = kdev-linux6
+2024-05-05 11:09:34,528 [DEBUG] kdev:   rclocal = /kernel/linux-6.git-build-x86_64/rclocal
+2024-05-05 11:09:34,529 [DEBUG] kdev:   qcow2_image = /linux/linux-6.git-build-x86_64/rootfs.qcow2
+2024-05-05 11:09:34,529 [INFO] kdev: -> Step check environment
+2024-05-05 11:09:34,529 [INFO] kdev: Target arch = [ x86_64 ]
+2024-05-05 11:09:34,529 [INFO] kdev: workdir : /kernel/linux-6.git-build-x86_64
+2024-05-05 11:09:34,529 [INFO] kdev: Check /kernel/linux-6.git ok! It's kernel source directory.
+2024-05-05 11:09:34,529 [INFO] kdev: -> Exe cmd:make kernelversion
+2024-05-05 11:09:34,559 [INFO] kdev: kernel version : 6.8.4
+2024-05-05 11:09:34,559 [INFO] kdev: master version : 6
+2024-05-05 11:09:34,559 [INFO] kdev: -> Step build kernel
+2024-05-05 11:09:34,560 [INFO] kdev:  set kenrel config from cmdline ubuntu24_x86_64_defconfig
+2024-05-05 11:09:34,560 [INFO] kdev: build kernel in docker
+2024-05-05 11:09:34,560 [INFO] kdev:  using docker image : yifengyou/linux6.0:latest
+2024-05-05 11:09:34,560 [INFO] kdev: -> Exe cmd:docker run -t -v /kernel/linux-6.git-build-x86_64/dockerbuild.sh:/bin/kdev -v /kernel/linux-6.git:/kernel -v /kernel/linux-6.git-build-x86_64:/workdir -w /workdir yifengyou/linux6.0:latest /bin/kdev
+2024-05-05 11:09:35,272 [INFO] kdev: STDOUT + '[' '!' -f /.dockerenv ']'
++ WORKDIR=/workdir
++ SOURCEDIR=/kernel
++ ARCH=x86_64
++ CROSS_COMPILE=
++ KERNEL_HEADER_INSTALL=6.8.4
++ JOB=56
++ cd /kernel
++ mkdir -p /workdir/build
+2024-05-05 11:09:35,275 [INFO] kdev: STDOUT + make O=/workdir/build ARCH=x86_64 CROSS_COMPILE= ubuntu24_x86_64_defconfig
+2024-05-05 11:09:35,283 [INFO] kdev: STDOUT make[1]: Entering directory '/workdir/build'
+2024-05-05 11:09:35,506 [INFO] kdev: STDOUT GEN     Makefile
+2024-05-05 11:09:37,834 [INFO] kdev: STDOUT #
+# No change to .config
+#
+2024-05-05 11:09:37,839 [INFO] kdev: STDOUT make[1]: Leaving directory '/workdir/build'
+2024-05-05 11:09:37,839 [INFO] kdev: STDOUT + '[' 0 -ne 0 ']'
++ ls -alh /workdir/build/.config
+2024-05-05 11:09:37,842 [INFO] kdev: STDOUT -rw-r--r-- 1 root root 281K May  5 01:19 /workdir/build/.config
+2024-05-05 11:09:37,842 [INFO] kdev: STDOUT + make O=/workdir/build ARCH=x86_64 CROSS_COMPILE= -j 56
+2024-05-05 11:09:37,849 [INFO] kdev: STDOUT make[1]: Entering directory '/workdir/build'
+2024-05-05 11:09:38,875 [INFO] kdev: STDOUT GEN     Makefile
+2024-05-05 11:09:38,906 [INFO] kdev: STDOUT UPD     include/generated/compile.h
+2024-05-05 11:09:38,911 [INFO] kdev: STDOUT mkdir -p /workdir/build/tools/objtool && make O=/workdir/build subdir=tools/objtool --no-print-directory -C objtool
+2024-05-05 11:09:38,917 [INFO] kdev: STDOUT mkdir -p /workdir/build/tools/bpf/resolve_btfids && make O=/workdir/build subdir=tools/bpf/resolve_btfids --no-print-directory -C bpf/resolve_btfids
+2024-05-05 11:09:39,047 [INFO] kdev: STDOUT INSTALL libsubcmd_headers
+2024-05-05 11:09:39,087 [INFO] kdev: STDOUT INSTALL libsubcmd_headers
+2024-05-05 11:09:39,218 [INFO] kdev: STDOUT CALL    /kernel/scripts/checksyscalls.sh
+2024-05-05 11:09:39,460 [INFO] kdev: STDOUT CC      init/version.o
+2024-05-05 11:09:40,746 [INFO] kdev: STDOUT AR      init/built-in.a
+2024-05-05 11:09:43,426 [INFO] kdev: STDOUT CHK     kernel/kheaders_data.tar.xz
+2024-05-05 11:09:43,897 [INFO] kdev: STDOUT GEN     kernel/kheaders_data.tar.xz
+2024-05-05 11:10:08,343 [INFO] kdev: STDOUT CC [M]  kernel/kheaders.o
+2024-05-05 11:10:08,989 [INFO] kdev: STDOUT AR      built-in.a
+2024-05-05 11:10:09,242 [INFO] kdev: STDOUT AR      vmlinux.a
+2024-05-05 11:10:09,659 [INFO] kdev: STDOUT LD      vmlinux.o
+2024-05-05 11:10:14,367 [INFO] kdev: STDOUT OBJCOPY modules.builtin.modinfo
+2024-05-05 11:10:14,475 [INFO] kdev: STDOUT GEN     modules.builtin
+2024-05-05 11:10:14,554 [INFO] kdev: STDOUT GEN     .vmlinux.objs
+2024-05-05 11:10:14,607 [INFO] kdev: STDOUT MODPOST Module.symvers
 ```
 
-clean 子命令用于清空编译
 
+### kdev rootfs
 
+```
+# kdev rootfs
+2024-05-05 11:02:20,854 [DEBUG] kdev: Enable debug output
+2024-05-05 11:02:20,854 [DEBUG] kdev: Parser and config:
+2024-05-05 11:02:20,854 [DEBUG] kdev:   version = False
+2024-05-05 11:02:20,854 [DEBUG] kdev:   help = False
+2024-05-05 11:02:20,854 [DEBUG] kdev:   verbose = None
+2024-05-05 11:02:20,854 [DEBUG] kdev:   sourcedir = /kernel/linux-6.git
+2024-05-05 11:02:20,854 [DEBUG] kdev:   arch = x86_64
+2024-05-05 11:02:20,854 [DEBUG] kdev:   workdir = None
+2024-05-05 11:02:20,854 [DEBUG] kdev:   debug = True
+2024-05-05 11:02:20,855 [DEBUG] kdev:   release = None
+2024-05-05 11:02:20,855 [DEBUG] kdev:   qcow2_image = /linux/linux-6.git-build-x86_64/rootfs.qcow2
+2024-05-05 11:02:20,855 [DEBUG] kdev:   func = <function timer.<locals>.wrapper at 0x7fb4060c6af0>
+2024-05-05 11:02:20,855 [DEBUG] kdev:   nbd = nbd6
+2024-05-05 11:02:20,855 [DEBUG] kdev:   skipimagecheck = True
+2024-05-05 11:02:20,855 [DEBUG] kdev:   vmname = kdev-linux6
+2024-05-05 11:02:20,855 [DEBUG] kdev:   config = ubuntu24_x86_64_defconfig
+2024-05-05 11:02:20,855 [DEBUG] kdev:   nodocker = False
+2024-05-05 11:02:20,855 [DEBUG] kdev:   mrproper = False
+2024-05-05 11:02:20,855 [DEBUG] kdev:   rclocal = /kernel/linux-6.git-build-x86_64/rclocal
+2024-05-05 11:02:20,855 [INFO] kdev: -> Step check environment
+2024-05-05 11:02:20,855 [INFO] kdev: Target arch = [ x86_64 ]
+2024-05-05 11:02:20,855 [INFO] kdev: workdir : /kernel/linux-6.git-build-x86_64
+2024-05-05 11:02:20,855 [INFO] kdev: Check /kernel/linux-6.git ok! It's kernel source directory.
+2024-05-05 11:02:20,855 [INFO] kdev: -> Exe cmd:make kernelversion
+2024-05-05 11:02:20,879 [INFO] kdev: kernel version : 6.8.4
+2024-05-05 11:02:20,880 [INFO] kdev: master version : 6
+2024-05-05 11:02:20,880 [INFO] kdev: using qcow2 from config
+2024-05-05 11:02:20,880 [INFO] kdev: -> Exe cmd:virsh domstate kdev-linux6
+2024-05-05 11:02:20,899 [INFO] kdev: -> Exe cmd:virsh destroy kdev-linux6
+2024-05-05 11:02:20,915 [INFO] kdev: STDERR error: Failed to destroy domain 'kdev-linux6'
+error: Requested operation is not valid: domain is not running
+2024-05-05 11:02:20,916 [INFO] kdev:  destroy vm kdev-linux6 failed!
+2024-05-05 11:02:20,916 [INFO] kdev: -> Exe cmd:sync
+2024-05-05 11:02:20,985 [INFO] kdev: -> Exe cmd:qemu-nbd --disconnect /dev/nbd6
+2024-05-05 11:02:20,991 [INFO] kdev: STDOUT /dev/nbd6 disconnected
+2024-05-05 11:02:20,992 [DEBUG] kdev: try umount nbd /dev/nbd6
+2024-05-05 11:02:20,992 [INFO] kdev: -> Exe cmd:qemu-nbd --connect /dev/nbd6 /kernel/linux-6.git-build-x86_64/rootfs.qcow2
+2024-05-05 11:02:21,046 [INFO] kdev: -> Exe cmd:sync
+2024-05-05 11:02:21,056 [INFO] kdev: -> Exe cmd:mount -o rw /dev/nbd6p1 /tmp/qcow2-3097
+2024-05-05 11:02:21,067 [INFO] kdev: STDERR mount: /tmp/qcow2-3097: wrong fs type, bad option, bad superblock on /dev/nbd6p1, missing codepage or helper program, or other error.
+2024-05-05 11:02:21,067 [INFO] kdev: Mount qcow2 /dev/nbd6p1 failed! Try again.
+2024-05-05 11:02:21,067 [INFO] kdev: -> Exe cmd:mount -o rw /dev/nbd6p2 /tmp/qcow2-3097
+2024-05-05 11:02:21,090 [INFO] kdev: -> Exe cmd:sync
+2024-05-05 11:02:21,102 [INFO] kdev:  run cmd: /usr/bin/cp -a /kernel/linux-6.git-build-x86_64/boot/config-6.8.4+ /kernel/linux-6.git-build-x86_64/boot/vmlinuz-6.8.4+ /kernel/linux-6.git-build-x86_64/boot/System.map-6.8.4+ /tmp/qcow2-3097/boot/
+2024-05-05 11:02:21,102 [INFO] kdev: -> Exe cmd:/usr/bin/cp -a /kernel/linux-6.git-build-x86_64/boot/config-6.8.4+ /kernel/linux-6.git-build-x86_64/boot/vmlinuz-6.8.4+ /kernel/linux-6.git-build-x86_64/boot/System.map-6.8.4+ /tmp/qcow2-3097/boot/
+2024-05-05 11:02:21,490 [INFO] kdev:  copy vmlinuz/config ok! /tmp/qcow2-3097/boot
+2024-05-05 11:02:21,490 [INFO] kdev: -> Exe cmd:sync
+2024-05-05 11:02:21,956 [INFO] kdev: -> Exe cmd:/usr/bin/cp -a /kernel/linux-6.git-build-x86_64/lib/modules/6.8.4+ /tmp/qcow2-3097/lib/modules/
+2024-05-05 11:02:44,476 [INFO] kdev:  copy modules(stripped) ok! /tmp/qcow2-3097/lib/modules
+2024-05-05 11:02:44,477 [INFO] kdev: -> Exe cmd:sync
+2024-05-05 11:02:44,586 [INFO] kdev: -> Exe cmd:/usr/bin/cp -a /kernel/linux-6.git-build-x86_64/usr/src /tmp/qcow2-3097/usr/
+2024-05-05 11:02:45,777 [INFO] kdev:  copy headers ok! /tmp/qcow2-3097/usr
+2024-05-05 11:02:45,777 [INFO] kdev: -> Exe cmd:sync
+2024-05-05 11:02:45,838 [INFO] kdev:  set hostname : kdev
+2024-05-05 11:02:45,843 [INFO] kdev: using custom rclocal from config
+2024-05-05 11:02:45,844 [INFO] kdev:  set rc.local done!
+2024-05-05 11:02:45,844 [INFO] kdev:  clean ...
+2024-05-05 11:02:45,844 [INFO] kdev: -> Exe cmd:umount -l /tmp/qcow2-3097
+2024-05-05 11:02:46,049 [INFO] kdev: -> Exe cmd:qemu-nbd --disconnect /dev/nbd6
+2024-05-05 11:02:46,057 [INFO] kdev: STDOUT /dev/nbd6 disconnected
+2024-05-05 11:02:46,057 [INFO] kdev: -> handle_rootfs Done! Ret=[ 0 ] Runtime=[ 0.420 min ]
+2024-05-05 11:02:46,058 [INFO] kdev: -> Repeat Build Options [/usr/bin/kdev rootfs]
 
-
-## 子命令详解
-
-### kernel子命令
-
-```shell
-optional arguments:
-  -h, --help            show this help message and exit
-  -V, --verbose         show verbose output
-  -s SOURCEDIR, --sourcedir SOURCEDIR
-                        set kernel source dir
-  -a ARCH, --arch ARCH  set arch, default is x86_64
-  -w WORKDIR, --workdir WORKDIR
-                        setup workdir
-  --debug               enable debug
-  --nodocker, --host    build kernel without docker environment
-  -j JOB, --job JOB     setup compile job number
-  -c CLEAN, --clean CLEAN
-                        clean docker when exit
-  --config CONFIG       setup kernel build config
-  --bash                break before build(just for docker build)
-  --mrproper            make mrproper before build
 ```
 
-* --mrproper 将清空工作目录进行完整编译，默认不清空，支持二次编译。经测试完整编译耗时6.36min，二次编译耗时0.63min
-* --nodocker 不使用docker编译，使用host编译环境
-* --bash 登陆 docker bash 终端
-* --config 指定config配置
 
+### kdev run
 
-### rootfs子命令
+```
+[root@X99F8D /linux/linux-6.git-build-x86_64]# kdev run
+2024-05-05 11:05:29,811 [DEBUG] kdev: Enable debug output
+2024-05-05 11:05:29,812 [DEBUG] kdev: Parser and config:
+2024-05-05 11:05:29,812 [DEBUG] kdev:   version = False
+2024-05-05 11:05:29,812 [DEBUG] kdev:   help = False
+2024-05-05 11:05:29,812 [DEBUG] kdev:   verbose = None
+2024-05-05 11:05:29,812 [DEBUG] kdev:   sourcedir = /kernel/linux-6.git
+2024-05-05 11:05:29,812 [DEBUG] kdev:   arch = x86_64
+2024-05-05 11:05:29,812 [DEBUG] kdev:   workdir = None
+2024-05-05 11:05:29,812 [DEBUG] kdev:   debug = True
+2024-05-05 11:05:29,812 [DEBUG] kdev:   name = None
+2024-05-05 11:05:29,812 [DEBUG] kdev:   vmcpu = None
+2024-05-05 11:05:29,812 [DEBUG] kdev:   vmram = None
+2024-05-05 11:05:29,812 [DEBUG] kdev:   func = <function timer.<locals>.wrapper at 0x7f8ecd71fc10>
+2024-05-05 11:05:29,812 [DEBUG] kdev:   nbd = nbd6
+2024-05-05 11:05:29,812 [DEBUG] kdev:   skipimagecheck = True
+2024-05-05 11:05:29,812 [DEBUG] kdev:   vmname = kdev-linux6
+2024-05-05 11:05:29,813 [DEBUG] kdev:   config = ubuntu24_x86_64_defconfig
+2024-05-05 11:05:29,813 [DEBUG] kdev:   nodocker = False
+2024-05-05 11:05:29,813 [DEBUG] kdev:   mrproper = False
+2024-05-05 11:05:29,813 [DEBUG] kdev:   rclocal = /kernel/linux-6.git-build-x86_64/rclocal
+2024-05-05 11:05:29,813 [DEBUG] kdev:   qcow2_image = /linux/linux-6.git-build-x86_64/rootfs.qcow2
+2024-05-05 11:05:29,813 [INFO] kdev: -> Step check environment
+2024-05-05 11:05:29,813 [INFO] kdev: Target arch = [ x86_64 ]
+2024-05-05 11:05:29,813 [INFO] kdev: workdir : /kernel/linux-6.git-build-x86_64
+2024-05-05 11:05:29,813 [INFO] kdev: Check /kernel/linux-6.git ok! It's kernel source directory.
+2024-05-05 11:05:29,813 [INFO] kdev: -> Exe cmd:make kernelversion
+2024-05-05 11:05:29,838 [INFO] kdev: kernel version : 6.8.4
+2024-05-05 11:05:29,838 [INFO] kdev: master version : 6
+2024-05-05 11:05:29,839 [INFO] kdev: virt-install is found in the system at /usr/bin/virt-install.
+2024-05-05 11:05:29,839 [INFO] kdev: using qcow2 from config
+2024-05-05 11:05:29,839 [INFO] kdev:  try startup kdev-linux6
+2024-05-05 11:05:29,839 [INFO] kdev: -> Exe cmd:virsh domstate kdev-linux6
+2024-05-05 11:05:29,857 [INFO] kdev: -> Exe cmd:virsh start kdev-linux6
+2024-05-05 11:05:31,537 [INFO] kdev: STDOUT Domain 'kdev-linux6' started
+2024-05-05 11:05:31,539 [INFO] kdev: start vm kdev-linux6 ok, enjoy it.
+Connected to domain 'kdev-linux6'
+Escape character is ^] (Ctrl + ])
 
-```shell
-usage: kdev rootfs [-h] [-V] [-s SOURCEDIR] [-a ARCH] [-w WORKDIR] [--debug] [-r]
+                             GNU GRUB  version 2.12
 
-optional arguments:
-  -h, --help            show this help message and exit
-  -V, --verbose         show verbose output
-  -s SOURCEDIR, --sourcedir SOURCEDIR
-                        set kernel source dir
-  -a ARCH, --arch ARCH  set arch, default is x86_64
-  -w WORKDIR, --workdir WORKDIR
-                        setup workdir
-  --debug               enable debug
-  -r, --release
+ +----------------------------------------------------------------------------+
+ | Ubuntu                                                                     |
+ |*Advanced options for Ubuntu                                                |
+ |                                                                            |
+ |                                                                            |
+ |                                                                            |
+ |                                                                            |
+ |                                                                            |
+ |                                                                            |
+ |                                                                            |
+ |                                                                            |
+ |                                                                            |
+ |                                                                            |
+ +----------------------------------------------------------------------------+
+
+      Use the ^ and v keys to select which entry is highlighted.          
+      Press enter to boot the selected OS, `e' to edit the commands       
+      before booting or `c' for a command-line.                           
+
 ```
 
 
 
 
 
-## Debian Distribution Release
-
-| 版本及代号                     | 内核版本                 | 稳定性                                           | 可用仓库                                                                           |
-| ------------------------------ | ------------------------ | ------------------------------------------------ | ---------------------------------------------------------------------------------- |
-| **Debian 12 (bookworm)**           | 6.1/5.10(LTS)/5.15       | 当前的稳定（stable）版                           | [链接](http://mirrors.tencent.com/debian/dists/bookworm/)                          |
-| **Debian 11 (bullseye)**           | 5.10(LTS)                | 当前的旧的稳定（oldstable）版                    | [链接](http://mirrors.tencent.com/debian/dists/bullseye/)                          |
-| **Debian 10（buster）**            | 4.19/4.20                | 当前的更旧的稳定（oldoldstable）版，现有长期支持   | [链接](http://mirrors.tencent.com/debian/dists/buster/)                            |
-| Debian 9（stretch）            | 4.9/4.10                 | 已存档版本，现有扩展长期支持                      | [链接](https://snapshot.debian.org/archive/debian/20220101T024315Z/dists/stretch/) |
-| **Debian 8（jessie）**             | 3.16/3.18                | 已存档版本，现有扩展长期支持                      | [链接](http://snapshot.debian.org/archive/debian/20210326T030000Z/dists/jessie)    |
-| Debian 7（wheezy）             | 3.2/3.4                  | 被淘汰的稳定版                                   | [链接](http://snapshot.debian.org/archive/debian/20210326T030000Z/dists/wheezy)    |
-| **Debian 6.0（squeeze）**         | 2.6.32/2.6.36/2.6.38/3.2 | 被淘汰的稳定版                                   | [链接](https://snapshot.debian.org/archive/debian/20160301T103342Z/dists/squeeze/) |
-| Debian GNU/Linux 5.0（lenny）  | 2.6.26                   | 被淘汰的稳定版                                   |                                                                                    |
-| Debian GNU/Linux 4.0（etch）   | 2.6.18                   | 被淘汰的稳定版                                   |                                                                                    |
-| Debian GNU/Linux 3.1（sarge）  | 2.4.27/2.6.8             | 被淘汰的稳定版                                   |                                                                                    |
-| Debian GNU/Linux 3.0（woody）  | 2.4.18/2.6.8             | 被淘汰的稳定版                                   |                                                                                    |
-| Debian GNU/Linux 2.2（potato） | 2.2.10/2.4.18            | 被淘汰的稳定版                                   |                                                                                    |
-| Debian GNU/Linux 2.1（slink）  | 2.0.34/2.2.10            | 被淘汰的稳定版                                   |                                                                                    |
-| Debian GNU/Linux 2.0（hamm）   | 2.0.30/2.0.36            | 被淘汰的稳定版                                   |                                                                                    |
-
-* 存档镜像: <https://snapshot.debian.org/>
 
 
-## Ubuntu Distribution Release
+## 其他
 
-| 版本及代号                                | 内核版本 | 稳定性 | 可用仓库                                                                                                                                                                                                 |
-| ----------------------------------------- | -------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Ubuntu 22.04.X **LTS** (Jammy Jellyfish)  | 5.15     |        | [QCOW2](http://cloud-images.ubuntu.com/releases/jammy/) / [APT源](http://archive.ubuntu.com/ubuntu/dists/jammy/) / [ISO](https://old-releases.ubuntu.com/releases/jammy/)                        |
-| Ubuntu 21.10 (Impish Indri)               | 5.14     |        |                                                                                                                                                                                                          |
-| Ubuntu 21.04 (Hirsute Hippo)              | 5.11     |        |                                                                                                                                                                                                          |
-| Ubuntu 20.10 (Groovy Gorilla)             | 5.8      |        |                                                                                                                                                                                                          |
-| Ubuntu 20.04.X **LTS** (Focal Fossa)      | 5.4      |        | [QCOW2](http://cloud-images.ubuntu.com/releases/focal/) / [APT源](http://archive.ubuntu.com/ubuntu/dists/focal/) / [ISO](https://old-releases.ubuntu.com/releases/focal/)                        |
-| Ubuntu 19.10 (Eoan Ermine)                | 5.2      |        |                                                                                                                                                                                                          |
-| Ubuntu 19.04 (Disco Dingo)                | 5.0      |        |                                                                                                                                                                                                          |
-| Ubuntu 18.10 (Cosmic Cuttlefish)          | 4.18     |        |                                                                                                                                                                                                          |
-| Ubuntu 18.04.X **LTS** (Bionic Beaver)    | 4.15     |        | [QCOW2](http://cloud-images.ubuntu.com/releases/bionic/) / [APT源](http://archive.ubuntu.com/ubuntu/dists/bionic/) / [ISO](https://old-releases.ubuntu.com/releases/bionic/)                     |
-| Ubuntu 17.10 (Artful Aardvark)            | 4.13     |        |                                                                                                                                                                                                          |
-| Ubuntu 17.04 (Zesty Zapus)                | 4.10     |        |                                                                                                                                                                                                          |
-| Ubuntu 16.10 (Yakkety Yak)                | 4.8      |        |                                                                                                                                                                                                          |
-| Ubuntu 16.04.X **LTS** (Xenial Xerus)     | 4.4      |        | [QCOW2](http://cloud-images.ubuntu.com/releases/xenial/) / [APT源](http://archive.ubuntu.com/ubuntu/dists/xenial/) / [ISO](https://old-releases.ubuntu.com/releases/xenial/)                     |
-| Ubuntu 15.10 (Wily Werewolf)              | 4.2      |        |                                                                                                                                                                                                          |
-| Ubuntu 15.04 (Vivid Vervet)               | 3.19     |        |                                                                                                                                                                                                          |
-| Ubuntu 14.10 (Utopic Unicorn)             | 3.16     |        |                                                                                                                                                                                                          |
-| Ubuntu 14.04.5 **LTS** (Trusty Tahr)      | 3.13     |        | [QCOW2](http://cloud-images.ubuntu.com/releases/trusty/release/) / [APT源](http://archive.ubuntu.com/ubuntu/dists/trusty/) / [ISO](https://old-releases.ubuntu.com/releases/trusty/)                     |
-| Ubuntu 13.10 (Saucy Salamander)           | 3.11     |        |                                                                                                                                                                                                          |
-| Ubuntu 13.04 (Raring Ringtail)            | 3.8      |        |                                                                                                                                                                                                          |
-| Ubuntu 12.10 (Quantal Quetzal)            | 3.5      |        |                                                                                                                                                                                                          |
-| Ubuntu 12.04.X **LTS** (Precise Pangolin) | 3.2      |        | [QCOW2](http://cloud-images.ubuntu.com/releases/precise/release/) / [APT源](http://archive.ubuntu.com/ubuntu/dists/precise/) / [ISO](https://old-releases.ubuntu.com/releases/precise/)                  |
-| Ubuntu 11.10 (Oneiric Ocelot)             | 3.0      |        |                                                                                                                                                                                                          |
-| Ubuntu 11.04 (Natty Narwhal)              | 2.6.38   |        |                                                                                                                                                                                                          |
-| Ubuntu 10.10 (Maverick Meerkat)           | 2.6.35   |        |                                                                                                                                                                                                          |
-| Ubuntu 10.04.X **LTS** (Lucid Lynx)       | 2.6.32   |        | [QCOW2](http://cloud-images-archive.ubuntu.com/releases/lucid/release-20150427/) / [APT源](https://old-releases.ubuntu.com/ubuntu/dists/lucid/) / [ISO](https://old-releases.ubuntu.com/releases/lucid/) |
-| Ubuntu 9.10 (Karmic Koala)                | 2.6.31   |        |                                                                                                                                                                                                          |
-| Ubuntu 9.04 (Jaunty Jackalope)            | 2.6.28   |        |                                                                                                                                                                                                          |
-| Ubuntu 8.10 (Intrepid Ibex)               | 2.6.27   |        |                                                                                                                                                                                                          |
-| Ubuntu 8.04 (Intrepid Ibex)               | 2.6.24   |        |                                                                                                                                                                                                          |
-| Ubuntu 7.10 (Gutsy Gibbon)                | 2.6.22   |        |                                                                                                                                                                                                          |
-| Ubuntu 7.04 (Feisty Fawn)                 | 2.6.20   |        |                                                                                                                                                                                                          |
-| Ubuntu 6.10 (Edgy Eft)                    | 2.6.17   |        |                                                                                                                                                                                                          |
-| Ubuntu 6.06.X **LTS** (Dapper Drake)      | 2.6.15   |        |                                                                                                                                                                                                          |
-| Ubuntu 5.10 (Breezy Badger)               | 2.6.12   |        |                                                                                                                                                                                                          |
-| Ubuntu 5.04 (Hoary Hedgehog)              | 2.6.10   |        |                                                                                                                                                                                                          |
-| Ubuntu 4.10 (Warty Warthog)               | 2.6.8    |        |                                                                                                                                                                                                          |
+### 待适配发行版信息
 
-
-
-## CentOS Distribution Release
-
-| 版本及代号            | 内核版本    | 发布日期   | 可用仓库                                                                                                         |
-| --------------------- | ----------- | ---------- | ---------------------------------------------------------------------------------------------------------------- |
-| **CentOS Stream 9.0** | 5.14.0-284  | 2021-12-03 | [QCOW2](https://cloud.centos.org/centos/9-stream/x86_64/images/CentOS-Stream-GenericCloud-9-latest.x86_64.qcow2) |
-| **CentOS 8.5**        | 4.18.0-348  | 2021-11-16 |                                                                                                                  |
-| CentOS8.4             | 4.18.0-305  | 2021-06-03 | [QCOW2](https://cloud.centos.org/centos/8/x86_64/images/CentOS-8-GenericCloud-8.4.2105-20210603.0.x86_64.qcow2)  |
-| CentOS8.3             | 4.18.0-240  | 2020-12-08 |                                                                                                                  |
-| CentOS8.2             | 4.18.0-193  | 2020-06-15 |                                                                                                                  |
-| CentOS8.1             | 4.18.0-147  | 2020-01-15 |                                                                                                                  |
-| CentOS8.0             | 4.18.0-80   | 2019-09-24 |                                                                                                                  |
-| **CentOS 7.9**        | 3.10.0-1160 | 2020-09-29 | [QCOW2](https://cloud.centos.org/centos/7/images/CentOS-7-x86_64-GenericCloud.qcow2)                             |
-| CentOS 7.8            | 3.10.0-1127 | 2020-03-31 |                                                                                                                  |
-| CentOS 7.7            | 3.10.0-1062 | 2019-08-06 |                                                                                                                  |
-| CentOS 7.6            | 3.10.0-957  | 2018-11-03 |                                                                                                                  |
-| CentOS 7.5            | 3.10.0-862  | 2018-04-04 |                                                                                                                  |
-| CentOS 7.4            | 3.10.0-693  | 2017-08-03 |                                                                                                                  |
-| CentOS 7.3            | 3.10.0-514  | 2016-11-03 |                                                                                                                  |
-| CentOS 7.2            | 3.10.0-327  | 2015-11-19 |                                                                                                                  |
-| CentOS 7.1            | 3.10.0-229  | 2015-03-31 |                                                                                                                  |
-| CentOS 7.0            | 3.10.0-123  | 2014-07-07 |                                                                                                                  |
-| **CentOS 6.10**       | 2.6.32-754  | 2018-07-03 | [QCOW2](https://cloud.centos.org/centos/6/images/CentOS-6-x86_64-GenericCloud.qcow2)                             |
-| CentOS 6.9            | 2.6.32-696  | 2017-03-28 |                                                                                                                  |
-| CentOS 6.8            | 2.6.32-642  | 2016-05-25 |                                                                                                                  |
-| CentOS 6.7            | 2.6.32-573  | 2015-08-07 |                                                                                                                  |
-| CentOS 6.6            | 2.6.32-504  | 2014-10-28 |                                                                                                                  |
-| CentOS 6.5            | 2.6.32-431  | 2013-12-01 |                                                                                                                  |
-| CentOS 6.4            | 2.6.32-358  | 2013-03-09 |                                                                                                                  |
-| CentOS 6.3            | 2.6.32-279  | 2012-07-09 |                                                                                                                  |
-| CentOS 6.2            | 2.6.32-220  | 2011-12-20 |                                                                                                                  |
-| CentOS 6.1            | 2.6.32-131  | 2011-12-09 |                                                                                                                  |
-| CentOS 6.0            | 2.6.32-71   | 2011-07-10 |                                                                                                                  |
-| CentOS 5.11           | 2.6.18-398  | 2014-09-30 |                                                                                                                  |
-| CentOS 5.10           | 2.6.18-371  | 2013-10-19 |                                                                                                                  |
-| CentOS 5.9            | 2.6.18-348  | 2013-01-17 |                                                                                                                  |
-| CentOS 5.8            | 2.6.18-308  | 2012-03-07 |                                                                                                                  |
-| CentOS 5.7            | 2.6.18-274  | 2011-09-13 |                                                                                                                  |
-| CentOS 5.6            | 2.6.18-238  | 2011-04-08 |                                                                                                                  |
-| CentOS 5.5            | 2.6.18-194  | 2010-05-14 |                                                                                                                  |
-| CentOS 5.4            | 2.6.18-164  | 2009-10-21 |                                                                                                                  |
-| CentOS 5.3            | 2.6.18-128  | 2009-03-31 |                                                                                                                  |
-| CentOS 5.2            | 2.6.18-92   | 2008-06-24 |                                                                                                                  |
-| CentOS 5.1            | 2.6.18-53   | 2007-12-02 |                                                                                                                  |
-| CentOS 5.0            | 2.6.18-8    | 2007-04-12 |                                                                                                                  |
-
-
-
-## RockyLinux Distribution Release
-
-
-| 版本及代号      | 内核版本       |
-| --------------- | -------------- |
-| Rocky Linux 9.2 | 6.0            |
-| Rocky Linux 9.1 | 5.14.0-70.13.1 |
-| Rocky Linux 9.0 | 5.14.0-162.6.1 |
-| Rocky Linux 8.5 | 4.18.0-348     |
-| Rocky Linux 8.4 | 4.18.0-305     |
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+* [Debian] (docs/Debian.md)
+* [CentOS] (docs/CentOS.md)
+* [RockyLinux] (docs/RockyLinux.md)
 
 
 
