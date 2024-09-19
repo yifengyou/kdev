@@ -945,6 +945,12 @@ def handle_run(args):
     return 0
 
 
+def handle_onekey(args):
+    handle_kernel(args)
+    handle_rootfs(args)
+    handle_run(args)
+
+
 @timer
 def handle_clean(args):
     handle_check(args)
@@ -1117,6 +1123,25 @@ def main():
     parser_run.add_argument('--vmcpu', help="setup vm vcpu number")
     parser_run.add_argument('--vmram', help="setup vm ram")
     parser_run.set_defaults(func=handle_run)
+
+    # 添加子命令 onekey
+    parser_onekey = subparsers.add_parser('onekey', aliases=['go', 'test'], parents=[parent_parser],
+                                          help="build kernel and startup")
+    parser_onekey.add_argument("--nodocker", "--host", dest="nodocker", default=None, action="store_true",
+                               help="build kernel without docker environment")
+    parser_onekey.add_argument("-j", "--job", default=os.cpu_count(), help="setup compile job number")
+    parser_onekey.add_argument("-c", "--clean", help="clean docker when exit")
+    parser_onekey.add_argument("--config", help="setup kernel build config")
+    parser_onekey.add_argument("--bash", dest="bash", default=None, action="store_true",
+                               help="break before build(just for docker build)")
+    parser_onekey.add_argument("--mrproper", dest="mrproper", default=None, action="store_true",
+                               help="make mrproper before build")
+    parser_onekey.add_argument('-r', '--release', default=None, action="store_true")
+    parser_onekey.add_argument('-q', '--qcow2', dest="qcow2_image", default=None)
+    parser_onekey.add_argument('-n', '--name', help="setup vm name")
+    parser_onekey.add_argument('--vmcpu', help="setup vm vcpu number")
+    parser_onekey.add_argument('--vmram', help="setup vm ram")
+    parser_onekey.set_defaults(func=handle_onekey)
 
     # 添加子命令 clean
     parser_clean = subparsers.add_parser('clean', parents=[parent_parser], help="clean buile environment")
