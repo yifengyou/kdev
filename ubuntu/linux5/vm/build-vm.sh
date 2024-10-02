@@ -14,6 +14,12 @@ fi
 sync
 sleep 1
 
+curl http://192.168.122.1/ks/ubuntu/ &> /dev/null
+if [ $? -ne 0 ] ; then
+	echo "this ubuntu version need webserver to setup automatic installation"
+	exit 1
+fi
+
 if [ ! -f ubuntu-22.04-live-server-amd64.iso ]; then
 	wget -c https://old-releases.ubuntu.com/releases/22.04/ubuntu-22.04-live-server-amd64.iso
 fi
