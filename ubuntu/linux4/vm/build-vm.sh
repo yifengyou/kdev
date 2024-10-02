@@ -15,7 +15,7 @@ sync
 sleep 1
 
 if [ ! -f ubuntu-18.04-server-amd64.iso ]; then
-	https://old-releases.ubuntu.com/releases/18.04.4/ubuntu-18.04-server-amd64.iso
+	wget -c https://old-releases.ubuntu.com/releases/18.04.4/ubuntu-18.04-server-amd64.iso
 fi
 
 virt-install --connect qemu:///system \

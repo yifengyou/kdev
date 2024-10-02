@@ -316,6 +316,8 @@ def timer(func):
         elapsed = end - start
         log.info(f"-> {func.__name__} Done! Ret=[ {result} ] Runtime=[ {format(elapsed / 60, '.3f')} min ]")
         log.info(f"-> Repeat Build Options [{' '.join(sys.argv)}]")
+        if result:
+            exit(result)
         return result
 
     return wrapper

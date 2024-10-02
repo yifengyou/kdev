@@ -30,7 +30,7 @@ virt-install \
 	--location ubuntu-22.04-live-server-amd64.iso,kernel=casper/vmlinuz,initrd=casper/initrd \
 	--initrd-inject user-data \
 	--initrd-inject meta-data \
-	--extra-args="priority=critical console=ttyS0,115200 autoinstall ds=nocloud-net;s=http://192.168.33.99/ks/ubuntu/ cloud-config-url=/dev/null  root=/dev/ram0" \
+	--extra-args="priority=critical console=ttyS0,115200 autoinstall ds=nocloud-net;s=http://192.168.122.1/ks/ubuntu/ cloud-config-url=/dev/null  root=/dev/ram0" \
 	--check all=off
 
 qemu-img snapshot -c 'install os' rootfs.qcow2
