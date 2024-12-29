@@ -474,6 +474,18 @@ if [ $? -ne 0 ]; then
     echo "make headers_install to ${WORKDIR} failed!"
     exit 1
 fi
+
+echo " build isoimage"
+make O=${WORKDIR}/build ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} INSTALL_MOD_STRIP=1 isoimage -j ${JOB}
+if [ $? -ne 0 ]; then
+    # try again
+    make O=${WORKDIR}/build ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} INSTALL_MOD_STRIP=1 isoimage -j ${JOB}
+    if [ $? -ne 0 ]; then
+        echo "make isoimage failed!"
+        exit 1
+    fi
+fi
+
 """
 
     if hasattr(args, 'nodocker') and ('True' == args.nodocker or '1' == args.nodocker):
@@ -921,6 +933,9 @@ def handle_run(args):
         log.error(f"unsupported arch {args.arch}")
         return 1
 
+    enable_kvm = ""
+    if os.path.exists("/dev/kvm"):
+        enable_kvm = f"  --virt-type kvm "
     qemu_cmd = f"virt-install  " \
                f"  --name {vmname} " \
                f"  --arch {args.vmarch} " \
@@ -929,7 +944,7 @@ def handle_run(args):
                f"  --vcpus {args.vmcpu}  " \
                f"  --disk path={os.path.join(args.workdir, qcow2_image_f)},format=qcow2,bus=scsi " \
                f"  --network default " \
-               f"  --virt-type kvm " \
+               f"  {enable_kvm}" \
                f"  --graphics spice,listen=0.0.0.0 " \
                f"  --video vga " \
                f"  --boot hd " \
@@ -1120,7 +1135,7 @@ def main():
 
     # 添加子命令 run
     parser_run = subparsers.add_parser('run', aliases=['startup', 'start'], parents=[parent_parser],
-                                       help="run kernel in qemu-kvm")
+                                       help="run kernel in qemu")
     parser_run.add_argument('-n', '--name', help="setup vm name")
     parser_run.add_argument('--vmcpu', help="setup vm vcpu number")
     parser_run.add_argument('--vmram', help="setup vm ram")
