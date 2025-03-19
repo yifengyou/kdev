@@ -474,6 +474,11 @@ if [ $? -ne 0 ]; then
     echo "make headers_install to ${WORKDIR} failed!"
     exit 1
 fi
+make O=${WORKDIR}/build ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} headers_check INSTALL_HDR_PATH=${KERNEL_HEADER_INSTALL}
+if [ $? -ne 0 ]; then
+    echo "make headers_check to ${WORKDIR} failed!"
+    exit 1
+fi
 
 echo " build isoimage"
 make O=${WORKDIR}/build ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} INSTALL_MOD_STRIP=1 isoimage -j ${JOB}
@@ -486,6 +491,21 @@ if [ $? -ne 0 ]; then
     fi
 fi
 
+# add linux-headers/kernel-devel files
+rsync -av --exclude-from='/kernel/.gitignore'  ${WORKDIR}/build/*  ${KERNEL_HEADER_INSTALL}/
+rsync -av ${WORKDIR}/build/include  ${KERNEL_HEADER_INSTALL}/
+rsync -av ${WORKDIR}/build/arch  ${KERNEL_HEADER_INSTALL}/
+rsync -av ${WORKDIR}/build/Module.symvers  ${KERNEL_HEADER_INSTALL}/
+rsync -av ${WORKDIR}/build/modules.*  ${KERNEL_HEADER_INSTALL}/
+
+rm -f ${WORKDIR}/lib/modules/${KERNELRELEASE}/source
+rm -f ${WORKDIR}/lib/modules/${KERNELRELEASE}/build
+ln -svf /usr/src/linux-headers-${KERNELRELEASE}  ${WORKDIR}/lib/modules/${KERNELRELEASE}/source
+ln -svf /usr/src/linux-headers-${KERNELRELEASE}  ${WORKDIR}/lib/modules/${KERNELRELEASE}/build
+
+# add kernel source
+mkdir -p ${KERNEL_HEADER_INSTALL}/kernel-source
+rsync -av /kernel  ${KERNEL_HEADER_INSTALL}/kernel-source-tree
 """
 
     if hasattr(args, 'nodocker') and ('True' == args.nodocker or '1' == args.nodocker):
@@ -721,7 +741,7 @@ def handle_rootfs(args):
     copy_bootdir = os.path.join(args.workdir, "boot")
     qcow_bootdir = os.path.join(args.tmpdir, "boot")
     if os.path.isdir(copy_bootdir) and qcow_bootdir != "/boot":
-        copy_cmd = ["/usr/bin/cp", "-a"] + glob.glob(f"{copy_bootdir}/*") + [f"{qcow_bootdir}/"]
+        copy_cmd = ["/usr/bin/rsync", "-av", "--mkpath"] + glob.glob(f"{copy_bootdir}/*") + [f"{qcow_bootdir}/"]
         log.info(" run cmd: %s" % ' '.join(copy_cmd))
         retcode, _, error = do_exe_cmd(copy_cmd)
 
@@ -733,11 +753,28 @@ def handle_rootfs(args):
     # 稍作延迟
     do_exe_cmd("sync")
 
+    # 拷贝kernel源代码
+    copy_srcdir = os.path.join(args.sourcedir)
+    qcow_srcdir = os.path.join(args.tmpdir, "kernel")
+    if os.path.isdir(copy_srcdir) and qcow_srcdir != "/kernel":
+        copy_cmd = ["/usr/bin/rsync", "-av", "--mkpath"] + glob.glob(f"{copy_srcdir}/*") + [f"{qcow_srcdir}/"]
+        log.info(" run cmd: %s" % ' '.join(copy_cmd))
+        retcode, _, error = do_exe_cmd(copy_cmd)
+
+        if retcode == 0:
+            log.info(f" copy source tree ok! {qcow_srcdir}")
+        else:
+            log.error(f" copy source tree failed!! {qcow_srcdir} {error}")
+
+    # 稍作延迟
+    do_exe_cmd("sync")
+
     # 拷贝lib目录，包含inbox核外驱动
     copy_libdir = os.path.join(args.workdir, "lib/modules")
     qcow_libdir = os.path.join(args.tmpdir, "lib/modules")
     if os.path.isdir(copy_libdir) and qcow_libdir != "/lib/modules":
-        copy_cmd = ["/usr/bin/cp", "-a"] + glob.glob(f"{copy_libdir}/*") + [f"{qcow_libdir}/"]
+        copy_cmd = ["/usr/bin/rsync", "-av", "--mkpath"] + glob.glob(f"{copy_libdir}/*") + [f"{qcow_libdir}/"]
+        log.info(" run cmd: %s" % ' '.join(copy_cmd))
         retcode, _, _ = do_exe_cmd(copy_cmd)
         if retcode == 0:
             log.info(f" copy modules(stripped) ok! {qcow_libdir}")
@@ -751,7 +788,7 @@ def handle_rootfs(args):
     copy_headerdir = os.path.join(args.workdir, "usr")
     qcow_headerdir = os.path.join(args.tmpdir, "usr")
     if os.path.isdir(copy_headerdir) and qcow_headerdir != "/usr":
-        copy_cmd = ["/usr/bin/cp", "-a"] + glob.glob(f"{copy_headerdir}/*") + [f"{qcow_headerdir}/"]
+        copy_cmd = ["/usr/bin/rsync", "-av", "--mkpath"] + glob.glob(f"{copy_headerdir}/*") + [f"{qcow_headerdir}/"]
         retcode, _, _ = do_exe_cmd(copy_cmd)
         if retcode == 0:
             log.info(f" copy headers ok! {qcow_headerdir}")
@@ -903,16 +940,16 @@ def handle_run(args):
     if 0 == retcode:
         if args.vmstat.strip() == "running":
             log.info(f"{vmname} already running")
-            os.system(f"virsh console {vmname}")
-            log.info(f"you can run 'virsh console {vmname}' to attach vm again~")
+            os.system(f"virsh console --force {vmname}")
+            log.info(f"you can run 'virsh console --force {vmname}' to attach vm again~")
             return
         ret, _, _ = do_exe_cmd(f"virsh start {vmname}", print_output=True)
         if 0 != ret:
             log.error(f"start vm {vmname} failed,check it.")
             return 1
         log.info(f"start vm {vmname} ok, enjoy it.")
-        os.system(f"virsh console {vmname}")
-        log.info(f"you can run 'virsh console {vmname}' to attach vm again~")
+        os.system(f"virsh console --force {vmname}")
+        log.info(f"you can run 'virsh console --force {vmname}' to attach vm again~")
         return 0
 
     log.info(f" {vmname} does't exists! create new vm")
@@ -957,8 +994,8 @@ def handle_run(args):
         return 1
     log.info(f" start {vmname} success! enjoy it~~")
 
-    os.system(f"virsh console {vmname}")
-    log.info(f"you can run 'virsh console {vmname}' to attach vm again~")
+    os.system(f"virsh console --force {vmname}")
+    log.info(f"you can run 'virsh console --force {vmname}' to attach vm again~")
     return 0
 
 
