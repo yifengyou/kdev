@@ -493,7 +493,7 @@ if [ $? -ne 0 ]; then
     fi
 fi
 """
-    if hasattr(args, 'isoimage') and args.isoimage:
+    if hasattr(args, 'isoimage') and args.isoimage == True:
         body += isoimage_script
 
     body += """
