@@ -479,7 +479,9 @@ if [ $? -ne 0 ]; then
     echo "make headers_check to ${WORKDIR} failed!"
     exit 1
 fi
+"""
 
+    isoimage_script = """
 echo " build isoimage"
 make O=${WORKDIR}/build ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} INSTALL_MOD_STRIP=1 isoimage -j ${JOB}
 if [ $? -ne 0 ]; then
@@ -490,7 +492,11 @@ if [ $? -ne 0 ]; then
         exit 1
     fi
 fi
+"""
+    if hasattr(args, 'isoimage') and args.isoimage:
+        body += isoimage_script
 
+    body += """
 # add linux-headers/kernel-devel files
 rsync -av --exclude-from='/kernel/.gitignore'  ${WORKDIR}/build/*  ${KERNEL_HEADER_INSTALL}/
 rsync -av ${WORKDIR}/build/include  ${KERNEL_HEADER_INSTALL}/
@@ -741,7 +747,8 @@ def handle_rootfs(args):
     copy_bootdir = os.path.join(args.workdir, "boot")
     qcow_bootdir = os.path.join(args.tmpdir, "boot")
     if os.path.isdir(copy_bootdir) and qcow_bootdir != "/boot":
-        copy_cmd = ["/usr/bin/rsync", "-av", "--mkpath"] + glob.glob(f"{copy_bootdir}/*") + [f"{qcow_bootdir}/"]
+        copy_cmd = ["/usr/bin/rsync", "-av", "--mkpath", "--exclude", "*.img*", "--exclude", "*.old"] + glob.glob(
+            f"{copy_bootdir}/*") + [f"{qcow_bootdir}/"]
         log.info(" run cmd: %s" % ' '.join(copy_cmd))
         retcode, _, error = do_exe_cmd(copy_cmd)
 
@@ -837,7 +844,7 @@ def handle_rootfs(args):
         log.info("using default rclocal config")
         with open(os.path.join(args.tmpdir, "etc/rc.local"), "w") as f:
             f.write("""#!/bin/bash
-    
+
 if [ -f /etc/firstboot ]; then
     mv /etc/firstboot /etc/firstboot-bak
     cd /boot
@@ -868,7 +875,7 @@ if [ -f /etc/firstboot ]; then
 fi
 
 exit 0
-    
+
     """)
 
     # modify rootfs/etc/rc.local file mode
@@ -1161,6 +1168,8 @@ def main():
                                help="break before build(just for docker build)")
     parser_kernel.add_argument("--mrproper", dest="mrproper", default=None, action="store_true",
                                help="make mrproper before build")
+    parser_kernel.add_argument("--isoimage", dest="isoimage", default=False, action="store_true",
+                               help="make isoimage")
     parser_kernel.set_defaults(func=handle_kernel)
 
     # 添加子命令 rootfs
