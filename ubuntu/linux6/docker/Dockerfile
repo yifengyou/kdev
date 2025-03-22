@@ -7,7 +7,7 @@ RUN echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selectio
     && apt-get install -y -q sudo aptitude xz-utils flex bison libncurses5-dev make \
                              git exuberant-ctags bc libssl-dev libelf-dev gcc g++ \
                              python3 vim tmux lrzsz cpio build-essential rsync \
-                             dwarves zstd
+                             dwarves zstd kmod syslinux-utils isolinux
 
 
 CMD ["bash"]
