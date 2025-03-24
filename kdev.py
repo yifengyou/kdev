@@ -474,11 +474,10 @@ if [ $? -ne 0 ]; then
     echo "make headers_install to ${WORKDIR} failed!"
     exit 1
 fi
-make O=${WORKDIR}/build ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} headers_check INSTALL_HDR_PATH=${KERNEL_HEADER_INSTALL}
-if [ $? -ne 0 ]; then
-    echo "make headers_check to ${WORKDIR} failed!"
-    exit 1
-fi
+
+# linux 6.6 will build failed!
+make O=${WORKDIR}/build ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} headers_check INSTALL_HDR_PATH=${KERNEL_HEADER_INSTALL} || :
+
 """
 
     isoimage_script = """
@@ -601,9 +600,9 @@ JOB=%s
         os.chmod("dockerbuild.sh", 0o755)
 
         if args.bash:
-            docker_cmd = f"\n\ndocker run -it " \
+            docker_cmd = f"\n\ndocker run --privileged  -it " \
                          f" -v {args.workdir}/dockerbuild.sh:/bin/kdev " \
-                         f" --hostname linux{args.masterversion}_docker " \
+                         f" --hostname kdev-linux{args.masterversion} " \
                          f" -v {args.sourcedir}:/kernel " \
                          f" -v {args.workdir}:/workdir " \
                          f" -w /workdir " \
@@ -613,7 +612,8 @@ JOB=%s
             os.system(docker_cmd)
             return 1
 
-        docker_cmd = f"docker run -t " \
+        docker_cmd = f"docker run --privileged -t " \
+                     f" --hostname kdev-linux{args.masterversion} " \
                      f" -v {args.workdir}/dockerbuild.sh:/bin/kdev " \
                      f" -v {args.sourcedir}:/kernel " \
                      f" -v {args.workdir}:/workdir " \

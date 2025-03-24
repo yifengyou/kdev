@@ -21,7 +21,7 @@ if [ $? -ne 0 ] ; then
 fi
 
 if [ ! -f ubuntu-24.04-live-server-amd64.iso ]; then
-	wget -c https://mirrors.aliyun.com/ubuntu-releases/24.04/ubuntu-24.04-live-server-amd64.iso
+	wget -c https://mirrors.aliyun.com/ubuntu-releases/24.04/ubuntu-24.04.2-live-server-amd64.iso
 fi
 
 virt-install \

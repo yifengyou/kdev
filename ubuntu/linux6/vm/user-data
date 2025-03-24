@@ -8,10 +8,10 @@ autoinstall:
     - arches:
       - amd64
       - i386
-      uri: http://cn.archive.ubuntu.com/ubuntu
+      uri: https://mirrors.aliyun.com/ubuntu
     - arches:
       - default
-      uri: http://ports.ubuntu.com/ubuntu-ports
+      uri: http://mirrors.aliyun.com/ubuntu-ports
   drivers:
     install: false
   identity:
@@ -35,7 +35,7 @@ autoinstall:
   network:
     ethernets:
       enp1s0:
-        dhcp4: false
+        dhcp4: true
     version: 2
   ssh:
     allow-pw: true
@@ -43,6 +43,12 @@ autoinstall:
     install-server: true
   packages:
     - vim
+    - tmux
+    - lrzsz
+    - net-tools
+    - openssh-server
+    - build-essential
+    - isc-dhcp-client-ddns
   storage:
     config:
     - ptable: gpt
