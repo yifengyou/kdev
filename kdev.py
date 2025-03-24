@@ -407,7 +407,7 @@ def handle_check(args):
 
 
 @timer
-def handle_kernel(args):
+def handle_build_kernel(args):
     handle_check(args)
     log.info("-> Step build kernel")
     os.chdir(args.workdir)
@@ -420,72 +420,79 @@ def handle_kernel(args):
 
     mrproper = ""
     if hasattr(args, 'mrproper') and ('1' == args.mrproper or 'True' == args.mrproper):
-        mrproper = "make O=${WORKDIR}/build mrproper"
+        mrproper = "make mrproper"
 
     # 生产编译脚本，因为不同环境对python版本有依赖要求，暂时不考虑规避，脚本万能
     body = """
-cd ${SOURCEDIR}
+cd ${WORKDIR}
 
-mkdir -p ${WORKDIR}/build
 """ + mrproper + """
-make O=${WORKDIR}/build ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} """ + kernel_config + """
+
+if [ -f .config ]; then
+    cp -a .config .config-bak
+fi
+
+make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} """ + kernel_config + """
 if [ $? -ne 0 ]; then
     echo "make  """ + kernel_config + """ failed!"
     exit 1
 fi
 
-ls -alh ${WORKDIR}/build/.config
-make O=${WORKDIR}/build ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} -j "${JOB}"
+diff .config .config-bak
+if [ $? -eq 0 ];then
+    cp -a .config-bak .config
+fi
+
+ls -alh ${WORKDIR}/.config
+make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} -j "${JOB}"
 if [ $? -ne 0 ]; then
     echo "Build kernel binary failed!"
     exit 1
 fi
 
-echo " kernel install to ${WORKDIR}/boot"
-if [ ! -d "${WORKDIR}/boot" ]; then
-    mkdir -p ${WORKDIR}/boot
+echo " kernel install to ${OUTPUTDIR}/boot"
+if [ ! -d "${OUTPUTDIR}/boot" ]; then
+    mkdir -p ${OUTPUTDIR}/boot
 fi
-make O=${WORKDIR}/build ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} install INSTALL_PATH=${WORKDIR}/boot
+make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} install INSTALL_PATH=${OUTPUTDIR}/boot
 if [ $? -ne 0 ]; then
-    echo "make install to ${WORKDIR}/boot failed!"
+    echo "make install to ${OUTPUTDIR}/boot failed!"
     exit 1
 fi
 
-echo " kernel modules install to ${WORKDIR}"
-make O=${WORKDIR}/build ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} INSTALL_MOD_STRIP=1 modules_install -j ${JOB} INSTALL_MOD_PATH=${WORKDIR}
+echo " kernel modules install to ${OUTPUTDIR}"
+make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} INSTALL_MOD_STRIP=1 modules_install -j ${JOB} INSTALL_MOD_PATH=${OUTPUTDIR}/
 if [ $? -ne 0 ]; then
     # try again
-    make O=${WORKDIR}/build ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} INSTALL_MOD_STRIP=1 modules_install -j ${JOB} INSTALL_MOD_PATH=${WORKDIR}
+    make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} INSTALL_MOD_STRIP=1 modules_install -j ${JOB} INSTALL_MOD_PATH=${OUTPUTDIR}/
     if [ $? -ne 0 ]; then
-        echo "make modules_install to ${WORKDIR} failed!"
+        echo "make modules_install to ${OUTPUTDIR} failed!"
         exit 1
     fi
 fi
 
-cd ${SOURCEDIR}
-KERNELRELEASE=$( make -s --no-print-directory O=${WORKDIR}/build ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} kernelrelease 2>/dev/null )
-KERNEL_HEADER_INSTALL=${WORKDIR}/usr/src/linux-headers-${KERNELRELEASE}
-echo " kernel headers install to ${KERNEL_HEADER_INSTALL}"
-if [ ! -d "${KERNEL_HEADER_INSTALL}" ]; then
-    mkdir -p ${KERNEL_HEADER_INSTALL}
-fi
-make O=${WORKDIR}/build ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} headers_install INSTALL_HDR_PATH=${KERNEL_HEADER_INSTALL}
+KERNELRELEASE=$( make -s --no-print-directory ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} kernelrelease 2>/dev/null )
+KERNEL_DEVEL_DIR=${OUTPUTDIR}/usr/src/linux-headers-${KERNELRELEASE}
+mkdir -p ${KERNEL_DEVEL_DIR}
+echo " kernel headers install to ${KERNEL_DEVEL_DIR}"
+
+make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} headers_install INSTALL_HDR_PATH=${OUTPUTDIR}/usr
 if [ $? -ne 0 ]; then
-    echo "make headers_install to ${WORKDIR} failed!"
+    echo "make headers_install to ${OUTPUTDIR} failed!"
     exit 1
 fi
 
 # linux 6.6 will build failed!
-make O=${WORKDIR}/build ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} headers_check INSTALL_HDR_PATH=${KERNEL_HEADER_INSTALL} || :
+make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} headers_check INSTALL_HDR_PATH=${OUTPUTDIR}/usr || :
 
 """
 
     isoimage_script = """
 echo " build isoimage"
-make O=${WORKDIR}/build ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} INSTALL_MOD_STRIP=1 isoimage -j ${JOB}
+make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} INSTALL_MOD_STRIP=1 isoimage -j ${JOB}
 if [ $? -ne 0 ]; then
     # try again
-    make O=${WORKDIR}/build ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} INSTALL_MOD_STRIP=1 isoimage -j ${JOB}
+    make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} INSTALL_MOD_STRIP=1 isoimage -j ${JOB}
     if [ $? -ne 0 ]; then
         echo "make isoimage failed!"
         exit 1
@@ -496,21 +503,20 @@ fi
         body += isoimage_script
 
     body += """
+
 # add linux-headers/kernel-devel files
-rsync -av --exclude-from='/kernel/.gitignore'  ${WORKDIR}/build/*  ${KERNEL_HEADER_INSTALL}/
-rsync -av ${WORKDIR}/build/include  ${KERNEL_HEADER_INSTALL}/
-rsync -av ${WORKDIR}/build/arch  ${KERNEL_HEADER_INSTALL}/
-rsync -av ${WORKDIR}/build/Module.symvers  ${KERNEL_HEADER_INSTALL}/
-rsync -av ${WORKDIR}/build/modules.*  ${KERNEL_HEADER_INSTALL}/
+cd ${WORKDIR}
+find -type f \( -name "Makefile*" -o -name "Kconfig*" \) -exec cp --parents {} ${KERNEL_DEVEL_DIR}/ \;
+rsync -a --exclude='*.o' --exclude='*.cmd' .config include arch Module.* modules.* scripts include tools kdev ${KERNEL_DEVEL_DIR}/
+find ${KERNEL_DEVEL_DIR}/ -name "*.o" -exec rm -rf {} \;
+find ${KERNEL_DEVEL_DIR}/ -name ".*.cmd" -exec rm -f {} \;
 
-rm -f ${WORKDIR}/lib/modules/${KERNELRELEASE}/source
-rm -f ${WORKDIR}/lib/modules/${KERNELRELEASE}/build
-ln -svf /usr/src/linux-headers-${KERNELRELEASE}  ${WORKDIR}/lib/modules/${KERNELRELEASE}/source
-ln -svf /usr/src/linux-headers-${KERNELRELEASE}  ${WORKDIR}/lib/modules/${KERNELRELEASE}/build
+rm -f ${OUTPUTDIR}/lib/modules/${KERNELRELEASE}/source ${OUTPUTDIR}/lib/modules/${KERNELRELEASE}/build
+ln -svf   /usr/src/linux-headers-${KERNELRELEASE}   ${OUTPUTDIR}/lib/modules/${KERNELRELEASE}/source
+ls -dlh ${OUTPUTDIR}/lib/modules/${KERNELRELEASE}/source
+ln -svf   /usr/src/linux-headers-${KERNELRELEASE}   ${OUTPUTDIR}/lib/modules/${KERNELRELEASE}/build
+ls -dlh ${OUTPUTDIR}/lib/modules/${KERNELRELEASE}/build
 
-# add kernel source
-mkdir -p ${KERNEL_HEADER_INSTALL}/kernel-source
-rsync -av /kernel  ${KERNEL_HEADER_INSTALL}/kernel-source-tree
 """
 
     if hasattr(args, 'nodocker') and ('True' == args.nodocker or '1' == args.nodocker):
@@ -531,17 +537,15 @@ if [ -f /.dockerenv ]; then
 fi
 
 WORKDIR=%s
-SOURCEDIR=%s
+OUTPUTDIR=/rootfs
 ARCH=%s
 CROSS_COMPILE=%s
-KERNEL_HEADER_INSTALL=%s
 JOB=%s
+
 """ % (
             args.workdir,
-            args.sourcedir,
             args.arch,
             args.cross_compile,
-            args.kernelversion,
             args.job,
 
         )
@@ -582,41 +586,71 @@ if [ ! -f /.dockerenv ]; then
 fi
 
 WORKDIR=%s
-SOURCEDIR=%s
+OUTPUTDIR=/rootfs
 ARCH=%s
 CROSS_COMPILE=%s
-KERNEL_HEADER_INSTALL=%s
 JOB=%s
+
 """ % (
             "/workdir",
-            "/kernel",
             args.arch,
             args.cross_compile,
-            args.kernelversion,
             args.job if hasattr(args, 'job') else os.cpu_count(),
         )
         with open("dockerbuild.sh", "w") as script:
             script.write(head + body)
         os.chmod("dockerbuild.sh", 0o755)
 
+        # overlay fs mount
+        overlay_build_dir = f"{args.workdir}/build"
+        overlay_work_dir = f"{args.workdir}/overlay-work"
+        overlay_merged_dir = f"{args.workdir}/overlay-merged"
+        output_dir = f"{args.workdir}/rootfs"
+
+        os.makedirs(overlay_build_dir, exist_ok=True)
+        os.makedirs(overlay_work_dir, exist_ok=True)
+        os.makedirs(overlay_merged_dir, exist_ok=True)
+        os.makedirs(output_dir, exist_ok=True)
+
+        overlayfs_mount_cmd = f"mount -t overlay overlay" \
+                              f" -o lowerdir={args.sourcedir},upperdir={overlay_build_dir},workdir={overlay_work_dir}" \
+                              f" {overlay_merged_dir}"
+        ret, output, error = do_exe_cmd(overlayfs_mount_cmd,
+                                        print_output=True,
+                                        shell=False,
+                                        enable_log=True,
+                                        logfile="build_kernel_in_docker.log")
+        if ret != 0:
+            log.error(f"overlayfs mount failed! [{overlayfs_mount_cmd}] retcode={ret}")
+            exit(1)
+        log.info(f"overlay mount success {overlay_merged_dir}!!")
+
+        def overlayfs_umount(mdir):
+            # 稍作延迟
+            do_exe_cmd("sync")
+            time.sleep(3)
+            overlayfs_umount_cmd = f"umount {mdir}"
+            do_exe_cmd(overlayfs_umount_cmd, print_output=False, shell=False, enable_log=False)
+
         if args.bash:
-            docker_cmd = f"\n\ndocker run --privileged  -it " \
+            docker_cmd = f"\n\ndocker run -it" \
                          f" -v {args.workdir}/dockerbuild.sh:/bin/kdev " \
                          f" --hostname kdev-linux{args.masterversion} " \
-                         f" -v {args.sourcedir}:/kernel " \
-                         f" -v {args.workdir}:/workdir " \
+                         f" -v {args.workdir}/overlay-merged:/workdir " \
+                         f" -v {output_dir}:/rootfs " \
                          f" -w /workdir " \
                          f"{args.docker_image}  " \
                          f"/bin/bash\n\n"
             log.info(f"-> Exe cmd:\n{docker_cmd}")
             os.system(docker_cmd)
-            return 1
+            overlayfs_umount(overlay_merged_dir)
+            return 0
 
-        docker_cmd = f"docker run --privileged -t " \
+        docker_cmd = f"docker run -t" \
                      f" --hostname kdev-linux{args.masterversion} " \
                      f" -v {args.workdir}/dockerbuild.sh:/bin/kdev " \
-                     f" -v {args.sourcedir}:/kernel " \
-                     f" -v {args.workdir}:/workdir " \
+                     f" -v {args.workdir}/overlay-merged:/workdir " \
+                     f" -v {output_dir}:/rootfs " \
                      f" -w /workdir   " \
                      f"{args.docker_image}  " \
                      f"/bin/kdev"
@@ -629,8 +663,10 @@ JOB=%s
         if ret != 0:
             log.error(f"docker build failed! retcode={ret}")
             log.info("you can run 'kdev bash' to enter build environment!!")
+            overlayfs_umount(overlay_merged_dir)
             return 1
         log.info("You can run 'kdev bash' to enter build environment!!")
+        overlayfs_umount(overlay_merged_dir)
         return 0
 
 
@@ -744,63 +780,16 @@ def handle_rootfs(args):
     do_exe_cmd("sync")
 
     # 拷贝boot目录，包含linux vmlinuz config maps
-    copy_bootdir = os.path.join(args.workdir, "boot")
-    qcow_bootdir = os.path.join(args.tmpdir, "boot")
-    if os.path.isdir(copy_bootdir) and qcow_bootdir != "/boot":
-        copy_cmd = ["/usr/bin/rsync", "-av", "--mkpath", "--exclude", "*.img*", "--exclude", "*.old"] + glob.glob(
-            f"{copy_bootdir}/*") + [f"{qcow_bootdir}/"]
+    copy_rootfsdir = os.path.join(args.workdir, "rootfs")
+    qcow_rootfsdir = os.path.join(args.tmpdir)
+    if os.path.isdir(copy_rootfsdir) and qcow_rootfsdir != "/":
+        copy_cmd = ["/usr/bin/rsync", "-ah", "--update", "-K", f"{copy_rootfsdir}/", f"{qcow_rootfsdir}/"]
         log.info(" run cmd: %s" % ' '.join(copy_cmd))
         retcode, _, error = do_exe_cmd(copy_cmd)
-
         if retcode == 0:
-            log.info(f" copy vmlinuz/config ok! {qcow_bootdir}")
+            log.info(f" copy rootfs ok! {qcow_rootfsdir}")
         else:
-            log.error(f" copy vmlinuz/config failed!! {qcow_bootdir} {error}")
-
-    # 稍作延迟
-    do_exe_cmd("sync")
-
-    # 拷贝kernel源代码
-    copy_srcdir = os.path.join(args.sourcedir)
-    qcow_srcdir = os.path.join(args.tmpdir, "kernel")
-    if os.path.isdir(copy_srcdir) and qcow_srcdir != "/kernel":
-        copy_cmd = ["/usr/bin/rsync", "-av", "--mkpath"] + glob.glob(f"{copy_srcdir}/*") + [f"{qcow_srcdir}/"]
-        log.info(" run cmd: %s" % ' '.join(copy_cmd))
-        retcode, _, error = do_exe_cmd(copy_cmd)
-
-        if retcode == 0:
-            log.info(f" copy source tree ok! {qcow_srcdir}")
-        else:
-            log.error(f" copy source tree failed!! {qcow_srcdir} {error}")
-
-    # 稍作延迟
-    do_exe_cmd("sync")
-
-    # 拷贝lib目录，包含inbox核外驱动
-    copy_libdir = os.path.join(args.workdir, "lib/modules")
-    qcow_libdir = os.path.join(args.tmpdir, "lib/modules")
-    if os.path.isdir(copy_libdir) and qcow_libdir != "/lib/modules":
-        copy_cmd = ["/usr/bin/rsync", "-av", "--mkpath"] + glob.glob(f"{copy_libdir}/*") + [f"{qcow_libdir}/"]
-        log.info(" run cmd: %s" % ' '.join(copy_cmd))
-        retcode, _, _ = do_exe_cmd(copy_cmd)
-        if retcode == 0:
-            log.info(f" copy modules(stripped) ok! {qcow_libdir}")
-        else:
-            log.error(f" copy modules(stripped) failed!! {qcow_libdir}")
-
-    # 稍作延迟
-    do_exe_cmd("sync")
-
-    # 拷贝内核头文件
-    copy_headerdir = os.path.join(args.workdir, "usr")
-    qcow_headerdir = os.path.join(args.tmpdir, "usr")
-    if os.path.isdir(copy_headerdir) and qcow_headerdir != "/usr":
-        copy_cmd = ["/usr/bin/rsync", "-av", "--mkpath"] + glob.glob(f"{copy_headerdir}/*") + [f"{qcow_headerdir}/"]
-        retcode, _, _ = do_exe_cmd(copy_cmd)
-        if retcode == 0:
-            log.info(f" copy headers ok! {qcow_headerdir}")
-        else:
-            log.error(f" copy headers failed!! {qcow_headerdir}")
+            log.error(f" copy rootfs failed!! {qcow_rootfsdir} {error}")
 
     # 稍作延迟
     do_exe_cmd("sync")
@@ -1007,7 +996,7 @@ def handle_run(args):
 
 
 def handle_onekey(args):
-    handle_kernel(args)
+    handle_build_kernel(args)
     handle_rootfs(args)
     handle_run(args)
 
@@ -1154,7 +1143,7 @@ def main():
     parser_bash.add_argument("--config", help="setup kernel build config")
     parser_bash.add_argument("--bash", dest="bash", default=True, action="store_true",
                              help="break before build(just for docker build)")
-    parser_bash.set_defaults(func=handle_kernel)
+    parser_bash.set_defaults(func=handle_build_kernel)
 
     # 添加子命令 kernel
     parser_kernel = subparsers.add_parser('kernel', aliases=['build', 'compile'], parents=[parent_parser],
@@ -1170,7 +1159,7 @@ def main():
                                help="make mrproper before build")
     parser_kernel.add_argument("--isoimage", dest="isoimage", default=False, action="store_true",
                                help="make isoimage")
-    parser_kernel.set_defaults(func=handle_kernel)
+    parser_kernel.set_defaults(func=handle_build_kernel)
 
     # 添加子命令 rootfs
     parser_rootfs = subparsers.add_parser('rootfs', aliases=['vm', 'qcow2'], parents=[parent_parser],
