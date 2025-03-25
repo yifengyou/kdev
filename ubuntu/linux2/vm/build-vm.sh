@@ -1,7 +1,7 @@
 #!/bin/bash
 
-virsh destroy kdev-ubuntu10 || :
-virsh undefine kdev-ubuntu10 --nvram || :
+virsh destroy kdev-ubuntu12 || :
+virsh undefine kdev-ubuntu12 --nvram || :
 
 if [ -f rootfs.qcow2 ];then
 	rm -f rootfs.qcow2
@@ -14,20 +14,20 @@ fi
 sync
 sleep 1
 
-if [ ! -f ubuntu-10.04-server-amd64.iso ]; then
-	wget -c https://old-releases.ubuntu.com/releases/10.04.0/ubuntu-10.04-server-amd64.iso
+if [ ! -f ubuntu-12.04.5-server-amd64.iso ]; then
+	wget -c https://old-releases.ubuntu.com/releases/10.04.0/ubuntu-12.04.5-server-amd64.iso
 fi
 
 virt-install --connect qemu:///system \
-	--name kdev-ubuntu10 \
-	--os-variant ubuntu10.04 \
+	--name kdev-ubuntu12 \
+	--os-variant ubuntu12.04 \
 	--ram 4096 \
 	--vcpus 16 \
 	--graphics none \
 	--network network=default,model=e1000e \
 	--disk path=rootfs.qcow2,size=8,format=qcow2,bus=scsi,target.dev=sda \
 	--controller type=scsi,model=auto \
-	--location ubuntu-10.04-server-amd64.iso \
+	--location ubuntu-12.04.5-server-amd64.iso \
 	--initrd-inject preseed.cfg \
 	--extra-args="auto=true priority=critical preseed/file=/preseed.cfg console=tty0 console=ttyS0,115200 autoinstall" \
 	--check all=off

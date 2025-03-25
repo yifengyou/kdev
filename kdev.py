@@ -438,9 +438,11 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-diff .config .config-bak
-if [ $? -eq 0 ];then
-    cp -a .config-bak .config
+if [ -f .config-bak ] ; then
+    diff .config .config-bak
+    if [ $? -eq 0 ];then
+        cp -a .config-bak .config
+    fi
 fi
 
 ls -alh ${WORKDIR}/.config
