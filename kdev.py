@@ -567,12 +567,15 @@ JOB=%s
 
     else:
         log.info("build kernel in docker")
-        ok, image = check_docker_image(args)
-        if not ok:
-            log.error("not useable docker image found!")
-            return 1
-        log.info(f" using docker image : {image} ")
-        args.docker_image = image
+
+        if not (hasattr(args, "docker_image") and (args.docker_image != '')):
+            ok, image = check_docker_image(args)
+            if not ok:
+                log.error("not useable docker image found!")
+                return 1
+            log.info(f" using docker image : {image} ")
+            args.docker_image = image
+        log.info(f"using docker image {args.docker_image}")
 
         args.cross_compile = ''
         if os.uname().machine != args.arch:
@@ -1145,6 +1148,7 @@ def main():
     parser_bash.add_argument("--config", help="setup kernel build config")
     parser_bash.add_argument("--bash", dest="bash", default=True, action="store_true",
                              help="break before build(just for docker build)")
+    parser_bash.add_argument("--docker_image", dest="docker_image", help="specific docker image")
     parser_bash.set_defaults(func=handle_build_kernel)
 
     # 添加子命令 kernel
@@ -1161,6 +1165,7 @@ def main():
                                help="make mrproper before build")
     parser_kernel.add_argument("--isoimage", dest="isoimage", default=False, action="store_true",
                                help="make isoimage")
+    parser_kernel.add_argument("--docker_image", dest="docker_image", help="specific docker image")
     parser_kernel.set_defaults(func=handle_build_kernel)
 
     # 添加子命令 rootfs

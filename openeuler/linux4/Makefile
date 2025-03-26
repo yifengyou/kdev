@@ -14,21 +14,21 @@ help:
 	@echo TIMESTAMP: $(TIMESTAMP)
 
 build:
-	cd docker && docker build -t yifengyou/linux4.0:latest  .
-	docker tag yifengyou/linux4.0:latest yifengyou/linux4.0:$(TIMESTAMP)
-	docker tag yifengyou/linux4.0:latest yifengyou/linux4.0-openeuler20.03-lts-sp1:$(TIMESTAMP)
+	cd docker && docker build -t yifengyou/openeuler-linux4:latest  .
+	docker tag yifengyou/openeuler-linux4:latest yifengyou/openeuler-linux4:$(TIMESTAMP)
+	docker tag yifengyou/openeuler-linux4:latest yifengyou/openeuler-linux4-openeuler20.03-lts-sp1:$(TIMESTAMP)
 	@echo "Build docker done!"
 
 run:
-	docker run -it --rm yifengyou/linux4.0:latest /bin/bash
+	docker run -it --rm yifengyou/openeuler-linux4:latest /bin/bash
 
 pull:
-	docker pull yifengyou/linux4.0:latest
+	docker pull yifengyou/openeuler-linux4:latest
 
 push:
-	docker push yifengyou/linux4.0:latest
-	docker push yifengyou/linux4.0-openeuler20.03-lts-sp1:$(TIMESTAMP)
-	docker push yifengyou/linux4.0:$(TIMESTAMP)
+	docker push yifengyou/openeuler-linux4:latest
+	docker push yifengyou/openeuler-linux4-openeuler20.03-lts-sp1:$(TIMESTAMP)
+	docker push yifengyou/openeuler-linux4:$(TIMESTAMP)
 	@echo "Push docker done!"
 
 vm:

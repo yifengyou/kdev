@@ -34,7 +34,7 @@ virt-install --connect qemu:///system \
 	--check all=off
 
 sync
-sleep 1
+sleep 3
 
 qemu-img snapshot -c 'install os' rootfs.qcow2
 qemu-img snapshot -l rootfs.qcow2

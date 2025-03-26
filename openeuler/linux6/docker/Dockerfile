@@ -1,4 +1,4 @@
-FROM hub.rat.dev/openeuler/openeuler:22.03-lts
+FROM hub.rat.dev/openeuler/openeuler:24.03-lts
 
 COPY bashrc /root/.bashrc
 RUN yum makecache \

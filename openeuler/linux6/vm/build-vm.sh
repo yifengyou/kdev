@@ -1,7 +1,7 @@
 #!/bin/bash
 
-virsh destroy kdev-openeuler20.03-lts-sp1 || :
-virsh undefine kdev-openeuler20.03-lts-sp1 --nvram || :
+virsh destroy kdev-openeuler24.03-lts-sp1 || :
+virsh undefine kdev-openeuler24.03-lts-sp1 --nvram || :
 
 if [ -f rootfs.qcow2 ];then
 	rm -f rootfs.qcow2
@@ -14,12 +14,12 @@ fi
 sync
 sleep 1
 
-if [ ! -f openEuler-20.03-LTS-SP1-x86_64-dvd.iso ]; then
-	wget -c https://mirrors.huaweicloud.com/openeuler/openEuler-20.03-LTS-SP1/ISO/x86_64/openEuler-20.03-LTS-SP1-x86_64-dvd.iso
+if [ ! -f openEuler-24.03-LTS-SP1-x86_64-dvd.iso ]; then
+	wget -c https://mirrors.huaweicloud.com/openeuler/openEuler-24.03-LTS-SP1/ISO/x86_64/openEuler-24.03-LTS-SP1-x86_64-dvd.iso
 fi
 
 virt-install --connect qemu:///system \
-	--name kdev-openeuler20.03-lts-sp1 \
+	--name kdev-openeuler24.03-lts-sp1 \
 	--os-variant centos7.0 \
 	--ram 4096 \
 	--vcpus 16 \
@@ -28,7 +28,7 @@ virt-install --connect qemu:///system \
 	--network network=default,model=e1000e \
 	--disk path=rootfs.qcow2,size=8,format=qcow2,bus=scsi,target.dev=sda \
 	--controller type=scsi,model=virtio-scsi \
-	--location openEuler-20.03-LTS-SP1-x86_64-dvd.iso \
+	--location openEuler-24.03-LTS-SP1-x86_64-dvd.iso \
 	--initrd-inject ks.cfg \
 	--extra-args="inst.ks=file:///ks.cfg console=ttyS0,115200 console=tty0 level=10 net.ifnames=0 " \
 	--check all=off
