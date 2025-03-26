@@ -980,7 +980,7 @@ def handle_run(args):
                f"  --ram {args.vmram} " \
                f"  --os-type=generic " \
                f"  --vcpus {args.vmcpu}  " \
-               f"  --disk path={os.path.join(args.workdir, qcow2_image_f)},format=qcow2,bus=scsi " \
+               f"  --disk path={os.path.join(args.workdir, qcow2_image_f)},format=qcow2,bus=sata " \
                f"  --network default " \
                f"  {enable_kvm}" \
                f"  --graphics spice,listen=0.0.0.0 " \
