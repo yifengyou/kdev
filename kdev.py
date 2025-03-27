@@ -1222,8 +1222,10 @@ def main():
     args = parser.parse_args()
 
     # 解析命令后解析配置文件，合并两者
+    find_kdev_config = False
     for filename in os.listdir('.'):
         if filename.endswith(".kdev"):
+            find_kdev_config = True
             log.debug("load config file %s" % filename)
             with open(filename, 'r', encoding='utf8') as f:
                 for line in f:
@@ -1240,6 +1242,9 @@ def main():
                         # 如果命令行未打开选项，但配置中打开，则使用配置中的KV
                         if getattr(args, key) is None:
                             setattr(args, key, value)
+    if not find_kdev_config:
+        log.info("no kdev config found!")
+        exit(1)
 
     # 参数解析后开始具备debug output能力
     if hasattr(args, "debug") and (args.debug == 'True' or args.debug == '1'):
