@@ -5,6 +5,7 @@
  Authors:
    yifengyou <842056007@qq.com>
 """
+
 import datetime
 import glob
 import logging
@@ -12,11 +13,19 @@ import os
 import random
 import re
 import shutil
+import stat
 import subprocess
 import sys
 import argparse
 import time
 import select
+
+try:
+    import pexpect
+except ImportError:
+    print("need pexpect package, you can run 'pip3 install pexpect' to install it.")
+    exit(1)
+
 from logging.handlers import RotatingFileHandler
 
 CURRENT_VERSION = "0.2.0-20240410"
@@ -315,7 +324,7 @@ def timer(func):
         end = time.time()
         elapsed = end - start
         log.info(f"-> {func.__name__} Done! Ret=[ {result} ] Runtime=[ {format(elapsed / 60, '.3f')} min ]")
-        log.info(f"-> Repeat Build Options [{' '.join(sys.argv)}]")
+        log.info(f"-> Repeat Cmdline: [{' '.join(sys.argv)}]")
         if result:
             exit(result)
         return result
@@ -1114,6 +1123,83 @@ def handle_image(args):
             log.info(f"File {args.umount} does not exist")
 
 
+@timer
+def handle_qemu(args):
+    handle_check(args)
+    log.info("-> Step handle qemu")
+    os.chdir(args.workdir)
+
+    kernel_config = f"{args.arch}_defconfig"
+
+    # overlay fs mount
+    overlay_build_dir = f"{args.workdir}/build"
+    overlay_work_dir = f"{args.workdir}/overlay-work"
+    overlay_merged_dir = f"{args.workdir}/overlay-merged"
+    output_dir = f"{args.workdir}/rootfs"
+
+    os.makedirs(overlay_build_dir, exist_ok=True)
+    os.makedirs(overlay_work_dir, exist_ok=True)
+    os.makedirs(overlay_merged_dir, exist_ok=True)
+    os.makedirs(output_dir, exist_ok=True)
+
+    overlayfs_mount_cmd = f"mount -t overlay overlay" \
+                          f" -o lowerdir={args.sourcedir},upperdir={overlay_build_dir},workdir={overlay_work_dir}" \
+                          f" {overlay_merged_dir}"
+    ret, output, error = do_exe_cmd(overlayfs_mount_cmd,
+                                    print_output=True,
+                                    shell=False,
+                                    enable_log=True,
+                                    logfile="build_kernel_in_docker.log")
+    if ret != 0:
+        log.error(f"overlayfs mount failed! [{overlayfs_mount_cmd}] retcode={ret}")
+        exit(1)
+    log.info(f"overlay mount success {overlay_merged_dir}!!")
+
+    def overlayfs_umount(mdir):
+        # 稍作延迟
+        do_exe_cmd("sync")
+        time.sleep(3)
+        overlayfs_umount_cmd = f"umount {mdir}"
+        do_exe_cmd(overlayfs_umount_cmd, print_output=False, shell=False, enable_log=False)
+
+    qemu_cmd = f"""#!/bin/bash
+    
+qemu-system-x86_64 \
+    -kernel build/arch/{args.arch}/boot/bzImage \
+    -initrd init.cpio \
+    -s -S \
+    -append "nokaslr console=ttyS0" \
+    -nographic
+    
+    """
+
+    qemu_script_path = os.path.join(args.workdir, "qemu.sh")
+    with open(qemu_script_path, 'w') as qemu_script:
+        qemu_script.write(qemu_cmd)
+
+    # 设置权限：用户读写执行，组读写，其他读
+    os.chmod(qemu_script_path,
+             stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR |  # 用户权限
+             stat.S_IRGRP | stat.S_IWGRP |  # 组权限
+             stat.S_IROTH)  # 其他用户权限
+
+    log.info(f"run qemu script [{qemu_script_path}]")
+    log.info(f"Tips: gdb /linux/linux-{args.masterversion}.git-build-{args.arch}")
+    log.info(f"      # target remote :1234")
+    try:
+        child = pexpect.spawn(f'{qemu_script_path}')
+        child.interact()
+        log.info("Qemu exited!")
+    except pexpect.ExceptionPexpect as e:
+        log.error(f"Qemu error: {e}")
+
+    overlayfs_umount(overlay_merged_dir)
+    if ret != 0:
+        log.error(f"qemu exit with failed code={ret}")
+        return 1
+    return 0
+
+
 def main():
     global CURRENT_VERSION
     check_python_version()
@@ -1217,6 +1303,11 @@ def main():
     parser_image_group.add_argument('-m', '--mount', metavar='QCOW2_FILE_PATH', help="mount qcow2")
     parser_image_group.add_argument('-u', '--umount', metavar='QCOW2_FILE_PATH', help="umount qcow2")
     parser_image_group.set_defaults(func=handle_image)
+
+    # 添加子命令 qemu
+    parser_qemu = subparsers.add_parser('qemu', parents=[parent_parser], help="run kernel with qemu directly")
+    parser_qemu.add_argument("-j", "--job", default=os.cpu_count(), help="setup compile job number")
+    parser_qemu.set_defaults(func=handle_qemu)
 
     # 开始解析命令
     args = parser.parse_args()
