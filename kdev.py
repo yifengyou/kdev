@@ -254,6 +254,14 @@ def check_qcow_image(args):
     return False, ''
 
 
+def do_umount(target_dir):
+    do_exe_cmd("sync")
+    time.sleep(2)
+    # lazy 延迟卸载机制
+    umount_cmd = f"umount -l {target_dir}"
+    do_exe_cmd(umount_cmd, print_output=False, shell=False, enable_log=False)
+
+
 def do_exe_cmd(cmd, enable_log=False, logfile="build-kernel.log", print_output=False, shell=False):
     stdout_output = ''
     stderr_output = ''
@@ -639,13 +647,6 @@ JOB=%s
             exit(1)
         log.info(f"overlay mount success {overlay_merged_dir}!!")
 
-        def overlayfs_umount(mdir):
-            # 稍作延迟
-            do_exe_cmd("sync")
-            time.sleep(3)
-            overlayfs_umount_cmd = f"umount {mdir}"
-            do_exe_cmd(overlayfs_umount_cmd, print_output=False, shell=False, enable_log=False)
-
         if args.bash:
             docker_cmd = f"\n\ndocker run -it" \
                          f" -v {args.workdir}/dockerbuild.sh:/bin/kdev " \
@@ -657,7 +658,7 @@ JOB=%s
                          f"/bin/bash\n\n"
             log.info(f"-> Exe cmd:\n{docker_cmd}")
             os.system(docker_cmd)
-            overlayfs_umount(overlay_merged_dir)
+            do_umount(overlay_merged_dir)
             return 0
 
         docker_cmd = f"docker run -t" \
@@ -677,10 +678,10 @@ JOB=%s
         if ret != 0:
             log.error(f"docker build failed! retcode={ret}")
             log.info("you can run 'kdev bash' to enter build environment!!")
-            overlayfs_umount(overlay_merged_dir)
+            do_umount(overlay_merged_dir)
             return 1
         log.info("You can run 'kdev bash' to enter build environment!!")
-        overlayfs_umount(overlay_merged_dir)
+        do_umount(overlay_merged_dir)
         return 0
 
 
@@ -1128,8 +1129,7 @@ def handle_qemu(args):
     handle_check(args)
     log.info("-> Step handle qemu")
     os.chdir(args.workdir)
-
-    kernel_config = f"{args.arch}_defconfig"
+    log.info(f"-> current workdir {args.workdir}")
 
     # overlay fs mount
     overlay_build_dir = f"{args.workdir}/build"
@@ -1145,6 +1145,7 @@ def handle_qemu(args):
     overlayfs_mount_cmd = f"mount -t overlay overlay" \
                           f" -o lowerdir={args.sourcedir},upperdir={overlay_build_dir},workdir={overlay_work_dir}" \
                           f" {overlay_merged_dir}"
+    log.info(f"-> mount overlayfs [{overlayfs_mount_cmd}]")
     ret, output, error = do_exe_cmd(overlayfs_mount_cmd,
                                     print_output=True,
                                     shell=False,
@@ -1155,27 +1156,39 @@ def handle_qemu(args):
         exit(1)
     log.info(f"overlay mount success {overlay_merged_dir}!!")
 
-    def overlayfs_umount(mdir):
-        # 稍作延迟
-        do_exe_cmd("sync")
-        time.sleep(3)
-        overlayfs_umount_cmd = f"umount {mdir}"
-        do_exe_cmd(overlayfs_umount_cmd, print_output=False, shell=False, enable_log=False)
+    qemu_script_path = os.path.join(args.workdir, "qemu.sh")
+    if hasattr(args, "initrd") and args.initrd != '':
+        initrd_path = args.initrd
+    else:
+        initrd_path = "init.cpio"
 
-    qemu_cmd = f"""#!/bin/bash
-    
+    if not os.path.exists(initrd_path):
+        log.error(f"initrd [{initrd_path}] not found!")
+        exit(1)
+
+    log.info(f"-> using initrd [{initrd_path}]")
+
+    kernel_parameter = ""
+    if hasattr(args, "allparam") and args.allparam != '':
+        kernel_parameter = str(args.allparam)
+    if hasattr(args, "append") and args.append != '':
+        kernel_parameter = str(args.append)
+    log.info(f"-> kernel parameter [{kernel_parameter}]")
+
+    qemu_cmd = rf"""#!/bin/bash\
+
 qemu-system-x86_64 \
     -kernel build/arch/{args.arch}/boot/bzImage \
-    -initrd init.cpio \
+    -initrd {initrd_path} \
     -s -S \
-    -append "nokaslr console=ttyS0" \
+    -append "{kernel_parameter}" \
     -nographic
-    
-    """
 
-    qemu_script_path = os.path.join(args.workdir, "qemu.sh")
+# netstat -anpt |grep :1234
+    """
     with open(qemu_script_path, 'w') as qemu_script:
         qemu_script.write(qemu_cmd)
+    log.info("-> qemu script:\n" + f"{qemu_cmd}")
 
     # 设置权限：用户读写执行，组读写，其他读
     os.chmod(qemu_script_path,
@@ -1184,8 +1197,24 @@ qemu-system-x86_64 \
              stat.S_IROTH)  # 其他用户权限
 
     log.info(f"run qemu script [{qemu_script_path}]")
-    log.info(f"Tips: gdb /linux/linux-{args.masterversion}.git-build-{args.arch}")
-    log.info(f"      # target remote :1234")
+    log.info(f"""
+
+Tips: 
+
+    1. GDB attach
+    
+        cd  /linux/linux-{args.masterversion}.git
+        gdb /linux/linux-{args.masterversion}.git-build-{args.arch}/build/vmlinux
+            # target remote :1234
+            # b vfs_write
+            # c
+    
+    2. Exit qemu
+    
+        Press ctrl + a + x
+
+Enter debug mode. waiting gdb cmd.
+    """)
     try:
         child = pexpect.spawn(f'{qemu_script_path}')
         child.interact()
@@ -1193,7 +1222,7 @@ qemu-system-x86_64 \
     except pexpect.ExceptionPexpect as e:
         log.error(f"Qemu error: {e}")
 
-    overlayfs_umount(overlay_merged_dir)
+    do_umount(overlay_merged_dir)
     if ret != 0:
         log.error(f"qemu exit with failed code={ret}")
         return 1
@@ -1307,6 +1336,10 @@ def main():
     # 添加子命令 qemu
     parser_qemu = subparsers.add_parser('qemu', parents=[parent_parser], help="run kernel with qemu directly")
     parser_qemu.add_argument("-j", "--job", default=os.cpu_count(), help="setup compile job number")
+    parser_qemu.add_argument("--initrd", dest="initrd", help="specific initrd path")
+    parser_qemu.add_argument("--append", dest="append", default='nokaslr console=ttyS0',
+                             help="append kernel boot parameters")
+    parser_qemu.add_argument("--allparam", dest="allparam", default='', help="append kernel boot parameters")
     parser_qemu.set_defaults(func=handle_qemu)
 
     # 开始解析命令
