@@ -685,16 +685,6 @@ JOB=%s
         return 0
 
 
-def is_file_locked(file_path):
-    locked = False
-    try:
-        with open(file_path, 'rb') as fp:
-            pass
-    except:
-        locked = True
-    return locked
-
-
 @timer
 def handle_rootfs(args):
     handle_check(args)
@@ -1126,105 +1116,99 @@ def handle_image(args):
 
 @timer
 def handle_qemu(args):
+    """
+    执行 qmeu 调试模式，此模式不进行overlayfs挂载
+    :param args:
+    :return:
+    """
     handle_check(args)
-    log.info("-> Step handle qemu")
     os.chdir(args.workdir)
     log.info(f"-> current workdir {args.workdir}")
 
-    # overlay fs mount
-    overlay_build_dir = f"{args.workdir}/build"
-    overlay_work_dir = f"{args.workdir}/overlay-work"
-    overlay_merged_dir = f"{args.workdir}/overlay-merged"
-    output_dir = f"{args.workdir}/rootfs"
-
-    os.makedirs(overlay_build_dir, exist_ok=True)
-    os.makedirs(overlay_work_dir, exist_ok=True)
-    os.makedirs(overlay_merged_dir, exist_ok=True)
-    os.makedirs(output_dir, exist_ok=True)
-
-    overlayfs_mount_cmd = f"mount -t overlay overlay" \
-                          f" -o lowerdir={args.sourcedir},upperdir={overlay_build_dir},workdir={overlay_work_dir}" \
-                          f" {overlay_merged_dir}"
-    log.info(f"-> mount overlayfs [{overlayfs_mount_cmd}]")
-    ret, output, error = do_exe_cmd(overlayfs_mount_cmd,
-                                    print_output=True,
-                                    shell=False,
-                                    enable_log=True,
-                                    logfile="build_kernel_in_docker.log")
-    if ret != 0:
-        log.error(f"overlayfs mount failed! [{overlayfs_mount_cmd}] retcode={ret}")
+    # check bzImage
+    bzImage_path = f"build/arch/{args.arch}/boot/bzImage"
+    if not os.path.exists(bzImage_path):
+        log.error(f"bzImage not found in [{bzImage_path}]")
+        log.error(f"Tips: you shoud run 'kdev build' to build bzImage at first.")
         exit(1)
-    log.info(f"overlay mount success {overlay_merged_dir}!!")
+    log.info(f"-> using bzImage [{bzImage_path}]")
 
-    qemu_script_path = os.path.join(args.workdir, "qemu.sh")
+    # check initrd
     if hasattr(args, "initrd") and args.initrd != '':
         initrd_path = args.initrd
     else:
         initrd_path = "init.cpio"
-
     if not os.path.exists(initrd_path):
-        log.error(f"initrd [{initrd_path}] not found!")
+        log.error(f"init app not found in [{initrd_path}]")
+        log.error(f"Tips: you shoud run 'kdev shell' enter build env to build it at first.")
         exit(1)
-
     log.info(f"-> using initrd [{initrd_path}]")
 
+    # check kernel parameters
     kernel_parameter = ""
     if hasattr(args, "allparam") and args.allparam != '':
         kernel_parameter = str(args.allparam)
     if hasattr(args, "append") and args.append != '':
-        kernel_parameter = str(args.append)
+        kernel_parameter += " %s " % str(args.append)
     log.info(f"-> kernel parameter [{kernel_parameter}]")
 
-    qemu_cmd = rf"""#!/bin/bash\
+    # check kvm support
+    is_enable_kvm = "-enable-kvm"
+    if not os.path.exists("/dev/kvm"):
+        is_enable_kvm = ""
 
+    # generate qemu script
+    qemu_script_path = os.path.join(args.workdir, "qemu.sh")
+    qemu_cmd = rf"""#!/bin/bash
 qemu-system-x86_64 \
-    -kernel build/arch/{args.arch}/boot/bzImage \
+    -m 4096M \
+    -smp 4,sockets=4,cores=1,threads=1 \
+    -object memory-backend-ram,id=mem0,size=1G \
+    -object memory-backend-ram,id=mem1,size=1G \
+    -object memory-backend-ram,id=mem2,size=1G \
+    -object memory-backend-ram,id=mem3,size=1G \
+    -numa node,nodeid=0,memdev=mem0,cpus=0 \
+    -numa node,nodeid=1,memdev=mem1,cpus=1 \
+    -numa node,nodeid=2,memdev=mem2,cpus=2 \
+    -numa node,nodeid=3,memdev=mem3,cpus=3 \
+    -smp 4 \
+    -net nic \
+    -kernel {bzImage_path} \
     -initrd {initrd_path} \
-    -s -S \
+    {is_enable_kvm} -s -S \
     -append "{kernel_parameter}" \
     -nographic
 
-# netstat -anpt |grep :1234
     """
     with open(qemu_script_path, 'w') as qemu_script:
         qemu_script.write(qemu_cmd)
-    log.info("-> qemu script:\n" + f"{qemu_cmd}")
-
-    # 设置权限：用户读写执行，组读写，其他读
     os.chmod(qemu_script_path,
              stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR |  # 用户权限
              stat.S_IRGRP | stat.S_IWGRP |  # 组权限
              stat.S_IROTH)  # 其他用户权限
+    log.info("-> generate qemu script:\n" + f"{qemu_cmd}")
 
-    log.info(f"run qemu script [{qemu_script_path}]")
+    log.info(f"-> run qemu script [{qemu_script_path}]")
     log.info(f"""
-
-Tips: 
-
-    1. GDB attach
-    
-        cd  /linux/linux-{args.masterversion}.git
-        gdb /linux/linux-{args.masterversion}.git-build-{args.arch}/build/vmlinux
-            # target remote :1234
-            # b vfs_write
-            # c
-    
-    2. Exit qemu
-    
-        Press ctrl + a + x
-
-Enter debug mode. waiting gdb cmd.
+--------------------------------------------------------------------------------------
+TIPS 1. GDB attach
+    cd  /linux/linux-{args.masterversion}.git
+    gdb /linux/linux-{args.masterversion}.git-build-{args.arch}/build/vmlinux
+        # target remote :1234
+        # b vfs_write
+        # c
+TIPS 2. Exit qemu
+    You can press hot key 'CTRL + a + x' to exit qemu environtment
+--------------------------------------------------------------------------------------
+Enter debug mode! Waiting gdb cmd ...
     """)
+
     try:
         child = pexpect.spawn(f'{qemu_script_path}')
         child.interact()
         log.info("Qemu exited!")
     except pexpect.ExceptionPexpect as e:
         log.error(f"Qemu error: {e}")
-
-    do_umount(overlay_merged_dir)
-    if ret != 0:
-        log.error(f"qemu exit with failed code={ret}")
         return 1
     return 0
 
@@ -1337,9 +1321,9 @@ def main():
     parser_qemu = subparsers.add_parser('qemu', parents=[parent_parser], help="run kernel with qemu directly")
     parser_qemu.add_argument("-j", "--job", default=os.cpu_count(), help="setup compile job number")
     parser_qemu.add_argument("--initrd", dest="initrd", help="specific initrd path")
-    parser_qemu.add_argument("--append", dest="append", default='nokaslr console=ttyS0',
+    parser_qemu.add_argument("--append", dest="append", help="append kernel boot parameters")
+    parser_qemu.add_argument("--allparam", dest="allparam", default='nokaslr console=ttyS0',
                              help="append kernel boot parameters")
-    parser_qemu.add_argument("--allparam", dest="allparam", default='', help="append kernel boot parameters")
     parser_qemu.set_defaults(func=handle_qemu)
 
     # 开始解析命令
