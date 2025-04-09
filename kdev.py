@@ -208,8 +208,8 @@ def check_arch(args):
     if args.arch:
         if args.arch == "x86_64":
             log.info("Target arch = [ x86_64 ]")
-        elif args.arch == "arm64":
-            log.info("Target arch = [ arm64 ]")
+        elif args.arch == "arm64" or args.arch == "aarch64":
+            log.info(f"Target arch = [ {args.arch} ]")
         else:
             log.info(f"Unsupported arch {args.arch}", file=sys.stderr)
             sys.exit(1)
@@ -1156,6 +1156,9 @@ def handle_qemu(args):
     is_enable_kvm = "-enable-kvm"
     if not os.path.exists("/dev/kvm"):
         is_enable_kvm = ""
+    gdb_tcp_port = "1234"
+    if hasattr(args, "gdbport") and args.gdbport != '':
+        gdb_tcp_port = str(args.gdbport)
 
     # generate qemu script
     qemu_script_path = os.path.join(args.workdir, "qemu.sh")
@@ -1171,11 +1174,11 @@ qemu-system-x86_64 \
     -numa node,nodeid=1,memdev=mem1,cpus=1 \
     -numa node,nodeid=2,memdev=mem2,cpus=2 \
     -numa node,nodeid=3,memdev=mem3,cpus=3 \
-    -smp 4 \
+    -smp 4 {is_enable_kvm}  \
     -net nic \
     -kernel {bzImage_path} \
     -initrd {initrd_path} \
-    {is_enable_kvm} -s -S \
+    -gdb tcp::{args.gdbport} -S \
     -append "{kernel_parameter}" \
     -nographic
 
@@ -1211,6 +1214,15 @@ Enter debug mode! Waiting gdb cmd ...
         log.error(f"Qemu error: {e}")
         return 1
     return 0
+
+
+@timer
+def handle_qcow(args):
+    """
+    :param args:
+    :return:
+    """
+    handle_check(args)
 
 
 def main():
@@ -1322,9 +1334,14 @@ def main():
     parser_qemu.add_argument("-j", "--job", default=os.cpu_count(), help="setup compile job number")
     parser_qemu.add_argument("--initrd", dest="initrd", help="specific initrd path")
     parser_qemu.add_argument("--append", dest="append", help="append kernel boot parameters")
+    parser_qemu.add_argument("--gdbport", dest="gdbport", help="specific gdb tcp port")
     parser_qemu.add_argument("--allparam", dest="allparam", default='nokaslr console=ttyS0',
                              help="append kernel boot parameters")
     parser_qemu.set_defaults(func=handle_qemu)
+
+    # 添加子命令 qcow
+    parser_qcow = subparsers.add_parser('qcow', parents=[parent_parser], help="run kernel with qcow directly")
+    parser_qcow.set_defaults(func=handle_qcow)
 
     # 开始解析命令
     args = parser.parse_args()
