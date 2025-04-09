@@ -210,6 +210,7 @@ def check_arch(args):
             log.info("Target arch = [ x86_64 ]")
         elif args.arch == "arm64" or args.arch == "aarch64":
             log.info(f"Target arch = [ {args.arch} ]")
+            args.arch = "arm64"
         else:
             log.info(f"Unsupported arch {args.arch}", file=sys.stderr)
             sys.exit(1)
