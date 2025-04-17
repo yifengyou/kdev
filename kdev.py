@@ -28,23 +28,10 @@ except ImportError:
 
 from logging.handlers import RotatingFileHandler
 
-CURRENT_VERSION = "0.2.0-20240410"
+CURRENT_VERSION = "0.2.0-20250517"
 
 timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H%M%S")
 log = logging.getLogger("kdev")
-console_handler = logging.StreamHandler(sys.stderr)
-console_handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] %(name)s: %(message)s'))
-log.addHandler(console_handler)
-logfile = os.path.join("kdev.log")
-file_handler = RotatingFileHandler(
-    filename=logfile,
-    encoding='UTF-8',
-    maxBytes=(1024 * 1024 * 1024),
-    backupCount=10
-)
-file_handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] %(name)s: %(message)s'))
-log.addHandler(file_handler)
-log.setLevel(logging.INFO)
 
 KERNEL_BUILD_MAP = {
     "linux-2.0": {
@@ -194,6 +181,33 @@ def check_python_version():
         raise Exception('Invalid python version requested: %d' % current_python)
 
 
+def check_config(args):
+    # 解析命令后解析配置文件，合并两者
+    find_kdev_config = False
+    for filename in os.listdir('.'):
+        if filename.endswith(".kdev"):
+            find_kdev_config = True
+            log.debug("load config file %s" % filename)
+            with open(filename, 'r', encoding='utf8') as f:
+                for line in f:
+                    line = line.strip()
+                    if not line or line.startswith('#'):
+                        continue
+                    match = re.match(r'(\w+)\s*=\s*([\w/.-]+)', line)
+                    if match:
+                        key = match.group(1)
+                        value = match.group(2)
+                        # 如果命令行没有定义key，则使用配置中的KV
+                        if not hasattr(args, key):
+                            setattr(args, key, value)
+                        # 如果命令行未打开选项，但配置中打开，则使用配置中的KV
+                        if getattr(args, key) is None:
+                            setattr(args, key, value)
+    if not find_kdev_config:
+        print("Error! no kdev config (ends with .kdev) found! ")
+        exit(1)
+
+
 def check_privilege():
     if os.getuid() == 0:
         return
@@ -253,6 +267,22 @@ def check_qcow_image(args):
     elif "fedora" in qcow_img_list and len(qcow_img_list["fedora"]) != 0:
         return True, qcow_img_list["fedora"][0]
     return False, ''
+
+
+def init_logger():
+    console_handler = logging.StreamHandler(sys.stderr)
+    console_handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] %(name)s: %(message)s'))
+    log.addHandler(console_handler)
+    logfile = os.path.join("kdev.log")
+    file_handler = RotatingFileHandler(
+        filename=logfile,
+        encoding='UTF-8',
+        maxBytes=(1024 * 1024 * 1024),
+        backupCount=10
+    )
+    file_handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] %(name)s: %(message)s'))
+    log.addHandler(file_handler)
+    log.setLevel(logging.INFO)
 
 
 def do_umount(target_dir):
@@ -1347,30 +1377,10 @@ def main():
     # 开始解析命令
     args = parser.parse_args()
 
-    # 解析命令后解析配置文件，合并两者
-    find_kdev_config = False
-    for filename in os.listdir('.'):
-        if filename.endswith(".kdev"):
-            find_kdev_config = True
-            log.debug("load config file %s" % filename)
-            with open(filename, 'r', encoding='utf8') as f:
-                for line in f:
-                    line = line.strip()
-                    if not line or line.startswith('#'):
-                        continue
-                    match = re.match(r'(\w+)\s*=\s*([\w/.-]+)', line)
-                    if match:
-                        key = match.group(1)
-                        value = match.group(2)
-                        # 如果命令行没有定义key，则使用配置中的KV
-                        if not hasattr(args, key):
-                            setattr(args, key, value)
-                        # 如果命令行未打开选项，但配置中打开，则使用配置中的KV
-                        if getattr(args, key) is None:
-                            setattr(args, key, value)
-    if not find_kdev_config:
-        log.info("no kdev config found!")
-        exit(1)
+    # 检查配置文件
+    check_config(args)
+    # 初始化日志组件
+    init_logger()
 
     # 参数解析后开始具备debug output能力
     if hasattr(args, "debug") and (args.debug == 'True' or args.debug == '1'):
