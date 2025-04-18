@@ -2,7 +2,7 @@ FROM ubuntu:22.04 as base
 
 COPY bashrc /root/.bashrc
 RUN echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections \
-    && sed -i 's/archive.ubuntu.com/mirrors.aliyun.com/g' /etc/apt/sources.list \
+    && sed -i 's/ports.ubuntu.com/mirrors.aliyun.com/g' /etc/apt/sources.list \
     && sed -i 's/security.ubuntu.com/mirrors.aliyun.com/g' /etc/apt/sources.list \
     && apt-get update \
     && apt-get install -y -q apt-utils dialog \
