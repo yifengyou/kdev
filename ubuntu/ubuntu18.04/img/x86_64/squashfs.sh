@@ -40,4 +40,5 @@ mksquashfs ${TARGET_DIR} ${SQUASHFS_IMAGE} \
     -processors $(nproc)
 
 ls -lh *.squashfs
+md5sum *.squashfs
 echo "All done!"
