@@ -804,14 +804,34 @@ def handle_rootfs(args):
     # 创建临时挂载点
     args.tmpdir = "/tmp/qcow2-" + str(random.randint(0, 9999))
     os.makedirs(args.tmpdir, exist_ok=True)
-    retcode, _, _ = do_exe_cmd(f"mount -o rw /dev/{args.nbd}p1 {args.tmpdir}", print_output=True)
-    if retcode != 0:
-        log.info(f"Mount qcow2 /dev/{args.nbd}p1 failed! Try again.")
-        retcode, _, _ = do_exe_cmd(f"mount -o rw /dev/{args.nbd}p2 {args.tmpdir}", print_output=True)
-        if retcode != 0:
-            log.error(f"Mount qcow2 /dev/{args.nbd}p2 failed!")
-            return 1
 
+    # 找到根分区
+    target_part = None
+    for part in range(10):
+        disk_size = f"/sys/devices/virtual/block/{nbd}/{nbd}p{part}/size"
+        if os.path.exists(disk_size):
+            try:
+                # 读取设备文件获取扇区数[3,4](@ref)
+                with open(disk_size, 'r') as f:
+                    sectors = int(f.read().strip())
+            except Exception as e:
+                log.err(f"try get {nbd}p{part} size failed! {str(e)}")
+                do_clean_nbd()
+                exit(1)
+            size_mb = sectors * 512 / (1024 ** 2)
+            # 找到第一个大于2G的盘，一般UEFI的ESP分区都是1G以下，不是一般性
+            if size_mb > 2048:
+                target_part = f"{nbd}p{part}"
+                log.info(f"find disk part /dev/{target_part} size: {size_mb}")
+                break
+    if not target_part:
+        log.error(f"no suitable part for mount on {nbd}")
+        exit(1)
+    # 尝试挂载
+    retcode, _, _ = do_exe_cmd(f"mount -o rw /dev/{target_part} {args.tmpdir}", print_output=True)
+    if retcode != 0:
+        log.error(f"Mount qcow2 /dev/{target_part} failed!")
+        exit(1)
     # 稍作延迟
     do_exe_cmd("sync")
 
@@ -1115,9 +1135,30 @@ def handle_image(args):
             mntdir = file + '-mnt'
             os.makedirs(mntdir, exist_ok=True)
             time.sleep(3)
-            ok, _, _ = do_exe_cmd(f"mount /dev/{nbd}p1 {mntdir}", print_output=True)
+            target_part = None
+            for part in range(10):
+                disk_size = f"/sys/devices/virtual/block/{nbd}/{nbd}p{part}/size"
+                if os.path.exists(disk_size):
+                    try:
+                        # 读取设备文件获取扇区数[3,4](@ref)
+                        with open(disk_size, 'r') as f:
+                            sectors = int(f.read().strip())
+                    except Exception as e:
+                        log.err(f"try get {nbd}p{part} size failed! {str(e)}")
+                        do_clean_nbd()
+                        exit(1)
+                    size_mb = sectors * 512 / (1024 ** 2)
+                    # 找到第一个大于2G的盘，一般UEFI的ESP分区都是1G以下，不是一般性
+                    if size_mb > 2048:
+                        target_part = f"{nbd}p{part}"
+                        log.info(f"find disk part target_part size: {size_mb}")
+                        break
+            if not target_part:
+                log.error(f"no suitable part for mount on {nbd}")
+                exit(1)
+            ok, _, _ = do_exe_cmd(f"mount /dev/{target_part} {mntdir}", print_output=True)
             if 0 != ok:
-                log.error(f"mount {file} failed! retcode={ok}")
+                log.error(f"mount {target_part} {file} failed! retcode={ok}")
             else:
                 log.info(f"mount {args.mount} to {mntdir} done!")
         else:
@@ -1277,6 +1318,8 @@ def do_handle_qemu_arm64(args):
     qemu_script_path = os.path.join(args.workdir, "qemu.sh")
     qemu_cmd = rf"""#!/bin/bash
     qemu-system-aarch64 \
+        -machine virt-5.2,accel=kvm \
+        -cpu host \
         -m 4096M \
         -smp 4,sockets=4,cores=1,threads=1 \
         -object memory-backend-ram,id=mem0,size=1G \
