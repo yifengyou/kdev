@@ -12,3 +12,7 @@ ct*
 .idea
 *-bak
 snipaste
+*.ext4
+*.squashfs
+*.img
+rootfs
