@@ -5,7 +5,7 @@ set -x
 # 参数配置
 TARGET_DIR="./rootfs"
 MIRROR="https://mirrors.ustc.edu.cn/ubuntu/"  # 使用国内镜像加速
-ARCH="x86_64"
+ARCH="amd64"
 RELEASE="bionic"
 EXT4_IMAGE="rootfs.ext4"
 SQUASHFS_IMAGE="rootfs.squashfs"
