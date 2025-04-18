@@ -2,10 +2,8 @@
 
 set -x
 
-
 # ISOURL="https://old-releases.ubuntu.com/releases/18.04.4/ubuntu-18.04-server-arm64.iso"
 ISOURL="https://mirrors.tuna.tsinghua.edu.cn/ubuntu-cdimage/releases/bionic/release/ubuntu-18.04.6-server-arm64.iso"
-
 ISONAME=`basename ${ISOURL}`
 
 virsh destroy kdev-ubuntu18 || :

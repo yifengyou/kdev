@@ -1,9 +1,9 @@
 #!/bin/bash
 
+set -x
 
 # ISOURL="https://old-releases.ubuntu.com/releases/18.04.4/ubuntu-18.04-server-amd64.iso"
-ISOURL="https://mirrors.tuna.tsinghua.edu.cn/ubuntu-cdimage/releases/bionic/release/ubuntu-18.04.6-server-arm64.iso"
-
+ISOURL="https://mirrors.tuna.tsinghua.edu.cn/ubuntu-cdimage/releases/bionic/release/ubuntu-18.04.6-server-amd64.iso"
 ISONAME=`basename ${ISOURL}`
 
 virsh destroy kdev-ubuntu18 || :
@@ -16,9 +16,13 @@ if [ -f rootfs.qcow2 ] ; then
 		exit 1
 	fi
 	rm -f rootfs.qcow2
+	qemu-img create -f qcow2 rootfs.qcow2 500G
 else
 	qemu-img create -f qcow2 rootfs.qcow2 500G
 fi
+
+sync
+
 
 sync
 
@@ -35,13 +39,15 @@ virt-install --connect qemu:///system \
 	--network network=default,model=e1000e \
 	--disk path=rootfs.qcow2,size=8,format=qcow2,bus=scsi,target.dev=sda \
 	--controller type=scsi,model=auto \
-	--location ubuntu-18.04.6-server-amd64.iso \
+	--location ${ISONAME} \
 	--initrd-inject preseed.cfg \
 	--extra-args="auto=true priority=critical preseed/file=/preseed.cfg console=tty0 console=ttyS0,115200 autoinstall" \
 	--check all=off
 
-
-if [ $? -eq 0 ] ; then
+sync
+sleep 3
+lsof rootfs.qcow2
+if [ $? -ne 0 ] ; then
 	qemu-img snapshot -c 'install os' rootfs.qcow2
 	qemu-img snapshot -l rootfs.qcow2
 fi
