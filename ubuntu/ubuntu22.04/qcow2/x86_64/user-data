@@ -15,9 +15,6 @@ autoinstall:
     - arches:
       - amd64
       uri: https://mirrors.aliyun.com/ubuntu
-    - arches:
-      - arm64
-      uri: http://mirrors.aliyun.com/ubuntu-ports
   drivers:
     install: false
   identity:

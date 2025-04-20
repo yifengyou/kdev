@@ -2,8 +2,8 @@
 
 set -x
 
-ISOURL="https://old-releases.ubuntu.com/releases/22.04/ubuntu-22.04-live-server-arm64.iso"
-ISOURL="https://mirrors.cloud.tencent.com/ubuntu-cdimage/releases/22.04/release/ubuntu-22.04.4-live-server-arm64.iso"
+ISOURL="https://old-releases.ubuntu.com/releases/22.04/ubuntu-22.04-live-server-x86_64.iso"
+ISOURL="https://mirrors.cloud.tencent.com/ubuntu-cdimage/releases/22.04/release/ubuntu-22.04.4-live-server-x86_64.iso"
 FILE_SERVER_PORT="63335"
 ISONAME=`basename ${ISOURL}`
 
@@ -41,7 +41,7 @@ python3 -m http.server ${FILE_SERVER_PORT} --directory `pwd` &
 
 virt-install \
     --name kdev-ubuntu22 \
-    --arch aarch64 \
+    --arch x86_64 \
     --machine virt-5.2 \
     --vcpus 1 \
     --ram 2048 \
