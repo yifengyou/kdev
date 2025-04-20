@@ -36,8 +36,8 @@ virt-install \
     --ram 2048 \
     --cpu host-passthrough \
     --boot uefi \
-    --disk path=/linux/linux-4.git/kdev.git/ubuntu/ubuntu18.04/qcow2/aarch64/rootfs.qcow2,format=qcow2,bus=scsi \
-    --location ${ISONAME} \
+    --disk path=`pwd`/rootfs.qcow2,format=qcow2,bus=scsi \
+    --location `pwd`/${ISONAME} \
     --initrd-inject preseed.cfg \
     --extra-args="auto=true priority=critical preseed/file=/preseed.cfg console=serial earlyprintk level=10 log_level=10 autoinstall" \
     --features acpi=on \
@@ -49,10 +49,16 @@ virt-install \
 
 sync
 sleep 3
+
 lsof rootfs.qcow2
 if [ $? -ne 0 ] ; then
-	qemu-img snapshot -c 'install os' rootfs.qcow2
-	qemu-img snapshot -l rootfs.qcow2
+    size=$(du -s rootfs.qcow2 | awk '{print $1}')
+    if [ "$size" -gt 204800 ] ; then
+      qemu-img snapshot -c 'install os' rootfs.qcow2
+      qemu-img snapshot -l rootfs.qcow2
+    else
+      echo "rootfs.qcow2 size too small, skip snapshot"
+    fi
 fi
 
 exit 0
