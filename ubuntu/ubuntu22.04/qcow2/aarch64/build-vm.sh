@@ -70,9 +70,10 @@ if [ $? -ne 0 ] ; then
       echo "rootfs.qcow2 size too small, skip snapshot"
     fi
 fi
-clear
+
 fileserver=$(lsof -ti :${FILE_SERVER_PORT})
 if [ ! -z "${fileserver}" ] ; then
   kill -9 ${fileserver}
 fi
+
 exit 0
