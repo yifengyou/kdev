@@ -14,32 +14,26 @@ autoinstall:
     disable_components: []
     geoip: true
     preserve_sources_list: false
-    primary:
-    - arches:
-      - amd64
-      uri: https://mirrors.aliyun.com/ubuntu
-    - arches:
-      - arm64
-      uri: http://mirrors.aliyun.com/ubuntu-ports
+    mirror-selection:
+      primary:
+        - country-mirror
+        - uri: "http://mirrors.aliyun.com/ubuntu"
+          arches: [i386, amd64]
+        - uri: "http://mirrors.aliyun.com/ubuntu-ports"
+          arches: [s390x, arm64, armhf, powerpc, ppc64el, riscv64]
+    fallback: offline-install
+    geoip: true
   identity:
     hostname: ubuntu2204
-    password: $6$le8Tsrwn14s46Axh$tD2pc/OSVm5Y85179nb7Uy9cioKP6UGEkIQ.cWXOiiAIVF3n/jBJwAap14S9msBJM.ciCXG4LOe27Lb2dE.zA1
-    realname: ubuntu
     username: ubuntu
-  user-data:
-    disable_root: false
-    chpasswd:
-      list: |
-        root:linux
-      expire: false
+    password: "$6$le8Tsrwn14s46Axh$tD2pc/OSVm5Y85179nb7Uy9cioKP6UGEkIQ.cWXOiiAIVF3n/jBJwAap14S9msBJM.ciCXG4LOe27Lb2dE.zA1"
   kernel:
     package: linux-generic
-    cmdline: cloud-init=disabled
   keyboard:
     layout: us
+    variant: ""
     toggle: null
-    variant: ''
-  locale: en_US.UTF-8
+  locale: "en_US.UTF-8"
   timezone: Asia/Shanghai
   network:
     ethernets:
@@ -53,11 +47,15 @@ autoinstall:
   packages:
     - vim
   storage:
+    swap:
+      size: 0
     layout:
       name: direct
   grub:
     install_devices:
       - /dev/sda
+  drivers:
+    install: false
   late-commands:
     - sed -i -e 's/^#\?PasswordAuthentication.*/PasswordAuthentication yes/g' /target/etc/ssh/sshd_config
-    - touch /target/etc/cloud/cloud-init.disabled
+  shutdown: reboot
