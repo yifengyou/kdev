@@ -8,7 +8,6 @@ log
 *.log
 *.qcow2
 *.iso
-ct*
 .idea
 *-bak
 snipaste
