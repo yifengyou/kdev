@@ -24,7 +24,7 @@ autoinstall:
     fallback: offline-install
     geoip: true
   identity:
-    hostname: ubuntu2204
+    hostname: ubuntu2404
     username: ubuntu
     password: "$6$le8Tsrwn14s46Axh$tD2pc/OSVm5Y85179nb7Uy9cioKP6UGEkIQ.cWXOiiAIVF3n/jBJwAap14S9msBJM.ciCXG4LOe27Lb2dE.zA1"
   kernel:
