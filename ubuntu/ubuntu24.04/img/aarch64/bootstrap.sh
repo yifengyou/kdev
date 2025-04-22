@@ -2,11 +2,11 @@
 
 set -x
 
-IMAGE_NAME="ubuntu:22.04"
+IMAGE_NAME="hub.rat.dev/ubuntu:24.04"
 MIRROR="https://mirrors.ustc.edu.cn/ubuntu-ports/"
 TARGET_DIR="./rootfs"
 ARCH="arm64"
-RELEASE="jammy"
+RELEASE="noble"
 EXT4_IMAGE="rootfs.ext4"
 SQUASHFS_IMAGE="rootfs.squashfs"
 COMPRESS_LEVEL=9
@@ -32,10 +32,10 @@ trap cleanup EXIT
 
 echo "apt installation"
 docker exec -w /data $CONTAINER_NAME \
-  sed -i "s/ports.ubuntu.com/mirrors.aliyun.com/g" /etc/apt/sources.list
+  sed -i 's/ports.ubuntu.com/mirrors.aliyun.com/g'     /etc/apt/sources.list.d/ubuntu.sources
 
 docker exec -w /data $CONTAINER_NAME \
-  sed -i "s/security.ubuntu.com/mirrors.aliyun.com/g" /etc/apt/sources.list
+  sed -i 's/security.ubuntu.com/mirrors.aliyun.com/g'  /etc/apt/sources.list.d/ubuntu.sources
 
 docker exec -w /data $CONTAINER_NAME \
   cat /etc/apt/sources.list \
