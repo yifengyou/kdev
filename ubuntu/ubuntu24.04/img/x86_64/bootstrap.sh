@@ -2,11 +2,11 @@
 
 set -x
 
-IMAGE_NAME="hub.rat.dev/ubuntu:18.04"
-RELEASE="bionic"
+IMAGE_NAME="hub.rat.dev/ubuntu:24.04"
 ARCH="arm64"
 MIRROR="https://mirrors.ustc.edu.cn/ubuntu-ports/"
 TARGET_DIR="./rootfs"
+RELEASE="noble"
 EXT4_IMAGE="rootfs.ext4"
 SQUASHFS_IMAGE="rootfs.squashfs"
 COMPRESS_LEVEL=9
@@ -32,7 +32,6 @@ echo "-> start up docker ${IMAGE_NAME}"
 docker run \
   -v `pwd`:/data  \
   --name ${CONTAINER_NAME} \
-  --privileged \
   -itd $IMAGE_NAME bash
 
 cleanup() {
@@ -43,10 +42,10 @@ trap cleanup EXIT
 
 echo "-> apt installation"
 docker exec -w /data $CONTAINER_NAME \
-  sed -i "s/ports.ubuntu.com/mirrors.aliyun.com/g" /etc/apt/sources.list
+  sed -i 's/ports.ubuntu.com/mirrors.aliyun.com/g'     /etc/apt/sources.list.d/ubuntu.sources
 
 docker exec -w /data $CONTAINER_NAME \
-  sed -i "s/security.ubuntu.com/mirrors.aliyun.com/g" /etc/apt/sources.list
+  sed -i 's/security.ubuntu.com/mirrors.aliyun.com/g'  /etc/apt/sources.list.d/ubuntu.sources
 
 docker exec -w /data $CONTAINER_NAME \
   cat /etc/apt/sources.list \
@@ -62,7 +61,7 @@ docker exec -w /data ${CONTAINER_NAME} \
   /usr/sbin/debootstrap \
     --arch=${ARCH} \
     --components=main,universe \
-    --include="${INCLUDE_PACKAGES}" \
+    --include=${INCLUDE_PACKAGES} \
     ${RELEASE} \
     ${TARGET_DIR} \
     ${MIRROR}
