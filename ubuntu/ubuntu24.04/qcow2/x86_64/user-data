@@ -1,37 +1,40 @@
 #cloud-config
 autoinstall:
+  automatic:
+    reboot: true
+    updates: false
+    upgrade: false
+  console: |
+    type=serial
+    rich-mode=true
+  refresh-installer:
+    update: false
   apt:
     disable_components: []
     geoip: true
     preserve_sources_list: false
-    primary:
-    - arches:
-      - amd64
-      - i386
-      uri: https://mirrors.aliyun.com/ubuntu
-    - arches:
-      - default
-      uri: http://mirrors.aliyun.com/ubuntu-ports
+    mirror-selection:
+      primary:
+        - country-mirror
+        - uri: "http://mirrors.aliyun.com/ubuntu"
+          arches: [i386, amd64]
+        - uri: "http://mirrors.aliyun.com/ubuntu-ports"
+          arches: [s390x, arm64, armhf, powerpc, ppc64el, riscv64]
+    fallback: offline-install
+    geoip: true
   drivers:
     install: false
   identity:
-    hostname: ubuntu
-    password: $6$q10NM4gzbYU2IeND$j39lZZXhl0UA8jcrxwbBupYoAtrKdyH2DNU1/rbkbJ9jH95kYghEHW5J.SFH55zWPMJB/GP1.7TQixxqXKbl.0
-    realname: ubuntu
+    hostname: ubuntu2404
     username: ubuntu
-  user-data:
-    disable_root: false
-    chpasswd:
-      list: |
-        root:linux
-      expire: false
+    password: "$6$le8Tsrwn14s46Axh$tD2pc/OSVm5Y85179nb7Uy9cioKP6UGEkIQ.cWXOiiAIVF3n/jBJwAap14S9msBJM.ciCXG4LOe27Lb2dE.zA1"
   kernel:
     package: linux-generic
   keyboard:
     layout: us
     toggle: null
     variant: ''
-  locale: C.UTF-8
+  locale: "en_US.UTF-8"
   network:
     ethernets:
       enp1s0:
@@ -43,48 +46,10 @@ autoinstall:
     install-server: true
   packages:
     - vim
-    - tmux
-    - lrzsz
-    - net-tools
-    - openssh-server
-    - build-essential
-    - isc-dhcp-client-ddns
   storage:
-    config:
-    - ptable: gpt
-      path: /dev/sda
-      wipe: superblock-recursive
-      preserve: false
-      name: ''
-      grub_device: true
-      type: disk
-      id: disk-sda
-    - device: disk-sda
-      size: 1048576
-      flag: bios_grub
-      number: 1
-      preserve: false
-      grub_device: false
-      type: partition
-      id: partition-0
-    - device: disk-sda
-      size: 536867766272
-      wipe: superblock
-      flag: ''
-      number: 2
-      preserve: false
-      grub_device: false
-      type: partition
-      id: partition-1
-    - fstype: ext4
-      volume: partition-1
-      preserve: false
-      type: format
-      id: format-0
-    - path: /
-      device: format-0
-      type: mount
-      id: mount-0
-  updates: security
+    swap:
+      size: 0
+    layout:
+      name: direct
   version: 1
-
+  shutdown: poweroff
