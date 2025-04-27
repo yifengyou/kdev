@@ -6,7 +6,6 @@ ISOURL="https://old-releases.ubuntu.com/releases/24.04/ubuntu-24.04-live-server-
 FILE_SERVER_PORT="63336"
 ISONAME=$(basename ${ISOURL})
 
-# 检查web文件服务器端口是否被占用
 fileserver=$(lsof -ti :${FILE_SERVER_PORT})
 if [ ! -z "${fileserver}" ]; then
 	echo "${FILE_SERVER_PORT} already inuse by ${fileserver}"
@@ -37,6 +36,14 @@ fi
 touch meta-data user-data
 
 python3 -m http.server ${FILE_SERVER_PORT} --directory $(pwd) &
+
+cleanup() {
+	fileserver=$(lsof -ti :${FILE_SERVER_PORT})
+	if [ ! -z "${fileserver}" ]; then
+		kill -9 ${fileserver}
+	fi
+}
+trap cleanup EXIT
 
 virt-install \
 	--name kdev-ubuntu24 \
@@ -69,11 +76,6 @@ if [ $? -ne 0 ]; then
 	else
 		echo "rootfs.qcow2 size too small, skip snapshot"
 	fi
-fi
-
-fileserver=$(lsof -ti :${FILE_SERVER_PORT})
-if [ ! -z "${fileserver}" ]; then
-	kill -9 ${fileserver}
 fi
 
 exit 0

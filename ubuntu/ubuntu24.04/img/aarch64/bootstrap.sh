@@ -9,9 +9,8 @@ MIRROR="https://mirrors.ustc.edu.cn/ubuntu-ports/"
 TARGET_DIR="./rootfs"
 EXT4_IMAGE="rootfs.ext4"
 SQUASHFS_IMAGE="rootfs.squashfs"
-COMPRESS_LEVEL=9
 INCLUDE_PACKAGES=$(tr '\n' ',' <packages.list | sed 's/,$//')
-CONTAINER_NAME=${RANDOM}
+CONTAINER_NAME="bootstrap-ubuntu2404-${RANDOM}"
 
 if ! command -v docker &>/dev/null; then
 	echo "command docker not found!"
@@ -47,6 +46,9 @@ docker exec -w /data $CONTAINER_NAME \
 
 docker exec -w /data $CONTAINER_NAME \
 	sed -i 's/security.ubuntu.com/mirrors.aliyun.com/g' /etc/apt/sources.list.d/ubuntu.sources
+
+docker exec -w /data $CONTAINER_NAME \
+	sed -i 's/archive.ubuntu.com/mirrors.aliyun.com/g' /etc/apt/sources.list.d/ubuntu.sources
 
 docker exec -w /data $CONTAINER_NAME \
 	cat /etc/apt/sources.list
