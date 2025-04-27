@@ -52,7 +52,7 @@ virt-install \
 	--vcpus 4 \
 	--ram 2048 \
 	--cpu host-passthrough \
-	--boot cdrom \
+	--boot cdrom,hd \
 	--disk path=$(pwd)/rootfs.qcow2,format=qcow2,bus=scsi \
 	--location $(pwd)/${ISONAME},initrd=casper/initrd,kernel=casper/vmlinuz \
 	--extra-args=" ds=nocloud-net;s=http://192.168.122.1:${FILE_SERVER_PORT} cloud-config-url=/dev/null autoinstall priority=critical console=serial earlyprintk " \

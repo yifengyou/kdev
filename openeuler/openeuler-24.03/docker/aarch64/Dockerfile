@@ -1,4 +1,4 @@
-FROM hub.rat.dev/openeuler/openeuler:22.03-lts
+FROM hub.rat.dev/openeuler/openeuler:24.03-lts-sp1
 
 COPY bashrc /root/.bashrc
 RUN yum makecache \
@@ -6,6 +6,6 @@ RUN yum makecache \
            rpm-build patchutils xmlto asciidoc elfutils-libelf-devel \
            elfutils-devel zlib-devel binutils-devel newt-devel python3-devel \
            perl audit-libs-devel hmaccalc perl-ExtUtils-Embed dnf-plugins-core \
-           openssl-devel m4 hostname dwarves rsync
+           openssl-devel bison m4 hostname rsync
 
 CMD ["bash"]
