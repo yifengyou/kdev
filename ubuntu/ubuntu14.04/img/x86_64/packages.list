@@ -1,4 +1,3 @@
-systemd
 vim
 tmux
 build-essential
@@ -9,7 +8,6 @@ xz-utils
 flex
 bison
 m4
-libncurses-dev
 make
 git
 exuberant-ctags
@@ -23,5 +21,4 @@ wget
 curl
 binwalk
 cpio
-systemd-sysv
 locales

@@ -808,24 +808,24 @@ def handle_rootfs(args):
     # 找到根分区
     target_part = None
     for part in range(10):
-        disk_size = f"/sys/devices/virtual/block/{nbd}/{nbd}p{part}/size"
+        disk_size = f"/sys/devices/virtual/block/{args.nbd}/{args.nbd}p{part}/size"
         if os.path.exists(disk_size):
             try:
                 # 读取设备文件获取扇区数[3,4](@ref)
                 with open(disk_size, 'r') as f:
                     sectors = int(f.read().strip())
             except Exception as e:
-                log.err(f"try get {nbd}p{part} size failed! {str(e)}")
+                log.err(f"try get {args.nbd}p{part} size failed! {str(e)}")
                 do_clean_nbd()
                 exit(1)
             size_mb = sectors * 512 / (1024 ** 2)
             # 找到第一个大于2G的盘，一般UEFI的ESP分区都是1G以下，不是一般性
             if size_mb > 2048:
-                target_part = f"{nbd}p{part}"
+                target_part = f"{args.nbd}p{part}"
                 log.info(f"find disk part /dev/{target_part} size: {size_mb}")
                 break
     if not target_part:
-        log.error(f"no suitable part for mount on {nbd}")
+        log.error(f"no suitable part for mount on {args.nbd}")
         exit(1)
     # 尝试挂载
     retcode, _, _ = do_exe_cmd(f"mount -o rw /dev/{target_part} {args.tmpdir}", print_output=True)

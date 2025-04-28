@@ -2,14 +2,13 @@
 
 set -x
 
-IMAGE_NAME="hub.rat.dev/ubuntu:24.04"
-ARCH="arm64"
-MIRROR="https://mirrors.ustc.edu.cn/ubuntu-ports/"
+IMAGE_NAME="hub.rat.dev/ubuntu:14.04"
+ARCH="amd64"
+MIRROR="http://archive.ubuntu.com/ubuntu/"
 TARGET_DIR="./rootfs"
-RELEASE="noble"
+RELEASE="trusty"
 EXT4_IMAGE="rootfs.ext4"
 SQUASHFS_IMAGE="rootfs.squashfs"
-COMPRESS_LEVEL=9
 INCLUDE_PACKAGES=$(tr '\n' ',' <packages.list | sed 's/,$//')
 CONTAINER_NAME=${RANDOM}
 
@@ -41,12 +40,6 @@ cleanup() {
 trap cleanup EXIT
 
 echo "-> apt installation"
-docker exec -w /data $CONTAINER_NAME \
-	sed -i 's/ports.ubuntu.com/mirrors.aliyun.com/g' /etc/apt/sources.list.d/ubuntu.sources
-
-docker exec -w /data $CONTAINER_NAME \
-	sed -i 's/security.ubuntu.com/mirrors.aliyun.com/g' /etc/apt/sources.list.d/ubuntu.sources
-
 docker exec -w /data $CONTAINER_NAME \
 	cat /etc/apt/sources.list
 
