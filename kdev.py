@@ -819,7 +819,7 @@ def handle_rootfs(args):
                 do_clean_nbd()
                 exit(1)
             size_mb = sectors * 512 / (1024 ** 2)
-            # 找到第一个大于2G的盘，一般UEFI的ESP分区都是1G以下，不是一般性
+            # 找到第一个大于2G的盘，一般UEFI的ESP分区都是1G以下，不失一般性
             if size_mb > 2048:
                 target_part = f"{args.nbd}p{part}"
                 log.info(f"find disk part /dev/{target_part} size: {size_mb}")
