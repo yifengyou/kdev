@@ -1,0 +1,71 @@
+name: Build and Export Ubuntu 24.04 Rootfs
+on:
+  workflow_dispatch:  # 手动触发
+  push:
+    tags: v*          # 打标签时自动触发
+
+jobs:
+  build:
+    runs-on: ubuntu-latest  # 需支持嵌套虚拟化（建议自托管运行器）
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install KVM/QEMU
+        run: |
+          sudo apt update
+          sudo apt install -y qemu-kvm libvirt-daemon-system virtinst cpu-checker
+          sudo systemctl enable --now libvirtd
+          sudo virsh net-start default
+
+      - name: Download Ubuntu 24.04 ISO
+        run: |
+          wget https://releases.ubuntu.com/24.04/ubuntu-24.04-live-server-amd64.iso
+
+      - name: Create QCOW2 Disk
+        run: |
+          qemu-img create -f qcow2 rootfs.qcow2 10G
+
+      - name: Start VM Installation
+        run: |
+          sudo virt-install \
+            --name ubuntu24 \
+            --memory 2048 \
+            --vcpus 2 \
+            --disk path=rootfs.qcow2,format=qcow2 \
+            --cdrom ubuntu-24.04-live-server-amd64.iso \
+            --os-variant ubuntu24.04 \
+            --network network=default \
+            --graphics none \
+            --console pty,target_type=serial \
+            --extra-args 'console=ttyS0,115200n8 autoinstall ds=nocloud-net;s=http://example.com/cloud-init/'
+
+      - name: Wait for Installation
+        timeout-minutes: 30
+        run: |
+          while ! sudo virsh domstate ubuntu24 | grep -q "shut off"; do
+            sleep 10
+          done
+
+      - name: Compress rootfs.qcow2
+        run: |
+          zstd --rm -9 rootfs.qcow2 -o rootfs.qcow2.zst
+
+      - name: Create Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Ubuntu 24.04 Rootfs
+          draft: false
+          prerelease: false
+
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: rootfs.qcow2.zst
+          asset_name: ubuntu24.04-rootfs.qcow2.zst
