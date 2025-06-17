@@ -8,4 +8,6 @@ RUN yum makecache \
            perl audit-libs-devel hmaccalc perl-ExtUtils-Embed dnf-plugins-core \
            openssl-devel bison m4 hostname rsync
 
+RUN yum install -y dwarves
+
 CMD ["bash"]
