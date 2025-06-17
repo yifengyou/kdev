@@ -1,0 +1,56 @@
+#==========================================================================
+# Description: Upload test
+#==========================================================================
+
+name: Upload test
+
+on:
+  repository_dispatch:
+  workflow_dispatch:
+
+env:
+  TZ: America/New_York
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    if: ${{ github.event.repository.owner.id }} == ${{ github.event.sender.id }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Initialization environment
+        id: init
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          mkdir -p /tmp/builder/
+          cp -a /proc/cpuinfo /tmp/builder/
+          cp -a /proc/meminfo /tmp/builder/
+          uname -a > /tmp/builder/kernel.txt
+          ls -alh /dev/kvm > /tmp/builder/kvm.txt
+          echo "status=success" >> ${GITHUB_OUTPUT}
+
+      - name: Upload files to Release
+        uses: ncipollo/release-action@main
+        if: ${{ steps.init.outputs.status }} == 'success' && !cancelled()
+        with:
+          tag: upload_test
+          artifacts: /tmp/builder/*
+          allowUpdates: true
+          removeArtifacts: false
+          replacesArtifacts: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+          body: |
+            ### Action upload test
+            This is just test(这是一个测试)
+            - upload cpuinfo(获取构建环境的CPU信息)
+              * /proc/cpuinfo
+            - upload meminfo(获取构建环境的内存信息)
+              * /proc/meminfo
+            - upload release(上传发布信息)
+              * ```uname -a > /tmp/builder/kernel.txt```
+            - 测试链接
+              * [baidu](https://www.baidu.com "百度搜索")
+              * [taobao](https://www.taobao.com "淘宝")
