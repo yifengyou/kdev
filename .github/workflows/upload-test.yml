@@ -30,7 +30,7 @@ jobs:
           echo "" >> /tmp/builder/envinfo.txt
           id >> /tmp/builder/envinfo.txt
           echo "" >> /tmp/builder/envinfo.txt
-          cat /etc/*releae >> /tmp/builder/envinfo.txt
+          cat /etc/*release >> /tmp/builder/envinfo.txt
           echo "" >> /tmp/builder/envinfo.txt
           cat /proc/cpuinfo >> /tmp/builder/envinfo.txt
           echo "" >> /tmp/builder/envinfo.txt
