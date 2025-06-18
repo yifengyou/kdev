@@ -39,11 +39,13 @@ jobs:
           ls -alh /dev/kvm
           cd /builder/kdev.git/ubuntu/ubuntu24.04/qcow2/x86_64 && sudo ./build-vm.sh
           sudo virsh list --all
+          sudo virsh console 1
           echo "status=success" >> ${GITHUB_OUTPUT}
 
       - name: Compress rootfs.qcow2
         id: compress_output
         run: |
+          ls -alh /builder/kdev.git/ubuntu/ubuntu24.04/qcow2/x86_64
           cd /builder/kdev.git/ubuntu/ubuntu24.04/qcow2/x86_64 && \
             zstd --rm -9 rootfs.qcow2 -o /builder/release/rootfs.qcow2.zst && \
             rar a /builder/release/rootfs.img.rar rootfs.qcow2
