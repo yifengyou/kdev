@@ -26,10 +26,24 @@ jobs:
           DEBIAN_FRONTEND: noninteractive
         run: |
           mkdir -p /tmp/builder/
-          cp -a /proc/cpuinfo /tmp/builder/
-          cp -a /proc/meminfo /tmp/builder/
-          uname -a > /tmp/builder/kernel.txt
-          ls -alh /dev/kvm > /tmp/builder/kvm.txt
+          uname -a > /tmp/builder/envinfo.txt
+          echo "" >> /tmp/builder/envinfo.txt
+          id >> /tmp/builder/envinfo.txt
+          echo "" >> /tmp/builder/envinfo.txt
+          cat /etc/*releae >> /tmp/builder/envinfo.txt
+          echo "" >> /tmp/builder/envinfo.txt
+          cat /proc/cpuinfo >> /tmp/builder/envinfo.txt
+          echo "" >> /tmp/builder/envinfo.txt
+          cat /proc/cpuinfo >> /tmp/builder/envinfo.txt
+          echo "" >> /tmp/builder/envinfo.txt
+          free -w -h >> /tmp/builder/envinfo.txt
+          echo "" >> /tmp/builder/envinfo.txt
+          ls -alh /dev/kvm >> /tmp/builder/envinfo.txt
+          echo "" >> /tmp/builder/envinfo.txt
+          df -h >> /tmp/builder/envinfo.txt
+          echo "" >> /tmp/builder/envinfo.txt
+          dpkg -l >> /tmp/builder/envinfo.txt
+          echo "" >> /tmp/builder/envinfo.txt
           echo "status=success" >> ${GITHUB_OUTPUT}
 
       - name: Upload files to Release
