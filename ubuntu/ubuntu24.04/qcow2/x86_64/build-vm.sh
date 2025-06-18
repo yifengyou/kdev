@@ -33,7 +33,7 @@ fi
 sync
 
 if [ ! -f "${ISONAME}" ]; then
-	wget -c ${ISOURL}
+	wget -q -c ${ISOURL}
 fi
 
 touch meta-data user-data
