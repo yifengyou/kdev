@@ -25,7 +25,8 @@ jobs:
         env:
           DEBIAN_FRONTEND: noninteractive
         run: |
-          mkdir -p /tmp/builder/
+          sudo mkdir -p /tmp/builder/
+          sudo chown -R runner.runner /builder
           uname -a > /tmp/builder/envinfo.txt
           echo "" >> /tmp/builder/envinfo.txt
           tty >> /tmp/builder/envinfo.txt
