@@ -22,12 +22,13 @@ jobs:
           sudo apt install -y qemu-kvm libvirt-daemon-system virtinst cpu-checker
           sudo systemctl enable --now libvirtd
           sudo mkdir -p /builder/
+          sudo chown -R runner.runner /builder
 
       - name: Clone kdev project
         id: clone_kdev
         working-directory: /builder/
         run: |
-          git clone -q --single-branch --depth=1 --branch=main https://github.com/yifengyou/kdev.git kdev.git
+          git clone -q --single-branch --depth=1 --branch=master https://github.com/yifengyou/kdev.git kdev.git
           echo "status=success" >> ${GITHUB_OUTPUT}
 
       - name: Start VM Installation
