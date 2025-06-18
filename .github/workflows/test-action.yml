@@ -1,4 +1,9 @@
-name: Build and Export Ubuntu 24.04 Rootfs
+#==========================================================================
+# Description: Build qcow2 test
+#==========================================================================
+
+
+name: Build qcow2 test
 on:
   workflow_dispatch:  # 手动触发
   push:
@@ -16,7 +21,6 @@ jobs:
           sudo apt update
           sudo apt install -y qemu-kvm libvirt-daemon-system virtinst cpu-checker
           sudo systemctl enable --now libvirtd
-          sudo virsh net-start default
 
       - name: Download Ubuntu 24.04 ISO
         run: |
