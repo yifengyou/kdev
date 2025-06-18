@@ -39,7 +39,6 @@ jobs:
           ls -alh /dev/kvm
           cd /builder/kdev.git/ubuntu/ubuntu24.04/qcow2/x86_64 && sudo ./build-vm.sh
           sudo virsh list --all
-          sudo virsh console 1
           echo "status=success" >> ${GITHUB_OUTPUT}
 
       - name: Compress rootfs.qcow2

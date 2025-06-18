@@ -28,6 +28,8 @@ jobs:
           mkdir -p /tmp/builder/
           uname -a > /tmp/builder/envinfo.txt
           echo "" >> /tmp/builder/envinfo.txt
+          tty >> /tmp/builder/envinfo.txt
+          echo "" >> /tmp/builder/envinfo.txt
           id >> /tmp/builder/envinfo.txt
           echo "" >> /tmp/builder/envinfo.txt
           cat /etc/*release >> /tmp/builder/envinfo.txt
