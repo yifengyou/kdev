@@ -57,7 +57,6 @@ virt-install \
 	--disk path=$(pwd)/rootfs.qcow2,format=qcow2,bus=scsi \
 	--location $(pwd)/${ISONAME},initrd=casper/initrd,kernel=casper/vmlinuz \
 	--extra-args=" ds=nocloud-net;s=http://192.168.122.1:${FILE_SERVER_PORT} cloud-config-url=/dev/null autoinstall earlyprintk console=ttyS0,115200n8 " \
-	--graphics none \
 	--console pty,target_type=serial \
 	--os-variant ubuntu20.04 \
 	--check all=off \
