@@ -34,6 +34,8 @@ jobs:
       - name: Start VM Installation
         id: build_vm
         run: |
+          sudo chmod 777 /dev/kvm
+          ls -alh /dev/kvm
           cd /builder/kdev.git/ubuntu/ubuntu24.04/qcow2/x86_64 && sudo ./build-vm.sh
 
       - name: Compress rootfs.qcow2
