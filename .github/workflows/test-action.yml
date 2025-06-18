@@ -21,55 +21,38 @@ jobs:
           sudo apt update
           sudo apt install -y qemu-kvm libvirt-daemon-system virtinst cpu-checker
           sudo systemctl enable --now libvirtd
+          sudo mkdir -p /builder/
 
-      - name: Download Ubuntu 24.04 ISO
+      - name: Clone kdev project
+        id: clone_kdev
+        working-directory: /builder/
         run: |
-          wget https://releases.ubuntu.com/24.04/ubuntu-24.04.2-desktop-amd64.iso
-
-      - name: Create QCOW2 Disk
-        run: |
-          qemu-img create -f qcow2 rootfs.qcow2 10G
+          git clone -q --single-branch --depth=1 --branch=main https://github.com/yifengyou/kdev.git kdev.git
+          echo "status=success" >> ${GITHUB_OUTPUT}
 
       - name: Start VM Installation
+        id: build_vm
         run: |
-          sudo virt-install \
-            --name ubuntu24 \
-            --memory 2048 \
-            --vcpus 2 \
-            --disk path=rootfs.qcow2,format=qcow2 \
-            --cdrom ubuntu-24.04-live-server-amd64.iso \
-            --os-variant ubuntu24.04 \
-            --network network=default \
-            --graphics none \
-            --console pty,target_type=serial \
-            --extra-args 'console=ttyS0,115200n8 autoinstall ds=nocloud-net;s=http://example.com/cloud-init/'
-
-      - name: Wait for Installation
-        timeout-minutes: 30
-        run: |
-          while ! sudo virsh domstate ubuntu24 | grep -q "shut off"; do
-            sleep 10
-          done
+          cd /builder/kdev.git/ubuntu/ubuntu24.04/qcow2/x86_64 && ./build-vm.sh
 
       - name: Compress rootfs.qcow2
+        id: compress_output
         run: |
-          zstd --rm -9 rootfs.qcow2 -o rootfs.qcow2.zst
+          cd /builder/kdev.git/ubuntu/ubuntu24.04/qcow2/x86_64 && \
+            zstd --rm -9 rootfs.qcow2 -o /builder/release/rootfs.qcow2.zst && \
+            rar a /builder/release/rootfs.img.rar rootfs.qcow2
 
-      - name: Create Release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload rootfs qcow2 to release
+        uses: ncipollo/release-action@main
+        if: ${{ steps.compress_output.outputs.status }} == 'success' && !cancelled()
         with:
-          tag_name: ${{ github.ref }}
-          release_name: Ubuntu 24.04 Rootfs
-          draft: false
-          prerelease: false
-
-      - name: Upload Release Asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: rootfs.qcow2.zst
-          asset_name: ubuntu24.04-rootfs.qcow2.zst
+          tag: "kdev_release"
+          artifacts: /builder/*
+          allowUpdates: true
+          removeArtifacts: false
+          replacesArtifacts: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+          body: |
+            ### kdev release
+            - 默认用户名(Default username): root
+            - 默认密码(Default password): linux
