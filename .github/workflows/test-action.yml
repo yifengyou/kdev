@@ -24,7 +24,7 @@ jobs:
 
       - name: Download Ubuntu 24.04 ISO
         run: |
-          wget https://releases.ubuntu.com/24.04/ubuntu-24.04-live-server-amd64.iso
+          wget https://releases.ubuntu.com/24.04/ubuntu-24.04.2-desktop-amd64.iso
 
       - name: Create QCOW2 Disk
         run: |
