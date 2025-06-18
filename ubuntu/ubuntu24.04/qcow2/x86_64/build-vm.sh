@@ -62,6 +62,7 @@ virt-install \
 	--os-variant ubuntu20.04 \
 	--check all=off \
 	--debug \
+	--noautoconsole \
 	--qemu-commandline='-sandbox on,obsolete=deny,elevateprivileges=deny,spawn=deny,resourcecontrol=deny'
 
 echo "virt ret=$?"

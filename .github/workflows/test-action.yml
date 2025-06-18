@@ -22,6 +22,7 @@ jobs:
           sudo apt install -y qemu-kvm libvirt-daemon-system virtinst cpu-checker
           sudo systemctl enable --now libvirtd
           sudo mkdir -p /builder/
+          sudo mkdir -p /builder/release
           sudo chown -R runner.runner /builder
 
       - name: Clone kdev project
@@ -37,6 +38,8 @@ jobs:
           sudo chmod 777 /dev/kvm
           ls -alh /dev/kvm
           cd /builder/kdev.git/ubuntu/ubuntu24.04/qcow2/x86_64 && sudo ./build-vm.sh
+          sudo virsh list --all
+          echo "status=success" >> ${GITHUB_OUTPUT}
 
       - name: Compress rootfs.qcow2
         id: compress_output
@@ -44,6 +47,7 @@ jobs:
           cd /builder/kdev.git/ubuntu/ubuntu24.04/qcow2/x86_64 && \
             zstd --rm -9 rootfs.qcow2 -o /builder/release/rootfs.qcow2.zst && \
             rar a /builder/release/rootfs.img.rar rootfs.qcow2
+          echo "status=success" >> ${GITHUB_OUTPUT}
 
       - name: Upload rootfs qcow2 to release
         uses: ncipollo/release-action@main
