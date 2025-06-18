@@ -4,6 +4,7 @@ set -x
 
 ISOURL="https://old-releases.ubuntu.com/releases/24.04/ubuntu-24.04-live-server-amd64.iso"
 ISOURL="https://mirrors.aliyun.com/ubuntu-releases/24.04/ubuntu-24.04.2-live-server-amd64.iso"
+ISOURL="https://releases.ubuntu.com/24.04/ubuntu-24.04.2-live-server-amd64.iso"
 FILE_SERVER_PORT="63336"
 VMNAME="kdev-ubuntu24"
 ISONAME=$(basename ${ISOURL})
