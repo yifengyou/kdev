@@ -46,7 +46,7 @@ jobs:
         run: |
           ls -alh /builder/kdev.git/ubuntu/ubuntu24.04/qcow2/x86_64
           cd /builder/kdev.git/ubuntu/ubuntu24.04/qcow2/x86_64 && \
-            zstd --rm -9 rootfs.qcow2 -o /builder/release/rootfs.qcow2.zst && \
+            zstd -9 rootfs.qcow2 -o /builder/release/rootfs.qcow2.zst && \
             rar a /builder/release/rootfs.img.rar rootfs.qcow2
           echo "status=success" >> ${GITHUB_OUTPUT}
 

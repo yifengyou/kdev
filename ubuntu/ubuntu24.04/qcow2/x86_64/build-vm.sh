@@ -1,13 +1,13 @@
 #!/bin/bash
 
-set -x
-
+WORKDIR=`pwd`
 ISOURL="https://old-releases.ubuntu.com/releases/24.04/ubuntu-24.04-live-server-amd64.iso"
 ISOURL="https://mirrors.aliyun.com/ubuntu-releases/24.04/ubuntu-24.04.2-live-server-amd64.iso"
 ISOURL="https://releases.ubuntu.com/24.04/ubuntu-24.04.2-live-server-amd64.iso"
 FILE_SERVER_PORT="63336"
 VMNAME="kdev-ubuntu24"
 ISONAME=$(basename ${ISOURL})
+LOGNAME="kdev-install-${ISONAME}.log"
 
 fileserver=$(lsof -ti :${FILE_SERVER_PORT})
 if [ ! -z "${fileserver}" ]; then
@@ -45,26 +45,44 @@ cleanup() {
 	if [ ! -z "${fileserver}" ]; then
 		kill -9 ${fileserver}
 	fi
+	umount -l mnt || :
+
 }
 trap cleanup EXIT
+
+mkdir mnt
+mount ${ISONAME} mnt || :
+ls -alh mnt/casper
+
 qemu-system-x86_64 \
 	-name "kdev-ubuntu24" \
 	-machine pc,accel=kvm \
 	-cpu host \
 	-smp 4 \
 	-m 4096 \
-	-cdrom /linux/kdev.git/ubuntu/ubuntu24.04/qcow2/x86_64/ubuntu-24.04.2-live-server-amd64.iso \
+	-cdrom ${WORKDIR}/${ISONAME} \
 	-device virtio-scsi-pci,id=scsi \
-	-drive file=/linux/kdev.git/ubuntu/ubuntu24.04/qcow2/x86_64/rootfs.qcow2,format=qcow2,if=virtio \
+	-drive file=${WORKDIR}/rootfs.qcow2,format=qcow2,if=virtio \
 	-boot order=dc \
-	-kernel `pwd`/mnt/casper/vmlinuz \
-	-initrd `pwd`/mnt/casper/initrd \
+	-kernel ${WORKDIR}/mnt/casper/vmlinuz \
+	-initrd ${WORKDIR}/mnt/casper/initrd \
 	-append "ds=nocloud-net;s=http://192.168.122.1:63336 cloud-config-url=/dev/null autoinstall earlyprintk console=ttyS0,115200n8" \
-	-serial file:/var/log/libvirt/qemu/kdev-ubuntu24_console.log \
+	-serial file:${LOGNAME} \
 	-sandbox on,obsolete=deny,elevateprivileges=deny,spawn=deny,resourcecontrol=deny \
-	-net nic -net user,net=192.168.122.0/24,host=192.168.122.1
+	-net nic -net user,net=192.168.122.0/24,host=192.168.122.1 \
+	-display none \
+	--daemonize
 
-echo "virt ret=$?"
+tail -f ${LOGNAME} &
+
+while true ; do
+	ps aux|grep qemu-system-x86_64 |grep -v grep &> /dev/null
+	if [ $? -ne 0 ] ; then
+		break
+	fi
+	sleep 3
+done
+
 sync
 
 lsof rootfs.qcow2
