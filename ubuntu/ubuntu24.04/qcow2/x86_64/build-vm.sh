@@ -47,21 +47,22 @@ cleanup() {
 	fi
 }
 trap cleanup EXIT
-
-virt-install \
-	--name ${VMNAME} \
-	--arch x86_64 \
-	--vcpus 4 \
-	--ram 4096 \
-	--boot cdrom,hd \
-	--disk path=$(pwd)/rootfs.qcow2,format=qcow2,bus=scsi \
-	--location $(pwd)/${ISONAME},initrd=casper/initrd,kernel=casper/vmlinuz \
-	--extra-args=" ds=nocloud-net;s=http://192.168.122.1:${FILE_SERVER_PORT} cloud-config-url=/dev/null autoinstall earlyprintk console=ttyS0,115200n8 " \
-	--console pty,target_type=serial \
-	--os-variant ubuntu20.04 \
-	--check all=off \
-	--noautoconsole \
-	--qemu-commandline='-sandbox on,obsolete=deny,elevateprivileges=deny,spawn=deny,resourcecontrol=deny'
+qemu-system-x86_64 \
+	-name "kdev-ubuntu24" \
+	-machine pc,accel=kvm \
+	-cpu host \
+	-smp 4 \
+	-m 4096 \
+	-cdrom /linux/kdev.git/ubuntu/ubuntu24.04/qcow2/x86_64/ubuntu-24.04.2-live-server-amd64.iso \
+	-device virtio-scsi-pci,id=scsi \
+	-drive file=/linux/kdev.git/ubuntu/ubuntu24.04/qcow2/x86_64/rootfs.qcow2,format=qcow2,if=virtio \
+	-boot order=dc \
+	-kernel `pwd`/mnt/casper/vmlinuz \
+	-initrd `pwd`/mnt/casper/initrd \
+	-append "ds=nocloud-net;s=http://192.168.122.1:63336 cloud-config-url=/dev/null autoinstall earlyprintk console=ttyS0,115200n8" \
+	-serial file:/var/log/libvirt/qemu/kdev-ubuntu24_console.log \
+	-sandbox on,obsolete=deny,elevateprivileges=deny,spawn=deny,resourcecontrol=deny \
+	-net nic -net user,net=192.168.122.0/24,host=192.168.122.1
 
 echo "virt ret=$?"
 sync
