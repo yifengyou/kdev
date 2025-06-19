@@ -34,7 +34,7 @@ jobs:
           echo "-----------" >> /tmp/builder/envinfo.txt
           cat /etc/*release >> /tmp/builder/envinfo.txt
           echo "-----------" >> /tmp/builder/envinfo.txt
-          ls -alh /dev/kvm >> /tmp/builder/envinfo.txt
+          ls -alh /dev/ >> /tmp/builder/envinfo.txt
           echo "-----------" >> /tmp/builder/envinfo.txt
           ip addr >> /tmp/builder/envinfo.txt
           echo "-----------" >> /tmp/builder/envinfo.txt
