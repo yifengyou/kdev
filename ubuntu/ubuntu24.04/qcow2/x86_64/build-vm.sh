@@ -68,7 +68,6 @@ qemu-system-x86_64 \
 	-initrd ${WORKDIR}/mnt/casper/initrd \
 	-append "ds=nocloud-net;s=http://192.168.122.1:63336 cloud-config-url=/dev/null autoinstall earlyprintk console=ttyS0,115200n8" \
 	-serial file:${LOGNAME} \
-	-sandbox on,obsolete=deny,elevateprivileges=deny,spawn=deny,resourcecontrol=deny \
 	-net nic -net user,net=192.168.122.0/24,host=192.168.122.1 \
 	-display none \
 	--daemonize
