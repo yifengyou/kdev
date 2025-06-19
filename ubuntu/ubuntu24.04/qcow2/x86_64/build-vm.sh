@@ -90,6 +90,7 @@ if [ $? -ne 0 ]; then
 	if [ "$size" -gt 204800 ]; then
 		qemu-img snapshot -c 'install os' rootfs.qcow2
 		qemu-img snapshot -l rootfs.qcow2
+		ls -alh rootfs.qcow2
 	else
 		echo "rootfs.qcow2 size too small, skip snapshot"
 	fi

@@ -38,7 +38,6 @@ jobs:
           sudo chmod 777 /dev/kvm
           ls -alh /dev/kvm
           cd /builder/kdev.git/ubuntu/ubuntu24.04/qcow2/x86_64 && sudo ./build-vm.sh
-          sudo virsh list --all
           echo "status=success" >> ${GITHUB_OUTPUT}
 
       - name: Compress rootfs.qcow2
@@ -48,6 +47,7 @@ jobs:
           cd /builder/kdev.git/ubuntu/ubuntu24.04/qcow2/x86_64 && \
             zstd -9 rootfs.qcow2 -o /builder/release/rootfs.qcow2.zst && \
             rar a /builder/release/rootfs.img.rar rootfs.qcow2
+          ls -alh /builder/release/
           echo "status=success" >> ${GITHUB_OUTPUT}
 
       - name: Upload rootfs qcow2 to release
@@ -55,7 +55,7 @@ jobs:
         if: ${{ steps.compress_output.outputs.status }} == 'success' && !cancelled()
         with:
           tag: "kdev_release"
-          artifacts: /builder/*
+          artifacts: /builder/release/*
           allowUpdates: true
           removeArtifacts: false
           replacesArtifacts: true
