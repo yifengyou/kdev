@@ -7,23 +7,6 @@ name: qcow2 build x86_64
 on:
   repository_dispatch:
   workflow_dispatch:
-    inputs:
-      os_release:
-        description: "Select OS Release"
-        required: true
-        type: choice
-        options:
-          - "ubuntu-24.04.2-live-server-amd64.iso"
-          - "ubuntu-24.04.1-live-server-amd64.iso"
-          - "ubuntu-24.04-live-server-amd64.iso"
-          - "ubuntu-22.04.5-live-server-amd64.iso"
-          - "ubuntu-22.04.4-live-server-amd64.iso"
-          - "ubuntu-22.04.3-live-server-amd64.iso"
-          - "ubuntu-22.04.2-live-server-amd64.iso"
-          - "ubuntu-22.04.1-live-server-amd64.iso"
-          - "ubuntu-22.04-live-server-amd64.iso"
-          - "all"
-
 
 env:
   TZ: America/New_York
@@ -32,20 +15,17 @@ jobs:
   build:
     runs-on: ubuntu-latest
     strategy:
-      matrix:
-        os_image: ${{
-          inputs.os_release == 'all' && [
-            'ubuntu-24.04.2-live-server-amd64.iso',
-            'ubuntu-24.04.1-live-server-amd64.iso',
-            'ubuntu-24.04-live-server-amd64.iso',
-            'ubuntu-22.04.5-live-server-amd64.iso',
-            'ubuntu-22.04.4-live-server-amd64.iso',
-            'ubuntu-22.04.3-live-server-amd64.iso',
-            'ubuntu-22.04.2-live-server-amd64.iso',
-            'ubuntu-22.04.1-live-server-amd64.iso',
-            'ubuntu-22.04-live-server-amd64.iso'
-          ] || [inputs.os_release]
-        }}
+      matrix: [
+          'ubuntu-24.04.2-live-server-amd64.iso',
+          'ubuntu-24.04.1-live-server-amd64.iso',
+          'ubuntu-24.04-live-server-amd64.iso',
+          'ubuntu-22.04.5-live-server-amd64.iso',
+          'ubuntu-22.04.4-live-server-amd64.iso',
+          'ubuntu-22.04.3-live-server-amd64.iso',
+          'ubuntu-22.04.2-live-server-amd64.iso',
+          'ubuntu-22.04.1-live-server-amd64.iso',
+          'ubuntu-22.04-live-server-amd64.iso'
+      ]
       max-parallel: 3
       fail-fast: false
     steps:
