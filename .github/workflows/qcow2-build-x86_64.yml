@@ -1,8 +1,8 @@
 #==========================================================================
-# Description: Upload test
+# Description: name: qcow2 build x86_64
 #==========================================================================
 
-name: Upload test
+name: qcow2 build x86_64
 
 on:
   repository_dispatch:
@@ -38,7 +38,7 @@ on:
 
 
 
-        
+
 env:
   TZ: America/New_York
 

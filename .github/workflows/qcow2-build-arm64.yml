@@ -1,8 +1,8 @@
 #==========================================================================
-# Description: envtest x86_64
+# Description: qcow2 build arm64
 #==========================================================================
 
-name: envtest x86_64
+name: qcow2 build arm64
 
 on:
   repository_dispatch:
