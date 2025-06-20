@@ -1,0 +1,74 @@
+#==========================================================================
+# Description: envtest x86_64
+#==========================================================================
+
+name: envtest x86_64
+
+on:
+  repository_dispatch:
+  workflow_dispatch:
+
+env:
+  TZ: America/New_York
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.repository.owner.id }} == ${{ github.event.sender.id }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Initialization environment
+        id: init
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          mkdir -p /tmp/builder/
+          uname -a > /tmp/builder/envinfo.txt
+          echo "-----------" >> /tmp/builder/envinfo.txt
+          tty >> /tmp/builder/envinfo.txt || true
+          echo "-----------" >> /tmp/builder/envinfo.txt
+          id >> /tmp/builder/envinfo.txt
+          echo "-----------" >> /tmp/builder/envinfo.txt
+          cat /etc/*release >> /tmp/builder/envinfo.txt
+          echo "-----------" >> /tmp/builder/envinfo.txt
+          ls -alh /dev/ >> /tmp/builder/envinfo.txt
+          echo "-----------" >> /tmp/builder/envinfo.txt
+          ip addr >> /tmp/builder/envinfo.txt
+          echo "-----------" >> /tmp/builder/envinfo.txt
+          df -h >> /tmp/builder/envinfo.txt
+          echo "-----------" >> /tmp/builder/envinfo.txt
+          cat /proc/cpuinfo >> /tmp/builder/envinfo.txt
+          echo "-----------" >> /tmp/builder/envinfo.txt
+          cat /proc/cpuinfo >> /tmp/builder/envinfo.txt
+          echo "-----------" >> /tmp/builder/envinfo.txt
+          free -w -h >> /tmp/builder/envinfo.txt
+          echo "-----------" >> /tmp/builder/envinfo.txt
+          dpkg -l >> /tmp/builder/envinfo.txt
+          echo "-----------" >> /tmp/builder/envinfo.txt
+          echo "status=success" >> ${GITHUB_OUTPUT}
+
+      - name: Upload files to Release
+        uses: ncipollo/release-action@main
+        if: ${{ steps.init.outputs.status }} == 'success' && !cancelled()
+        with:
+          tag: envtest_x86_64
+          artifacts: /tmp/builder/*
+          allowUpdates: true
+          removeArtifacts: false
+          replacesArtifacts: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+          body: |
+            ### Action environment info
+            This is just test(这是一个测试)
+            - upload cpuinfo(获取构建环境的CPU信息)
+              * /proc/cpuinfo
+            - upload meminfo(获取构建环境的内存信息)
+              * /proc/meminfo
+            - upload release(上传发布信息)
+              * ```uname -a > /tmp/builder/kernel.txt```
+            - 测试链接
+              * [baidu](https://www.baidu.com "百度搜索")
+              * [taobao](https://www.taobao.com "淘宝")
