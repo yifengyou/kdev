@@ -7,7 +7,6 @@ output
 log
 *.log
 *.qcow2
-*.iso
 .idea
 *-bak
 snipaste
