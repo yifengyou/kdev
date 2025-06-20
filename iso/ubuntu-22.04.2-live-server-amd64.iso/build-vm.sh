@@ -65,7 +65,7 @@ qemu-system-x86_64 \
 	-boot order=dc \
 	-kernel ${WORKDIR}/mnt/casper/vmlinuz \
 	-initrd ${WORKDIR}/mnt/casper/initrd \
-	-append "ds=nocloud-net;s=http://192.168.122.1:63336 cloud-config-url=/dev/null autoinstall earlyprintk console=ttyS0,115200n8" \
+	-append " ds=nocloud-net;s=http://192.168.122.1:63336/ cloud-config-url=/dev/null autoinstall earlyprintk console=ttyS0,115200n8" \
 	-serial file:${LOGNAME} \
 	-net nic -net user,net=192.168.122.0/24,host=192.168.122.1 \
 	-display none \
@@ -99,3 +99,8 @@ umount mnt -l || true
 rmdir mnt || true
 
 exit 0
+
+--extra-args 'autoinstall ds=nocloud-net;s=http://your-server/path/to/config/'
+
+
+linux /vmlinuz ip=dhcp url=http://192.168.22.254/jammy/ubuntu-22.04.1-live-server-amd64.iso autoinstall ds=nocloud-net\;s=http://192.168.22.254/jammy/
