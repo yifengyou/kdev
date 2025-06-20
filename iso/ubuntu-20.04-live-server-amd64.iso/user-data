@@ -33,7 +33,7 @@ autoinstall:
     package: linux-generic
   keyboard:
     layout: us
-    toggle: null
+    toggle: caps_toggle
     variant: ''
   locale: "en_US.UTF-8"
   network:
