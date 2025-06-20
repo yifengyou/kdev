@@ -48,6 +48,7 @@ jobs:
         id: build_vm
         working-directory: /builder/kdev.git/iso/${{ inputs.os_release }}
         run: |
+          set -x
           ls -alh
           sudo ./build-vm.sh
           echo "status=success" >> ${GITHUB_OUTPUT}
@@ -58,6 +59,7 @@ jobs:
         run: |
           set -x
           ls -alh
+          mv kdev.log /builder/release/kdev_${{ inputs.os_release }}.log
           zstd -9 rootfs.qcow2 -o /builder/release/kdev_${{ inputs.os_release }}.qcow2.zst
           rar a /builder/release/kdev_${{ inputs.os_release }}.qcow2.rar rootfs.qcow2
           ls -alh /builder/release/

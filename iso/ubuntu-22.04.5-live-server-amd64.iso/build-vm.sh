@@ -4,9 +4,9 @@ ISOURL="http://releases.ubuntu.com/22.04.5/ubuntu-22.04.5-live-server-amd64.iso"
 
 WORKDIR=`pwd`
 FILE_SERVER_PORT="63336"
-VMNAME="kdev-ubuntu24"
+VMNAME="kdev-$RANDOM"
 ISONAME=$(basename ${ISOURL})
-LOGNAME="kdev-install-${ISONAME}.log"
+LOGNAME="kdev.log"
 
 fileserver=$(lsof -ti :${FILE_SERVER_PORT})
 if [ ! -z "${fileserver}" ]; then

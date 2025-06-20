@@ -6,18 +6,15 @@ ISOURL="https://releases.ubuntu.com/24.04/ubuntu-24.04.2-live-server-amd64.iso"
 
 WORKDIR=`pwd`
 FILE_SERVER_PORT="63336"
-VMNAME="kdev-ubuntu24"
+VMNAME="kdev-$RANDOM"
 ISONAME=$(basename ${ISOURL})
-LOGNAME="kdev-install-${ISONAME}.log"
+LOGNAME="kdev.log"
 
 fileserver=$(lsof -ti :${FILE_SERVER_PORT})
 if [ ! -z "${fileserver}" ]; then
 	echo "${FILE_SERVER_PORT} already inuse by ${fileserver}"
 	exit 1
 fi
-
-virsh destroy ${VMNAME} || :
-virsh undefine ${VMNAME} --nvram || :
 
 if [ -f rootfs.qcow2 ]; then
 	lsof rootfs.qcow2
