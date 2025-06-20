@@ -13,29 +13,26 @@ on:
         required: true
         type: choice
         options:
-          - ubuntu
-          - debian
-          - fedora
-          - centos
-          - rockylinux
-          - opencloudos
-          - anolis
-          - openeuler
-      os_version:
-        description: "Select OS Version"
-        required: false
-        default: ""
-        type: choice
-        options:
-          ${{ inputs.os_release == 'ubuntu' && '["jammy", "noble", "bookworm", "bullseye"]' ||
-             inputs.os_release == 'debian' && '["bookworm", "bullseye", "buster"]' ||
-             inputs.os_release == 'fedora' && '["36", "37", "38", "39", "40"]' ||
-             inputs.os_release == 'centos' && '["7", "8", "9"]' ||
-             inputs.os_release == 'rockylinux' && '["8", "9"]' ||
-             inputs.os_release == 'opencloudos' && '["8", "22.03"]' ||
-             inputs.os_release == 'anolis' && '["8", "23"]' ||
-             inputs.os_release == 'openeuler' && '["20.03", "22.03"]' || '[]' }}
-
+          - "debian - stable (bookworm)"
+          - "debian - testing (trixie)"
+          - "debian - unstable (sid)"
+          - "ubuntu - jammy (22.04 LTS)"
+          - "ubuntu - noble (24.04 LTS)"
+          - "ubuntu - bookworm"
+          - "fedora - 40"
+          - "fedora - rawhide"
+          - "centos - stream 8"
+          - "centos - stream 9"
+          - "rockylinux - 8"
+          - "rockylinux - 9"
+          - "opencloudos - 8"
+          - "opencloudos - 9"
+          - "anolis - 8"
+          - "anolis - 9"
+          - "openeuler - 21.03 LTS"
+          - "openeuler - 22.03 LTS"
+          - "openeuler - 23.03 LTS"
+          - "openeuler - 24.03 LTS"
 
 
 
