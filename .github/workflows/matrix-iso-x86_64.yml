@@ -1,0 +1,106 @@
+#==========================================================================
+# Description: name: qcow2 build x86_64
+#==========================================================================
+
+name: qcow2 build x86_64
+
+on:
+  repository_dispatch:
+  workflow_dispatch:
+    inputs:
+      os_release:
+        description: "Select OS Release (留空则编译全部)"
+        required: false
+        type: choice
+        default: "all"
+        options:
+          - "all"
+          - "ubuntu-24.04.2-live-server-amd64.iso"
+          - "ubuntu-24.04.1-live-server-amd64.iso"
+          - "ubuntu-24.04-live-server-amd64.iso"
+          - "ubuntu-22.04.5-live-server-amd64.iso"
+          - "ubuntu-22.04.4-live-server-amd64.iso"
+          - "ubuntu-22.04.3-live-server-amd64.iso"
+          - "ubuntu-22.04.2-live-server-amd64.iso"
+          - "ubuntu-22.04.1-live-server-amd64.iso"
+          - "ubuntu-22.04-live-server-amd64.iso"
+
+jobs:
+  build_qcow2:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        # 动态生成矩阵：如果输入为 "all" 则展开所有选项，否则只编译指定版本
+        os_image: ${{
+          inputs.os_release == 'all' && [
+            'ubuntu-24.04.2-live-server-amd64.iso',
+            'ubuntu-24.04.1-live-server-amd64.iso',
+            'ubuntu-24.04-live-server-amd64.iso',
+            'ubuntu-22.04.5-live-server-amd64.iso',
+            'ubuntu-22.04.4-live-server-amd64.iso',
+            'ubuntu-22.04.3-live-server-amd64.iso',
+            'ubuntu-22.04.2-live-server-amd64.iso',
+            'ubuntu-22.04.1-live-server-amd64.iso',
+            'ubuntu-22.04-live-server-amd64.iso'
+          ] || [inputs.os_release]
+        }}
+      max-parallel: 3  # 限制并行任务数避免资源超限
+      fail-fast: false  # 单个任务失败不影响其他任务[8](@ref)
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install KVM/QEMU
+        run: |
+          sudo apt update
+          sudo apt install -y qemu-kvm libvirt-daemon-system virtinst cpu-checker rar
+          sudo systemctl enable --now libvirtd
+          sudo mkdir -p /builder/
+          sudo mkdir -p /builder/release
+          sudo chown -R runner.runner /builder
+
+      - name: Clone kdev project
+        id: clone_kdev
+        working-directory: /builder/
+        run: |
+          git clone -q --single-branch --depth=1 --branch=master https://github.com/yifengyou/kdev.git kdev.git
+          echo "status=success" >> ${GITHUB_OUTPUT}
+
+      - name: Build rootfs in vm
+        id: build_vm
+        working-directory: /builder/kdev.git/iso/${{ inputs.os_release }}
+        run: |
+          set -x
+          ls -alh
+          sudo ./build-vm.sh
+          echo "status=success" >> ${GITHUB_OUTPUT}
+
+      - name: Compress Rootfs image
+        id: compress_output
+        working-directory: /builder/kdev.git/iso/${{ inputs.os_release }}
+        run: |
+          set -x
+          sudo chown -R runner.runner /builder
+          ls -alh
+          mv kdev.log /builder/release/kdev_${{ inputs.os_release }}.log
+          zstd -9 rootfs.qcow2 -o /builder/release/kdev_${{ inputs.os_release }}.qcow2.zst
+          rar a /builder/release/kdev_${{ inputs.os_release }}.qcow2.rar rootfs.qcow2
+          ls -alh /builder/release/
+          echo "status=success" >> ${GITHUB_OUTPUT}
+
+      - name: Upload image to release
+        uses: ncipollo/release-action@main
+        if: ${{ steps.compress_output.outputs.status }} == 'success' && !cancelled()
+        with:
+          tag: "kdev_x86_64_release"
+          artifacts: /builder/release/*
+          allowUpdates: true
+          removeArtifacts: false
+          replacesArtifacts: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+          body: |
+            ### kdev release
+            - 默认用户名(Default username): kdev
+            - 默认密码(Default password): linux
+
