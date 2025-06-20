@@ -64,6 +64,7 @@ jobs:
         working-directory: /builder/kdev.git/iso/${{ inputs.os_release }}
         run: |
           set -x
+          sudo chown -R runner.runner /builder
           ls -alh
           mv kdev.log /builder/release/kdev_${{ inputs.os_release }}.log
           zstd -9 rootfs.qcow2 -o /builder/release/kdev_${{ inputs.os_release }}.qcow2.zst
