@@ -46,8 +46,6 @@ jobs:
 
       - name: Build rootfs in vm
         id: build_vm
-        with:
-          timeout-minutes: 60
         working-directory: /builder/kdev.git/iso/${{ inputs.os_release }}
         run: |
           ls -alh
