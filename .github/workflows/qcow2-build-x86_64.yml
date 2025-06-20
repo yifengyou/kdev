@@ -13,11 +13,9 @@ on:
         required: true
         type: choice
         options:
-          - "ubuntu_12.04"
-          - "ubuntu_14.04"
-          - "ubuntu_18.04"
-          - "ubuntu_22.04"
-          - "ubuntu_24.04"
+          - "ubuntu-24.04.2-live-server-amd64.iso"
+          - "ubuntu-24.04.1-live-server-amd64.iso"
+          - "ubuntu-22.04.5-live-server-amd64.iso"
 
 
 env:
@@ -48,21 +46,22 @@ jobs:
 
       - name: Build rootfs in vm
         id: build_vm
+        with:
+          timeout-minutes: 60
+        working-directory: /builder/kdev.git/iso/${{ inputs.os_release }}
         run: |
-          sudo chmod 777 /dev/kvm
-          ls -alh /dev/kvm
-          cd /builder/kdev.git/${{ inputs.os_release }}/qcow2/x86_64 && \
-            sudo ./build-vm.sh && \
-            ls -alh
+          ls -alh
+          sudo ./build-vm.sh
           echo "status=success" >> ${GITHUB_OUTPUT}
 
       - name: Compress Rootfs image
         id: compress_output
-        working-directory: /builder/kdev.git/${{ inputs.os_release }}/qcow2/x86_64
+        working-directory: /builder/kdev.git/iso/${{ inputs.os_release }}
         run: |
+          set -x
           ls -alh
-          zstd -9 rootfs.qcow2 -o /builder/release/rootfs.qcow2.zst
-          rar a /builder/release/rootfs.img.rar rootfs.qcow2
+          zstd -9 rootfs.qcow2 -o /builder/release/kdev_${{ inputs.os_release }}.qcow2.zst
+          rar a /builder/release/kdev_${{ inputs.os_release }}.qcow2.rar rootfs.qcow2
           ls -alh /builder/release/
           echo "status=success" >> ${GITHUB_OUTPUT}
 
