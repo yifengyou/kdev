@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        set_release: [
+        os_release: [
           'ubuntu-24.04.2-live-server-amd64.iso',
           'ubuntu-24.04.1-live-server-amd64.iso',
           'ubuntu-24.04-live-server-amd64.iso',
