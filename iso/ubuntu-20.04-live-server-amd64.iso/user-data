@@ -38,10 +38,11 @@ autoinstall:
   locale: "en_US.UTF-8"
   network:
     version: 2
+    renderer: networkd
     ethernets:
-      any-card:
+      all-en:
         match:
-          name: "*"
+          name: "en*"
         dhcp4: true
         optional: true
   ssh:
