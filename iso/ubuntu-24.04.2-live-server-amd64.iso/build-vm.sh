@@ -31,7 +31,7 @@ fi
 sync
 
 if [ ! -f "${ISONAME}" ]; then
-	wget -q -c ${ISOURL}
+	aria2c ${ISOURL}
 fi
 
 touch meta-data user-data

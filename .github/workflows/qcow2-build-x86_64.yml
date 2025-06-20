@@ -68,7 +68,9 @@ jobs:
           ls -alh
           mv kdev.log /builder/release/kdev_${{ inputs.os_release }}.log
           zstd -9 rootfs.qcow2 -o /builder/release/kdev_${{ inputs.os_release }}.qcow2.zst
+          sha256sum /builder/release/kdev_${{ inputs.os_release }}.qcow2.zst > /builder/release/kdev_${{ inputs.os_release }}.qcow2.zst.sha256
           rar a /builder/release/kdev_${{ inputs.os_release }}.qcow2.rar rootfs.qcow2
+          sha256sum /builder/release/kdev_${{ inputs.os_release }}.qcow2.rar > /builder/release/kdev_${{ inputs.os_release }}.qcow2.rar.sha256
           ls -alh /builder/release/
           echo "status=success" >> ${GITHUB_OUTPUT}
 
