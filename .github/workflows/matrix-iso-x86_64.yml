@@ -27,7 +27,7 @@ jobs:
           'ubuntu-22.04.1-live-server-amd64.iso',
           'ubuntu-22.04-live-server-amd64.iso'
         ]
-      max-parallel: 3
+      max-parallel: 64
       fail-fast: false
     steps:
       - name: Checkout code
