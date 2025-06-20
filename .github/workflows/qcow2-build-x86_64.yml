@@ -51,7 +51,7 @@ jobs:
         run: |
           sudo chmod 777 /dev/kvm
           ls -alh /dev/kvm
-          cd /builder/kdev.git/${{ os_release }}/qcow2/x86_64 && \
+          cd /builder/kdev.git/${{ inputs.os_release }}/qcow2/x86_64 && \
             sudo ./build-vm.sh && \
             ls -alh
           echo "status=success" >> ${GITHUB_OUTPUT}
