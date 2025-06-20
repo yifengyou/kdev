@@ -9,12 +9,10 @@ on:
   workflow_dispatch:
     inputs:
       os_release:
-        description: "Select OS Release (留空则编译全部)"
-        required: false
+        description: "Select OS Release"
+        required: true
         type: choice
-        default: "all"
         options:
-          - "all"
           - "ubuntu-24.04.2-live-server-amd64.iso"
           - "ubuntu-24.04.1-live-server-amd64.iso"
           - "ubuntu-24.04-live-server-amd64.iso"
@@ -24,13 +22,17 @@ on:
           - "ubuntu-22.04.2-live-server-amd64.iso"
           - "ubuntu-22.04.1-live-server-amd64.iso"
           - "ubuntu-22.04-live-server-amd64.iso"
+          - "all"
+
+
+env:
+  TZ: America/New_York
 
 jobs:
-  build_qcow2:
+  build:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        # 动态生成矩阵：如果输入为 "all" 则展开所有选项，否则只编译指定版本
         os_image: ${{
           inputs.os_release == 'all' && [
             'ubuntu-24.04.2-live-server-amd64.iso',
@@ -44,9 +46,8 @@ jobs:
             'ubuntu-22.04-live-server-amd64.iso'
           ] || [inputs.os_release]
         }}
-      max-parallel: 3  # 限制并行任务数避免资源超限
-      fail-fast: false  # 单个任务失败不影响其他任务[8](@ref)
-
+      max-parallel: 3
+      fail-fast: false
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
