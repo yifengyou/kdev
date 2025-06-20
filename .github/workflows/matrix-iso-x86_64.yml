@@ -1,8 +1,8 @@
 #==========================================================================
-# Description: name: qcow2 build x86_64
+# Description: name: matrix qcow2 build x86_64
 #==========================================================================
 
-name: qcow2 build x86_64
+name: matrix qcow2 build x86_64
 
 on:
   repository_dispatch:
