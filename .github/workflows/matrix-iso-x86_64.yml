@@ -15,7 +15,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     strategy:
-      matrix: [
+      matrix:
+        set_release: [
           'ubuntu-24.04.2-live-server-amd64.iso',
           'ubuntu-24.04.1-live-server-amd64.iso',
           'ubuntu-24.04-live-server-amd64.iso',
@@ -25,7 +26,7 @@ jobs:
           'ubuntu-22.04.2-live-server-amd64.iso',
           'ubuntu-22.04.1-live-server-amd64.iso',
           'ubuntu-22.04-live-server-amd64.iso'
-      ]
+        ]
       max-parallel: 3
       fail-fast: false
     steps:
