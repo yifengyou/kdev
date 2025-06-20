@@ -58,11 +58,11 @@ jobs:
 
       - name: Compress Rootfs image
         id: compress_output
+        working-directory: /builder/kdev.git/${{ inputs.os_release }}/qcow2/x86_64
         run: |
-          ls -alh /builder/kdev.git/ubuntu/ubuntu24.04/qcow2/x86_64
-          cd /builder/kdev.git/ubuntu/ubuntu24.04/qcow2/x86_64 && \
-            zstd -9 rootfs.qcow2 -o /builder/release/rootfs.qcow2.zst && \
-            rar a /builder/release/rootfs.img.rar rootfs.qcow2
+          ls -alh
+          zstd -9 rootfs.qcow2 -o /builder/release/rootfs.qcow2.zst
+          rar a /builder/release/rootfs.img.rar rootfs.qcow2
           ls -alh /builder/release/
           echo "status=success" >> ${GITHUB_OUTPUT}
 
