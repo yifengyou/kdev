@@ -25,7 +25,7 @@ autoinstall:
   drivers:
     install: false
   identity:
-    hostname: ubuntu
+    hostname: kdev
     username: kdev
     # passwrod plain: linux
     password: "$6$le8Tsrwn14s46Axh$tD2pc/OSVm5Y85179nb7Uy9cioKP6UGEkIQ.cWXOiiAIVF3n/jBJwAap14S9msBJM.ciCXG4LOe27Lb2dE.zA1"
@@ -37,10 +37,10 @@ autoinstall:
     variant: ''
   locale: "en_US.UTF-8"
   early-commands:
-  - chzdev -e qeth 0600
-  - chzdev -e dasd 0200
-  network:
-    version: 2
+    - ls -alh /dev
+    - ip -br a
+    - uname -a
+    - cat /proc/cmdline
   ssh:
     allow-pw: true
     authorized-keys: []
