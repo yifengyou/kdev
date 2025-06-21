@@ -34,7 +34,7 @@ env:
   TZ: America/New_York
 
 jobs:
-  build:
+  qcow2-build-x86_64:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:

@@ -1,9 +1,9 @@
 #cloud-config
 autoinstall:
   automatic:
-    reboot: false
     updates: false
     upgrade: false
+    reboot: false
   console: |
     type=serial
     rich-mode=true
