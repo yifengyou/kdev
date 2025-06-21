@@ -10,22 +10,12 @@ autoinstall:
   refresh-installer:
     update: false
   apt:
-    disable_components: []
-    geoip: true
-    preserve_sources_list: false
-    mirror-selection:
-      primary:
-        - country-mirror
-        - uri: "http://mirrors.aliyun.com/ubuntu"
-          arches: [i386, amd64]
-        - uri: "http://mirrors.aliyun.com/ubuntu-ports"
-          arches: [s390x, arm64, armhf, powerpc, ppc64el, riscv64]
-    fallback: offline-install
-    geoip: true
+    disable_suites: [security]
+  updates: none
   drivers:
     install: false
   identity:
-    hostname: kdev
+    hostname: ubuntu
     username: kdev
     # passwrod plain: linux
     password: "$6$le8Tsrwn14s46Axh$tD2pc/OSVm5Y85179nb7Uy9cioKP6UGEkIQ.cWXOiiAIVF3n/jBJwAap14S9msBJM.ciCXG4LOe27Lb2dE.zA1"
@@ -39,8 +29,6 @@ autoinstall:
   early-commands:
     - ls -alh /dev
     - ip -br a
-    - uname -a
-    - cat /proc/cmdline
   ssh:
     allow-pw: true
     authorized-keys: []
@@ -52,5 +40,10 @@ autoinstall:
       size: 0
     layout:
       name: direct
+  late-commands:
+    - df -h
+    - uname -a
+    - cat /proc/cmdline
+    - shutdown -h now
   version: 1
   shutdown: poweroff
