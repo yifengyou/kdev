@@ -11,7 +11,6 @@ autoinstall:
     update: false
   apt:
     disable_suites: [security]
-  updates: none
   drivers:
     install: false
   identity:
