@@ -36,6 +36,9 @@ autoinstall:
     toggle: "shift_caps_toggle"
     variant: ''
   locale: "en_US.UTF-8"
+  early-commands:
+  - chzdev -e qeth 0600
+  - chzdev -e dasd 0200
   network:
     version: 2
   ssh:
