@@ -44,5 +44,5 @@ autoinstall:
     - df -h
     - uname -a
     - cat /proc/cmdline
-    - reboot --poweroff --force
+    - systemctl poweroff --force
   shutdown: poweroff
