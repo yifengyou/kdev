@@ -1,8 +1,8 @@
 #==========================================================================
-# Description: name: matrix qcow2 build x86_64
+# Description: name: matrix isobuild arm64
 #==========================================================================
 
-name: matrix qcow2 build x86_64
+name: matrix isobuild arm64
 
 on:
   repository_dispatch:
@@ -13,7 +13,7 @@ env:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
     timeout-minutes: 60
     strategy:
       matrix:
@@ -84,7 +84,7 @@ jobs:
         uses: ncipollo/release-action@main
         if: ${{ steps.compress_output.outputs.status }} == 'success' && !cancelled()
         with:
-          tag: "kdev_x86_64_release"
+          tag: "kdev_arm64_release"
           artifacts: /builder/release/*
           allowUpdates: true
           removeArtifacts: false

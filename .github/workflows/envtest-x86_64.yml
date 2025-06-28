@@ -54,7 +54,7 @@ jobs:
         uses: ncipollo/release-action@main
         if: ${{ steps.init.outputs.status }} == 'success' && !cancelled()
         with:
-          tag: envtest_x86_64
+          tag: "envtest_x86_64"
           artifacts: /tmp/builder/*
           allowUpdates: true
           removeArtifacts: false

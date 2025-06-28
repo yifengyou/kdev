@@ -1,8 +1,8 @@
 #==========================================================================
-# Description: name: qcow2 build arm64
+# Description: name: isobuild arm64
 #==========================================================================
 
-name: qcow2 build arm64
+name: isobuild arm64
 
 on:
   repository_dispatch:
