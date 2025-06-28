@@ -1,8 +1,8 @@
 #==========================================================================
-# Description: name: isobuild build x86_64
+# Description: name: isobuild x86_64
 #==========================================================================
 
-name: isobuild build x86_64
+name: isobuild x86_64
 
 on:
   repository_dispatch:
