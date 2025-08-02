@@ -14,11 +14,9 @@ LOGNAME="kdev.log"
 sudo apt-get install -y qemu-efi-aarch64 qemu-utils \
 	ipxe-qemu
 
-
-fileserver=$(lsof -ti :${FILE_SERVER_PORT} || :)
+fileserver=$(lsof -ti :${FILE_SERVER_PORT})
 if [ ! -z "${fileserver}" ]; then
-	echo "${FILE_SERVER_PORT} already inuse by ${fileserver}"
-	exit 1
+	kill -9 ${fileserver}
 fi
 
 if [ -f rootfs.qcow2 ]; then
@@ -79,8 +77,8 @@ qemu-system-aarch64 \
   -machine virt \
   -cpu max \
   -drive file=/usr/share/AAVMF/AAVMF_CODE.fd,format=raw,if=pflash \
-  -smp 2 \
-  -m 2048 \
+  -smp `nproc` \
+  -m 4096 \
   -cdrom ${ISONAME} \
   -device virtio-scsi-pci,id=scsi \
   -drive file=/root/rootfs.qcow2,format=qcow2,if=virtio \
@@ -127,4 +125,3 @@ umount mnt -l || true
 rmdir mnt || true
 
 exit 0
-
