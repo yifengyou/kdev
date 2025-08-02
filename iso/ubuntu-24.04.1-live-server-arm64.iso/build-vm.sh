@@ -49,7 +49,7 @@ if [ ! -f "${ISONAME}" ]; then
 fi
 echo "kdev: ${ISONAME} ready!"
 
-touch meta-data user-data
+touch meta-data user-data vendor-data
 
 python3 -m http.server ${FILE_SERVER_PORT} --directory $(pwd) &
 echo "kdev: http server ready!"
@@ -60,11 +60,12 @@ cleanup() {
 		kill -9 ${fileserver}
 	fi
 	umount -l mnt
+	rmdir mnt
 }
 trap cleanup EXIT
 
 mkdir -p mnt
-mount ${ISONAME} mnt 
+mount ${ISONAME} mnt
 if [ $? -ne 0 ]; then
   echo "kdev: mount ${ISONAME} failed!"
   exit 1
@@ -86,10 +87,11 @@ if [ ! -f mnt/casper/initrd ] ; then
   exit 1
 fi
 
-tmux new-session -d -s qemu \
+tmux new-session -d -s kdev \
 "qemu-system-aarch64 \
   -name kdev-ubuntu2404 \
   -machine virt \
+  -accel kvm \
   -cpu max \
   -drive file=/usr/share/AAVMF/AAVMF_CODE.fd,format=raw,if=pflash \
   -smp ${JOBS} \
@@ -104,22 +106,20 @@ tmux new-session -d -s qemu \
   -serial file:kdev.log \
   -net nic \
   -net user,net=192.168.122.0/24,host=192.168.122.1 \
-  -display curses 
-  --daemonize"
+  -display none"
 
 if [ $? -ne 0 ] ; then
 	echo "kdev: qemu exit with error"
 	exit 1
 fi
 
-set -x
-
+sync
 sleep 10
 tmux ls
-tail -f ${LOGNAME}
+tail -f ${LOGNAME} &
 
 while true ; do
-	ps aux|grep qemu-system-x86_64 |grep -v grep &> /dev/null
+	ps aux|grep qemu-system-aarch64 |grep -v grep &> /dev/null
 	if [ $? -ne 0 ] ; then
 		break
 	fi
@@ -139,8 +139,5 @@ if [ $? -ne 0 ]; then
 		echo "kdev: rootfs.qcow2 size too small, skip snapshot"
 	fi
 fi
-
-umount mnt -l || true
-rmdir mnt || true
 
 exit 0
