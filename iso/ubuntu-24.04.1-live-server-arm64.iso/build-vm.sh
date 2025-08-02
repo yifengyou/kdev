@@ -88,12 +88,13 @@ if [ ! -f mnt/casper/initrd ] ; then
 fi
 
 ls -alh /dev/kvm
+ip -br a
+virsh net-list --all
 
 tmux new-session -d -s kdev \
 "sudo qemu-system-aarch64 \
   -name kdev-ubuntu2404 \
   -machine virt \
-  -accel kvm \
   -cpu max \
   -drive file=/usr/share/AAVMF/AAVMF_CODE.fd,format=raw,if=pflash \
   -smp ${JOBS} \
