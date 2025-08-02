@@ -87,11 +87,12 @@ if [ ! -f mnt/casper/initrd ] ; then
   exit 1
 fi
 
+ls -alh /dev/kvm
+
 tmux new-session -d -s kdev \
 "sudo qemu-system-aarch64 \
   -name kdev-ubuntu2404 \
   -machine virt \
-  -accel kvm \
   -cpu max \
   -drive file=/usr/share/AAVMF/AAVMF_CODE.fd,format=raw,if=pflash \
   -smp ${JOBS} \
@@ -114,7 +115,9 @@ if [ $? -ne 0 ] ; then
 fi
 
 sync
-sleep 10
+sleep 20
+ps aux|grep qemu
+ps aux|grep tmux
 tmux ls
 tail -f ${LOGNAME} &
 
