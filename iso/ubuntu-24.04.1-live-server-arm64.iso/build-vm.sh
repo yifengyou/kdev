@@ -112,6 +112,10 @@ if [ $? -ne 0 ] ; then
 	exit 1
 fi
 
+set -x
+
+sleep 10
+tmux ls
 tail -f ${LOGNAME}
 
 while true ; do
