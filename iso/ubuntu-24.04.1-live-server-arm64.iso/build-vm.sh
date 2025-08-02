@@ -10,10 +10,15 @@ FILE_SERVER_PORT="63336"
 VMNAME="kdev-$RANDOM"
 ISONAME=$(basename ${ISOURL})
 LOGNAME="kdev.log"
+JOBS=`nproc`
 
-
-sudo apt-get install -y qemu-system-arm qemu-efi-aarch64 qemu-utils \
-	ipxe-qemu
+sudo apt-get install -y \
+  tmux \
+  qemu-system-arm \
+  qemu-system-gui \
+  qemu-efi-aarch64 \
+  qemu-utils \
+  ipxe-qemu
 
 fileserver=$(lsof -ti :${FILE_SERVER_PORT})
 if [ ! -z "${fileserver}" ]; then
@@ -23,7 +28,7 @@ fi
 if [ -f rootfs.qcow2 ]; then
 	lsof rootfs.qcow2
 	if [ $? -eq 0 ]; then
-		echo "rootfs.qcow2 is inuse"
+		echo "kdev: rootfs.qcow2 is inuse"
 		exit 1
 	fi
 	rm -f rootfs.qcow2
@@ -55,50 +60,59 @@ cleanup() {
 		kill -9 ${fileserver}
 	fi
 	umount -l mnt
-
 }
 trap cleanup EXIT
 
 mkdir -p mnt
 mount ${ISONAME} mnt 
 if [ $? -ne 0 ]; then
-	echo "mount ${ISONAME} failed!"
-	exit 1
+  echo "kdev: mount ${ISONAME} failed!"
+  exit 1
 fi
 
 ls -alh mnt/casper
 if [ $? -ne 0 ]; then
-	echo "casper does't exists in ${ISONAME}"
+	echo "kdev: casper does't exists in ${ISONAME}"
 	exit 1
 fi
 
-set -x
-qemu-system-aarch64 \
+if [ ! -f mnt/casper/vmlinuz ] ; then
+  echo "casper/vmlinuz does't exists!"
+  exit 1
+fi
+
+if [ ! -f mnt/casper/initrd ] ; then
+  echo "casper/initrd does't exists!"
+  exit 1
+fi
+
+tmux new-session -d -s qemu \
+"qemu-system-aarch64 \
   -name kdev-ubuntu2404 \
   -machine virt \
   -cpu max \
   -drive file=/usr/share/AAVMF/AAVMF_CODE.fd,format=raw,if=pflash \
-  -smp `nproc` \
+  -smp ${JOBS} \
   -m 4096 \
   -cdrom ${ISONAME} \
   -device virtio-scsi-pci,id=scsi \
-  -drive file=`pwd`/rootfs.qcow2,format=qcow2,if=virtio \
+  -drive file=rootfs.qcow2,format=qcow2,if=virtio \
   -boot order=dc \
-  -kernel `pwd`/mnt/casper/vmlinuz \
-  -initrd `pwd`/mnt/casper/initrd \
+  -kernel mnt/casper/vmlinuz \
+  -initrd mnt/casper/initrd \
   -append 'ds=nocloud-net;s=http://192.168.122.1:63336/ cloud-config-url=/dev/null autoinstall earlyprintk console=ttyS0,115200n8' \
   -serial file:kdev.log \
   -net nic \
   -net user,net=192.168.122.0/24,host=192.168.122.1 \
   -display curses 
-#  --daemonize
+  --daemonize"
 
 if [ $? -ne 0 ] ; then
-	echo "qemu exit with error"
+	echo "kdev: qemu exit with error"
 	exit 1
 fi
 
-tail -f ${LOGNAME} &
+tail -f ${LOGNAME}
 
 while true ; do
 	ps aux|grep qemu-system-x86_64 |grep -v grep &> /dev/null
@@ -118,7 +132,7 @@ if [ $? -ne 0 ]; then
 		qemu-img snapshot -l rootfs.qcow2
 		ls -alh rootfs.qcow2
 	else
-		echo "rootfs.qcow2 size too small, skip snapshot"
+		echo "kdev: rootfs.qcow2 size too small, skip snapshot"
 	fi
 fi
 
