@@ -82,10 +82,10 @@ qemu-system-aarch64 \
   -m 4096 \
   -cdrom ${ISONAME} \
   -device virtio-scsi-pci,id=scsi \
-  -drive file=/root/rootfs.qcow2,format=qcow2,if=virtio \
+  -drive file=`pwd`/rootfs.qcow2,format=qcow2,if=virtio \
   -boot order=dc \
-  -kernel /root/mnt/casper/vmlinuz \
-  -initrd /root/mnt/casper/initrd \
+  -kernel `pwd`/mnt/casper/vmlinuz \
+  -initrd `pwd`/mnt/casper/initrd \
   -append 'ds=nocloud-net;s=http://192.168.122.1:63336/ cloud-config-url=/dev/null autoinstall earlyprintk console=ttyS0,115200n8' \
   -serial file:kdev.log \
   -net nic \
