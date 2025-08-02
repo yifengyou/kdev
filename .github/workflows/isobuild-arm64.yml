@@ -31,7 +31,7 @@ jobs:
       - name: Install KVM/QEMU
         run: |
           sudo apt update
-          sudo apt install -y qemu-kvm libvirt-daemon-system virtinst cpu-checker rar qemu-utils qemu-system-gui
+          sudo apt install -y qemu-kvm libvirt-daemon-system virtinst cpu-checker qemu-utils qemu-system-gui
           sudo systemctl enable --now libvirtd
           sudo mkdir -p /builder/
           sudo mkdir -p /builder/release
