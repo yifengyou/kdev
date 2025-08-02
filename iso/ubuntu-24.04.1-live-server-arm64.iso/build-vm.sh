@@ -49,7 +49,7 @@ if [ ! -f "${ISONAME}" ]; then
 fi
 echo "kdev: ${ISONAME} ready!"
 
-touch meta-data user-data vendor-data
+touch meta-data user-data vendor-data ${LOGNAME}
 
 python3 -m http.server ${FILE_SERVER_PORT} --directory $(pwd) &
 echo "kdev: http server ready!"
@@ -88,7 +88,7 @@ if [ ! -f mnt/casper/initrd ] ; then
 fi
 
 tmux new-session -d -s kdev \
-"qemu-system-aarch64 \
+"sudo qemu-system-aarch64 \
   -name kdev-ubuntu2404 \
   -machine virt \
   -accel kvm \
