@@ -12,7 +12,7 @@ ISONAME=$(basename ${ISOURL})
 LOGNAME="kdev.log"
 
 
-sudo apt-get install -y qemu-efi-aarch64 qemu-utils \
+sudo apt-get install -y qemu-system-arm qemu-efi-aarch64 qemu-utils \
 	ipxe-qemu
 
 fileserver=$(lsof -ti :${FILE_SERVER_PORT})
