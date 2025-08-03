@@ -13,9 +13,7 @@ on:
         required: true
         type: choice
         options:
-          - "ubuntu-24.04.2-live-server-arm64.iso"
           - "ubuntu-24.04.1-live-server-arm64.iso"
-          - "ubuntu-22.04.5-live-server-arm64.iso"
 
 
 env:
