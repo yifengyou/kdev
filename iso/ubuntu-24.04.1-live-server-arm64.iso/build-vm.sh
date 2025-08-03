@@ -128,6 +128,7 @@ while true ; do
 	if [ $? -ne 0 ] ; then
 		break
 	fi
+	ls -alh rootfs.qcow2
 	sleep 3
 done
 
