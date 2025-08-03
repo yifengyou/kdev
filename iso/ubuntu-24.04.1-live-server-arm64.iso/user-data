@@ -56,4 +56,9 @@ autoinstall:
       name: direct
   version: 1
   shutdown: poweroff
-
+  late-commands:
+    - |
+      echo '#!/bin/sh
+      /sbin/halt -p
+      echo > /etc/rc.local' > /target/etc/rc.local
+    - chmod +x /target/etc/rc.local
