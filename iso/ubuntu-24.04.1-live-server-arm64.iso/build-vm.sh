@@ -106,7 +106,7 @@ sudo qemu-system-aarch64 \
   -boot order=dc \
   -kernel mnt/casper/vmlinuz \
   -initrd mnt/casper/initrd \
-  -append 'ds=nocloud-net;s=http://192.168.122.1:63336/ cloud-config-url=/dev/null autoinstall earlyprintk ignore_loglevel console=ttyAMA0,115200n8 earlycon=pl011,mmio,0x09000000 level=10 systemd.mask=snapd.service systemd.mask=snapd.seeded.service ' \
+  -append 'ds=nocloud-net;s=http://192.168.122.1:63336/ cloud-config-url=/dev/null autoinstall earlyprintk ignore_loglevel console=ttyAMA0,115200n8 earlycon=pl011,mmio,0x09000000 level=10 systemd.mask=snapd.service systemd.mask=snapd.seeded.service systemd.mask=casper-md5check.service ' \
   -serial mon:stdio \
   -net nic \
   -net user,net=192.168.122.0/24,host=192.168.122.1 \
