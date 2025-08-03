@@ -105,7 +105,7 @@ tmux new-session -d -s kdev \
   -boot order=dc \
   -kernel mnt/casper/vmlinuz \
   -initrd mnt/casper/initrd \
-  -append 'ds=nocloud-net;s=http://192.168.122.1:63336/ cloud-config-url=/dev/null autoinstall earlyprintk ignore_loglevel console=ttyAMA0,115200n8 earlycon=pl011,mmio,0x09000000 level=10' \
+  -append 'ds=nocloud-net;s=http://192.168.122.1:63336/ cloud-config-url=/dev/null autoinstall earlyprintk ignore_loglevel console=ttyAMA0,115200n8 earlycon=pl011,mmio,0x09000000 level=10 systemd.mask=snapd.service systemd.mask=snapd.seeded.service ' \
   -serial file:kdev.log \
   -net nic \
   -net user,net=192.168.122.0/24,host=192.168.122.1 \
