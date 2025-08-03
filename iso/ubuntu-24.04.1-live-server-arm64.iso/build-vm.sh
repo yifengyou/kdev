@@ -109,7 +109,7 @@ tmux new-session -d -s kdev \
   -serial file:kdev.log \
   -net nic \
   -net user,net=192.168.122.0/24,host=192.168.122.1 \
-  -display none &>> kdev.log"
+  -display none"
 
 if [ $? -ne 0 ] ; then
 	echo "kdev: qemu exit with error"
