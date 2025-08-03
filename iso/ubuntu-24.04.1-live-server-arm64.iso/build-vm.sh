@@ -110,45 +110,45 @@ sudo qemu-system-aarch64 \
   -serial stdio \
   -net nic \
   -net user,net=192.168.122.0/24,host=192.168.122.1 \
-  -display curses
+  -display none -daemonize
 
-tmux new-session -d -s kdev \
-"sudo qemu-system-aarch64 \
-  -name kdev-ubuntu2404 \
-  -machine virt \
-  -cpu max \
-  -drive file=/usr/share/AAVMF/AAVMF_CODE.fd,format=raw,if=pflash \
-  -smp ${JOBS} \
-  -m 4096 \
-  -cdrom ${ISONAME} \
-  -device virtio-scsi-pci,id=scsi \
-  -drive file=rootfs.qcow2,format=qcow2,if=virtio \
-  -boot order=dc \
-  -kernel mnt/casper/vmlinuz \
-  -initrd mnt/casper/initrd \
-  -append 'ds=nocloud-net;s=http://192.168.122.1:63336/ cloud-config-url=/dev/null autoinstall earlyprintk ignore_loglevel console=ttyAMA0,115200n8 earlycon=pl011,mmio,0x09000000 level=10 systemd.mask=snapd.service systemd.mask=snapd.seeded.service ' \
-  -serial file:kdev.log \
-  -net nic \
-  -net user,net=192.168.122.0/24,host=192.168.122.1 \
-  -display none"
-
-if [ $? -ne 0 ] ; then
-	echo "kdev: qemu exit with error"
-	exit 1
-fi
+#tmux new-session -d -s kdev \
+#"sudo qemu-system-aarch64 \
+#  -name kdev-ubuntu2404 \
+#  -machine virt \
+#  -cpu max \
+#  -drive file=/usr/share/AAVMF/AAVMF_CODE.fd,format=raw,if=pflash \
+#  -smp ${JOBS} \
+#  -m 4096 \
+#  -cdrom ${ISONAME} \
+#  -device virtio-scsi-pci,id=scsi \
+#  -drive file=rootfs.qcow2,format=qcow2,if=virtio \
+#  -boot order=dc \
+#  -kernel mnt/casper/vmlinuz \
+#  -initrd mnt/casper/initrd \
+#  -append 'ds=nocloud-net;s=http://192.168.122.1:63336/ cloud-config-url=/dev/null autoinstall earlyprintk ignore_loglevel console=ttyAMA0,115200n8 earlycon=pl011,mmio,0x09000000 level=10 systemd.mask=snapd.service systemd.mask=snapd.seeded.service ' \
+#  -serial file:kdev.log \
+#  -net nic \
+#  -net user,net=192.168.122.0/24,host=192.168.122.1 \
+#  -display none"
+#
+#if [ $? -ne 0 ] ; then
+#	echo "kdev: qemu exit with error"
+#	exit 1
+#fi
 
 sync
 sleep 20
 ps aux|grep qemu
-ps aux|grep tmux
-tmux ls
-tail -f ${LOGNAME} &
+#ps aux|grep tmux
+#tmux ls
+#tail -f ${LOGNAME} &
 
 while true ; do
-	ps aux|grep qemu-system-aarch64 |grep -v grep &> /dev/null
-	if [ $? -ne 0 ] ; then
-		break
-	fi
+#	ps aux|grep qemu-system-aarch64 |grep -v grep &> /dev/null
+#	if [ $? -ne 0 ] ; then
+#		break
+#	fi
 	ls -alh rootfs.qcow2
 	sleep 3
 done
