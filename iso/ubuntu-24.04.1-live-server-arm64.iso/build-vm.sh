@@ -40,13 +40,32 @@ echo "kdev: rootfs.qcow2 ready!"
 
 sync
 
-if [ ! -f "${ISONAME}" ]; then
-	aria2c ${ISOURL}
-	if [ $? -ne 0 ] ; then
-		echo "kdev: download ${ISONAME} failed!"
-		exit 1
+if [ ! -f "${ISONAME}" ] ; then
+	which aria2c
+	if [ $? -eq 0 ] ; then
+		aria2c ${ISOURL}
 	fi
 fi
+
+if [ ! -f "${ISONAME}" ] ; then
+	which wget
+	if [ $? -eq 0 ] ; then
+		wget -c ${ISOURL}
+	fi
+fi
+
+if [ ! -f "${ISONAME}" ] ; then
+	which curl
+	if [ $? -eq 0 ] ; then
+		curl -o ${ISONAME} ${ISOURL}
+	fi
+fi
+
+if [ ! -f "${ISONAME}" ] ; then
+	echo "kdev: cound't download ${ISONAME}"
+	exit 1
+fi
+
 ls -alh ${ISONAME}
 echo "kdev: ${ISONAME} ready!"
 
@@ -92,8 +111,8 @@ ls -alh /dev/kvm
 ip -br a
 virsh net-list --all
 
-sudo qemu-system-aarch64 \
-  -name kdev-ubuntu2404 \
+qemu-system-aarch64 \
+  -name "${ISO_NAME%.*}" \
   -machine virt \
   -cpu max \
   -accel kvm \
@@ -113,86 +132,16 @@ sudo qemu-system-aarch64 \
   -net user,net=192.168.122.0/24,host=192.168.122.1 \
   -nographic
 
+sync
 ls -alh rootfs.qcow2
-
-exit 0
-
-  -accel kvm \
-
-
-#sudo qemu-system-aarch64 \
-#  -name kdev-ubuntu2404 \
-#  -machine virt \
-#  -cpu max \
-#  -semihosting \
-#  -drive file=/usr/share/AAVMF/AAVMF_CODE.fd,format=raw,if=pflash \
-#  -smp ${JOBS} \
-#  -m 4096 \
-#  -cdrom ${ISONAME} \
-#  -device virtio-scsi-pci,id=scsi \
-#  -drive file=rootfs.qcow2,format=qcow2,if=virtio \
-#  -boot order=dc \
-#  -kernel mnt/casper/vmlinuz \
-#  -initrd mnt/casper/initrd \
-#  -append 'ds=nocloud-net;s=http://192.168.122.1:63336/ cloud-config-url=/dev/null autoinstall earlyprintk ignore_loglevel console=ttyAMA0,115200n8 earlycon=pl011,mmio,0x09000000 level=10 systemd.mask=snapd.service systemd.mask=snapd.seeded.service systemd.mask=casper-md5check.service ' \
-#  -serial mon:stdio \
-#  -net nic \
-#  -net user,net=192.168.122.0/24,host=192.168.122.1 \
-#  -nographic
-
-#tmux new-session -d -s kdev \
-#"sudo qemu-system-aarch64 \
-#  -name kdev-ubuntu2404 \
-#  -machine virt \
-#  -cpu max \
-#  -drive file=/usr/share/AAVMF/AAVMF_CODE.fd,format=raw,if=pflash \
-#  -smp ${JOBS} \
-#  -m 4096 \
-#  -cdrom ${ISONAME} \
-#  -device virtio-scsi-pci,id=scsi \
-#  -drive file=rootfs.qcow2,format=qcow2,if=virtio \
-#  -boot order=dc \
-#  -kernel mnt/casper/vmlinuz \
-#  -initrd mnt/casper/initrd \
-#  -append 'ds=nocloud-net;s=http://192.168.122.1:63336/ cloud-config-url=/dev/null autoinstall earlyprintk ignore_loglevel console=ttyAMA0,115200n8 earlycon=pl011,mmio,0x09000000 level=10 systemd.mask=snapd.service systemd.mask=snapd.seeded.service ' \
-#  -serial file:kdev.log \
-#  -net nic \
-#  -net user,net=192.168.122.0/24,host=192.168.122.1 \
-#  -display none"
-#
-#if [ $? -ne 0 ] ; then
-#	echo "kdev: qemu exit with error"
-#	exit 1
-#fi
-
-sync
-sleep 20
-ps aux|grep qemu
-#ps aux|grep tmux
-#tmux ls
-#tail -f ${LOGNAME} &
-
-while true ; do
-#	ps aux|grep qemu-system-aarch64 |grep -v grep &> /dev/null
-#	if [ $? -ne 0 ] ; then
-#		break
-#	fi
+size=$(du -s rootfs.qcow2 | awk '{print $1}')
+if [ "$size" -gt 204800 ]; then
+	qemu-img snapshot -c 'install os' rootfs.qcow2
+	qemu-img snapshot -l rootfs.qcow2
 	ls -alh rootfs.qcow2
-	sleep 3
-done
-
-sync
-
-lsof rootfs.qcow2
-if [ $? -ne 0 ]; then
-	size=$(du -s rootfs.qcow2 | awk '{print $1}')
-	if [ "$size" -gt 204800 ]; then
-		qemu-img snapshot -c 'install os' rootfs.qcow2
-		qemu-img snapshot -l rootfs.qcow2
-		ls -alh rootfs.qcow2
-	else
-		echo "kdev: rootfs.qcow2 size too small, skip snapshot"
-	fi
+else
+	echo "kdev: rootfs.qcow2 size too small, skip snapshot"
 fi
 
+echo "kdev: all done!"
 exit 0
