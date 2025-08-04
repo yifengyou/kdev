@@ -61,7 +61,7 @@ jobs:
         run: |
           set -x
           ls -alh
-          zstd -9 rootfs.qcow2 -o /builder/release/kdev_${{ inputs.os_release }}.qcow2.zst
+          zstd -9 -f rootfs.qcow2 -o /builder/release/kdev_${{ inputs.os_release }}.qcow2.zst
           # rar a /builder/release/kdev_${{ inputs.os_release }}.qcow2.rar rootfs.qcow2
           ls -alh /builder/release/
           echo "status=success" >> ${GITHUB_OUTPUT}
