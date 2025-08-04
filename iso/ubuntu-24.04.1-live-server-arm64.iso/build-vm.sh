@@ -96,6 +96,7 @@ sudo qemu-system-aarch64 \
   -name kdev-ubuntu2404 \
   -machine virt \
   -cpu max \
+  -accel kvm \
   -semihosting \
   -drive file=/usr/share/AAVMF/AAVMF_CODE.fd,format=raw,if=pflash \
   -smp ${JOBS} \
@@ -111,6 +112,12 @@ sudo qemu-system-aarch64 \
   -net nic \
   -net user,net=192.168.122.0/24,host=192.168.122.1 \
   -nographic
+
+ls -alh rootfs.qcow2
+
+exit 0
+
+  -accel kvm \
 
 
 #sudo qemu-system-aarch64 \
