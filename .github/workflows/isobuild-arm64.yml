@@ -41,8 +41,6 @@ jobs:
         id: clone_kdev
         working-directory: /builder/
         continue-on-error: false
-        retry-on-error: true
-        max-attempts: 3
         run: |
           if [ -d kdev.git ] ; then
             cd kdev.git && git pull
