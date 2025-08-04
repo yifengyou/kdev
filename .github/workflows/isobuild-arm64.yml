@@ -25,10 +25,7 @@ jobs:
     #runs-on: ubuntu-22.04-arm
     runs-on: dca588
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Install KVM/QEMU
+      - name: Install dependency software
         run: |
           sudo apt update
           sudo apt install -y aria2 qemu-kvm \
@@ -68,6 +65,8 @@ jobs:
           # zstd -9 -f rootfs.qcow2 -o /builder/release/kdev_${{ inputs.os_release }}.qcow2.zst
           # rar a /builder/release/kdev_${{ inputs.os_release }}.qcow2.rar rootfs.qcow2
           7z a /builder/release/kdev_${{ inputs.os_release }}.qcow2.rar rootfs.qcow2
+          cd /builder/release
+          sha256sum kdev_${{ inputs.os_release }}.qcow2.rar > kdev_${{ inputs.os_release }}.qcow2.rar.sha256
           ls -alh /builder/release/
           echo "status=success" >> ${GITHUB_OUTPUT}
 
@@ -76,7 +75,7 @@ jobs:
         if: ${{ steps.compress_output.outputs.status }} == 'success' && !cancelled()
         with:
           tag: "kdev_arm64_release"
-          artifacts: /builder/release/kdev_${{ inputs.os_release }}.qcow2.rar
+          artifacts: /builder/release/kdev_${{ inputs.os_release }}.qcow2.rar*
           allowUpdates: true
           removeArtifacts: false
           replacesArtifacts: true
