@@ -31,7 +31,10 @@ jobs:
       - name: Install KVM/QEMU
         run: |
           sudo apt update
-          sudo apt install -y aria2 qemu-kvm libvirt-daemon-system virtinst cpu-checker qemu-utils qemu-system-gui
+          sudo apt install -y aria2 qemu-kvm \
+            libvirt-daemon-system virtinst \
+            cpu-checker qemu-utils qemu-system-gui \
+            p7zip-full
           sudo systemctl enable --now libvirtd
           sudo mkdir -p /builder/
           sudo mkdir -p /builder/release
@@ -62,8 +65,9 @@ jobs:
         run: |
           set -x
           ls -alh
-          zstd -9 -f rootfs.qcow2 -o /builder/release/kdev_${{ inputs.os_release }}.qcow2.zst
+          # zstd -9 -f rootfs.qcow2 -o /builder/release/kdev_${{ inputs.os_release }}.qcow2.zst
           # rar a /builder/release/kdev_${{ inputs.os_release }}.qcow2.rar rootfs.qcow2
+          7z a /builder/release/kdev_${{ inputs.os_release }}.qcow2.rar rootfs.qcow2
           ls -alh /builder/release/
           echo "status=success" >> ${GITHUB_OUTPUT}
 
@@ -72,7 +76,7 @@ jobs:
         if: ${{ steps.compress_output.outputs.status }} == 'success' && !cancelled()
         with:
           tag: "kdev_arm64_release"
-          artifacts: /builder/release/*
+          artifacts: /builder/release/kdev_${{ inputs.os_release }}.qcow2.rar
           allowUpdates: true
           removeArtifacts: false
           replacesArtifacts: true

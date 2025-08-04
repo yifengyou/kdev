@@ -140,7 +140,8 @@ if [ "$size" -gt 204800 ]; then
 	qemu-img snapshot -l rootfs.qcow2
 	ls -alh rootfs.qcow2
 else
-	echo "kdev: rootfs.qcow2 size too small, skip snapshot"
+	echo "kdev: rootfs.qcow2 size too small, abort!"
+	exit 1
 fi
 
 echo "kdev: all done!"
