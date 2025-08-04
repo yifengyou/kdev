@@ -46,19 +46,27 @@ jobs:
       - name: Clone kdev project
         id: clone_kdev
         working-directory: /builder/
-        continue-on-error: false
+        continue-on-error: true
         run: |
-          if [ -d kdev.git ] ; then
-            cd kdev.git && git pull
-          else
-            git clone -q --single-branch --depth=1 --branch=master https://github.com/yifengyou/kdev.git kdev.git
-          fi
+          set -x
+          while true ; do
+            if [ -d kdev.git ] ; then
+              cd kdev.git
+              git pull
+              [ $? -eq 0 ] && break
+            else
+              git clone -q --single-branch --depth=1 \
+                --branch=master https://github.com/yifengyou/kdev.git kdev.git
+              [ $? -eq 0 ] && break
+            fi
+          done
           echo "status=success" >> ${GITHUB_OUTPUT}
 
       - name: Build rootfs in vm
         id: build_vm
         working-directory: /builder/kdev.git/iso/${{ inputs.os_release }}
         run: |
+          set -x
           ls -alh
           sudo ./build-vm.sh
           echo "status=success" >> ${GITHUB_OUTPUT}
