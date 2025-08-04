@@ -64,7 +64,7 @@ jobs:
           ls -alh
           # zstd -9 -f rootfs.qcow2 -o /builder/release/kdev_${{ inputs.os_release }}.qcow2.zst
           # rar a /builder/release/kdev_${{ inputs.os_release }}.qcow2.rar rootfs.qcow2
-          7z a /builder/release/kdev_${{ inputs.os_release }}.qcow2.rar rootfs.qcow2
+          7z a /builder/release/kdev_${{ inputs.os_release }}.qcow2.7z rootfs.qcow2
           cd /builder/release
           sha256sum kdev_${{ inputs.os_release }}.qcow2.rar > kdev_${{ inputs.os_release }}.qcow2.rar.sha256
           ls -alh /builder/release/
