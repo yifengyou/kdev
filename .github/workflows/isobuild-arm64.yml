@@ -30,7 +30,7 @@ jobs:
       - name: Install KVM/QEMU
         run: |
           sudo apt update
-          sudo apt install -y qemu-kvm libvirt-daemon-system virtinst cpu-checker qemu-utils qemu-system-gui
+          sudo apt install -y aria2 qemu-kvm libvirt-daemon-system virtinst cpu-checker qemu-utils qemu-system-gui
           sudo systemctl enable --now libvirtd
           sudo mkdir -p /builder/
           sudo mkdir -p /builder/release
@@ -40,7 +40,11 @@ jobs:
         id: clone_kdev
         working-directory: /builder/
         run: |
-          git clone -q --single-branch --depth=1 --branch=master https://github.com/yifengyou/kdev.git kdev.git
+          if [ -d kdev.git ] ; then
+            cd kdev.git && git pull
+          else
+            git clone -q --single-branch --depth=1 --branch=master https://github.com/yifengyou/kdev.git kdev.git
+          fi
           echo "status=success" >> ${GITHUB_OUTPUT}
 
       - name: Build rootfs in vm
@@ -58,7 +62,7 @@ jobs:
           set -x
           ls -alh
           zstd -9 rootfs.qcow2 -o /builder/release/kdev_${{ inputs.os_release }}.qcow2.zst
-          rar a /builder/release/kdev_${{ inputs.os_release }}.qcow2.rar rootfs.qcow2
+          # rar a /builder/release/kdev_${{ inputs.os_release }}.qcow2.rar rootfs.qcow2
           ls -alh /builder/release/
           echo "status=success" >> ${GITHUB_OUTPUT}
 
