@@ -6,7 +6,6 @@ WORKDIR=`pwd`
 FILE_SERVER_PORT="63336"
 VMNAME="kdev-$RANDOM"
 ISONAME=$(basename ${ISOURL})
-LOGNAME="kdev.log"
 JOBS=`nproc`
 
 sudo apt-get install -y \

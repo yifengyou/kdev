@@ -1,15 +1,11 @@
 #!/bin/bash
 
-ISOURL="https://old-releases.ubuntu.com/releases/24.04/ubuntu-24.04.1-live-server-amd64.iso"
-ISOURL="https://mirrors.aliyun.com/ubuntu-releases/24.04/ubuntu-24.04.1-live-server-arm64.iso"
-ISOURL="https://releases.ubuntu.com/24.04/ubuntu-24.04.1-live-server-arm64.iso"
 ISOURL="https://old-releases.ubuntu.com/releases/24.04/ubuntu-24.04.1-live-server-arm64.iso"
 
 WORKDIR=`pwd`
 FILE_SERVER_PORT="63336"
 VMNAME="kdev-$RANDOM"
 ISONAME=$(basename ${ISOURL})
-LOGNAME="kdev.log"
 JOBS=`nproc`
 
 sudo apt-get install -y \
@@ -69,7 +65,7 @@ fi
 ls -alh ${ISONAME}
 echo "kdev: ${ISONAME} ready!"
 
-touch meta-data user-data vendor-data ${LOGNAME}
+touch meta-data user-data vendor-data
 
 python3 -m http.server ${FILE_SERVER_PORT} --directory $(pwd) &
 echo "kdev: http server ready!"
