@@ -48,6 +48,7 @@ jobs:
         working-directory: /builder/
         continue-on-error: true
         run: |
+          set +e
           set -x
           while true ; do
             if [ -d kdev.git ] ; then
