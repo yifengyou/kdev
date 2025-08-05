@@ -26,6 +26,12 @@ on:
           - "ubuntu-20.04.2-live-server-arm64.iso"
           - "ubuntu-20.04.1-live-server-arm64.iso"
           - "ubuntu-20.04-live-server-arm64.iso"
+          - "ubuntu-18.04.5-server-arm64.iso"
+          - "ubuntu-18.04.4-server-arm64.iso"
+          - "ubuntu-18.04.3-server-arm64.iso"
+          - "ubuntu-18.04.2-server-arm64.iso"
+          - "ubuntu-18.04.1-server-arm64.iso"
+          - "ubuntu-18.04-server-arm64.iso"
 
 env:
   TZ: America/New_York
