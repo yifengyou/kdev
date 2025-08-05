@@ -14,3 +14,4 @@ snipaste
 *.squashfs
 *.img
 rootfs
+*.aria2
