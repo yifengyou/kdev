@@ -40,7 +40,7 @@ sync
 if [ ! -f "${ISONAME}" ] ; then
 	which aria2c
 	if [ $? -eq 0 ] ; then
-		aria2c ${ISOURL}
+		aria2c --max-tries=10 --retry-wait=5 ${ISOURL}
 	fi
 fi
 

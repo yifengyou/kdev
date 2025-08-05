@@ -25,7 +25,7 @@ fi
 sync
 
 if [ ! -f "${ISONAME}" ]; then
-	aria2c ${ISOURL}
+	aria2c --max-tries=10 --retry-wait=5 ${ISOURL}
 fi
 
 virt-install \
