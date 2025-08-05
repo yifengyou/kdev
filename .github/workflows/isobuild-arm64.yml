@@ -62,10 +62,11 @@ jobs:
           set -x
           while true ; do
             if [ -d kdev.git ] ; then
-              cd kdev.git
+              cd /builder/kdev.git
               git pull
               [ $? -eq 0 ] && break
             else
+              cd /builder/
               git clone -q --single-branch --depth=1 \
                 --branch=master https://github.com/yifengyou/kdev.git kdev.git
               [ $? -eq 0 ] && break
