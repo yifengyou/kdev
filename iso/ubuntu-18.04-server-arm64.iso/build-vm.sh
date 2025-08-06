@@ -87,19 +87,19 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 
-ls -alh mnt/casper
+ls -alh mnt/install
 if [ $? -ne 0 ]; then
 	echo "kdev: casper does't exists in ${ISONAME}"
 	exit 1
 fi
 
-if [ ! -f mnt/casper/vmlinuz ] ; then
-  echo "casper/vmlinuz does't exists!"
+if [ ! -f mnt/install/vmlinuz ] ; then
+  echo "install/vmlinuz does't exists!"
   exit 1
 fi
 
-if [ ! -f mnt/casper/initrd ] ; then
-  echo "casper/initrd does't exists!"
+if [ ! -f mnt/install/initrd.gz ] ; then
+  echo "install/initrd.gz does't exists!"
   exit 1
 fi
 
@@ -116,13 +116,15 @@ qemu-system-aarch64 \
   -drive file=/usr/share/AAVMF/AAVMF_CODE.fd,format=raw,if=pflash \
   -smp ${JOBS} \
   -m 4096 \
-  -cdrom ${ISONAME} \
+  -device virtio-scsi-device \
+  -device scsi-cd,drive=cdrom \
+  -drive id=cdrom,file=${ISONAME},if=none,media=cdrom \
   -device virtio-scsi-pci,id=scsi \
   -drive file=rootfs.qcow2,format=qcow2,if=virtio \
   -boot order=dc \
-  -kernel mnt/casper/vmlinuz \
-  -initrd mnt/casper/initrd \
-  -append 'ds=nocloud-net;s=http://192.168.122.1:63336/ cloud-config-url=/dev/null autoinstall earlyprintk ignore_loglevel console=ttyAMA0,115200n8 earlycon=pl011,mmio,0x09000000 level=10 ' \
+  -kernel mnt/install/vmlinuz \
+  -initrd mnt/install/initrd.gz \
+  -append 'auto=true priority=critical url=http://192.168.122.1:63336/preseed.cfg autoinstall earlyprintk ignore_loglevel console=ttyAMA0,115200n8 earlycon=pl011,mmio,0x09000000 level=10 ' \
   -serial mon:stdio \
   -net nic \
   -net user,net=192.168.122.0/24,host=192.168.122.1 \
@@ -142,3 +144,4 @@ fi
 
 echo "kdev: all done!"
 exit 0
+
