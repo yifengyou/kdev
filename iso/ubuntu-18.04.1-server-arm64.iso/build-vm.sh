@@ -65,8 +65,6 @@ fi
 ls -alh ${ISONAME}
 echo "kdev: ${ISONAME} ready!"
 
-touch meta-data user-data vendor-data
-
 python3 -m http.server ${FILE_SERVER_PORT} --directory $(pwd) &
 echo "kdev: http server ready!"
 
