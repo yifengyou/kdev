@@ -1,7 +1,6 @@
 #cloud-config
 autoinstall:
-  cloud-init:
-    disable: true
+  version: 1
   automatic:
     reboot: false
     updates: false
@@ -12,18 +11,7 @@ autoinstall:
   refresh-installer:
     update: false
   apt:
-    disable_components: []
-    geoip: true
-    preserve_sources_list: false
-    mirror-selection:
-      primary:
-        - country-mirror
-        - uri: "http://mirrors.aliyun.com/ubuntu"
-          arches: [i386, amd64]
-        - uri: "http://mirrors.aliyun.com/ubuntu-ports"
-          arches: [s390x, arm64, armhf, powerpc, ppc64el, riscv64]
-    fallback: offline-install
-    geoip: true
+    disable_suites: [security]
   drivers:
     install: false
   identity:
@@ -35,14 +23,12 @@ autoinstall:
     package: linux-generic
   keyboard:
     layout: us
-    toggle: null
+    toggle: "shift_caps_toggle"
     variant: ''
   locale: "en_US.UTF-8"
-  network:
-    ethernets:
-      enp1s0:
-        dhcp4: true
-    version: 2
+  early-commands:
+    - ls -alh /dev
+    - ip -br a
   ssh:
     allow-pw: true
     authorized-keys: []
@@ -54,5 +40,10 @@ autoinstall:
       size: 0
     layout:
       name: direct
-  version: 1
+  late-commands:
+    - df -h
+    - uname -a
+    - cat /proc/cmdline
+    - systemctl poweroff --force
   shutdown: poweroff
+
