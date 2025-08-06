@@ -9,6 +9,11 @@ VMNAME="kdev-$RANDOM"
 ISONAME=$(basename ${ISOURL})
 JOBS=`nproc`
 
+if [ "$(id -u)" != "0" ]; then
+	echo "must run as root"
+	exit 1
+fi
+
 sudo apt-get install -y \
   tmux \
   qemu-system-arm \
