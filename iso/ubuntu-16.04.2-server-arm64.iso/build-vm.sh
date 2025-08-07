@@ -1,6 +1,6 @@
 #!/bin/bash
 
-ISOURL="https://old-releases.ubuntu.com/releases/16.04.6/ubuntu-16.04.3-server-arm64.iso"
+ISOURL="https://old-releases.ubuntu.com/releases/16.04.6/ubuntu-16.04.2-server-arm64.iso"
 
 WORKDIR=`pwd`
 FILE_SERVER_PORT="63336"
