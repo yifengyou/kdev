@@ -36,7 +36,6 @@ localedef -i zh_CN -f UTF-8 zh_CN.UTF-8 || true
 mkdir -p ${WORKDIR}/rockdev
 mkdir -p ${WORKDIR}/release
 
-
 #==========================================================================#
 # Task: Build Root Filesystem (rootfs) using Armbian Build System          #
 #                                                                          #
@@ -89,10 +88,93 @@ cd ${WORKDIR}/rootfs/armbian.git
 ls -alh ${WORKDIR}/rootfs/armbian.git/output/images/
 
 # extract rootfs
-chmod +x ${WORKDIR}/kdevbuild/extract-rootfs-from-armbian.sh
-${WORKDIR}/kdevbuild/extract-rootfs-from-armbian.sh ${WORKDIR}/rootfs/armbian.git/output/images/
+cd ${WORKDIR}/rootfs/armbian.git/output/images/
+ARMBIAN_IMG=$(ls *.img.xz | head -n1)
+xz -kdc ${ARMBIAN_IMG} >armbian.img
+PARTITION_INFO=$(fdisk -l armbian.img | awk '/^Device/{flag=1; next} flag{print $1, $2, $3; exit}')
+START_SECTOR=$(echo "${PARTITION_INFO}" | awk '{print $2}')
+END_SECTOR=$(echo "${PARTITION_INFO}" | awk '{print $3}')
+COUNT=$((END_SECTOR - START_SECTOR + 1))
+dd if=armbian.img of=rootfs.img \
+  bs=512 \
+  skip="${START_SECTOR}" \
+  count="${COUNT}" \
+  status=progress
 ls -alh ${WORKDIR}/rootfs/armbian.git/output/images/rootfs.img
-md5sum ${WORKDIR}/rootfs/armbian.git/output/images/rootfs.img
+file ${WORKDIR}/rootfs/armbian.git/output/images/rootfs.img
+
+#==========================================================================#
+#                        Hack rootfs via chroot                            #
+#==========================================================================#
+
+ROOTFS_IMG="${WORKDIR}/rootfs/armbian.git/output/images/rootfs.img"
+MOUNT_POINT="${WORKDIR}/rootfs_mount"
+mkdir -p "${MOUNT_POINT}"
+mount -o loop "${ROOTFS_IMG}" "${MOUNT_POINT}"
+
+mount -t proc /proc "${MOUNT_POINT}/proc" || true
+mount -o bind /dev "${MOUNT_POINT}/dev" || true
+mount -o bind /sys "${MOUNT_POINT}/sys" || true
+
+cat >"${MOUNT_POINT}/hack-rootfs.sh" <<'EOF'
+#!/bin/bash
+set -ex
+
+if [ -f /usr/bin/systemctl ]; then
+  systemctl daemon-reload
+fi
+
+if [ -f /lib/systemd/system/lightdm.service ]; then
+  systemctl enable lightdm
+fi
+
+if [ -f /lib/systemd/system/gdm.service ]; then
+  if ! grep -q '\[Install\]' /lib/systemd/system/gdm.service; then
+    echo -e "\n[Install]\nWantedBy=graphical.target" >> /lib/systemd/system/gdm.service
+  fi
+  systemctl enable gdm
+  if [ -f /etc/gdm3/daemon.conf ]; then
+    sed -i '/\[security\]/a AllowRoot=true' /etc/gdm3/daemon.conf
+  fi
+  if [ -f /etc/pam.d/gdm-password ]; then
+    sed -i 's/^auth.*pam_succeed_if\.so.*user != root.*/#&/' /etc/pam.d/gdm-password
+  fi
+fi
+
+if [ -f /etc/rc.local ]; then
+  chmod +x /etc/rc.local
+fi
+
+sed -i 's/NanoPC T6/KDEV/g' /etc/armbian-*
+
+adduser --quiet --disabled-password --gecos "" admin
+echo "admin:admin" | chpasswd
+usermod -aG sudo admin
+
+adduser --quiet --disabled-password --gecos "" teamhd
+echo "teamhd:teamhd" | chpasswd
+usermod -aG sudo teamhd
+
+adduser --quiet --disabled-password --gecos "" linaro
+echo "linaro:linaro" | chpasswd
+usermod -aG sudo linaro
+
+if [ -f /root/.not_logged_in_yet ]; then
+  rm -f /root/.not_logged_in_yet
+fi
+
+EOF
+
+chmod +x "${MOUNT_POINT}/hack-rootfs.sh"
+chroot "${MOUNT_POINT}" /hack-rootfs.sh
+
+rm -f "${MOUNT_POINT}/hack-rootfs.sh"
+umount "${MOUNT_POINT}/proc" || true
+umount "${MOUNT_POINT}/dev" || true
+umount "${MOUNT_POINT}/sys" || true
+umount "${MOUNT_POINT}"
+rmdir "${MOUNT_POINT}"
+sync
 
 # archive rootfs image
 cd ${WORKDIR}/rootfs/armbian.git/output/images/
