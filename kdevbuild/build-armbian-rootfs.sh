@@ -72,6 +72,7 @@ git clone -q --single-branch \
   --branch=main \
   https://github.com/armbian/build.git armbian.git
 ls -alh ${WORKDIR}/rootfs/armbian.git
+
 cd ${WORKDIR}/rootfs/armbian.git
 ./compile.sh RELEASE=${set_release} \
   BOARD=nanopct6 \
@@ -94,7 +95,8 @@ ls -alh ${WORKDIR}/rootfs/armbian.git/output/images/rootfs.img
 md5sum ${WORKDIR}/rootfs/armbian.git/output/images/rootfs.img
 
 # archive rootfs image
-rar a ${WORKDIR}/release/${build_tag}.rar ${WORKDIR}/rootfs/armbian.git/output/images/rootfs.img
+cd ${WORKDIR}/rootfs/armbian.git/output/images/
+rar a ${WORKDIR}/release/${build_tag}.rar rootfs.img
 ls -alh ${WORKDIR}/release/${build_tag}.rar
 md5sum ${WORKDIR}/release/${build_tag}.rar
 

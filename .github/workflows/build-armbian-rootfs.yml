@@ -132,7 +132,7 @@ jobs:
             ### armbian rootfs
 
             1. 镜像命名规则
-            以 **armbian_${RELEASE}_${DESKTOP}.rar** 为例
+            以 **armbian_${RELEASE}_${DESKTOP}.rar** 为例, 默认架构aarch64
 
             - "${RELEASE}" 发行版，可选一下几种发行版
               - bullseye - Debian 11
@@ -146,6 +146,9 @@ jobs:
               - plucky   - Ubuntu 25.04
               - resolute - Ubuntu 25.10
             - "${DESKTOP}" 桌面环境，可选 (mini,xfce,gnome)
+              - mini - 最小化构建
+              - xfce - 带XFce图形界面
+              - gnome - 带GNome图形界面
 
             2. 系统密码
 
