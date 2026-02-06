@@ -147,17 +147,11 @@ fi
 
 sed -i 's/NanoPC T6/KDEV/g' /etc/armbian-*
 
+echo "root:admin" | chpasswd
+
 adduser --quiet --disabled-password --gecos "" admin
 echo "admin:admin" | chpasswd
 usermod -aG sudo admin
-
-adduser --quiet --disabled-password --gecos "" teamhd
-echo "teamhd:teamhd" | chpasswd
-usermod -aG sudo teamhd
-
-adduser --quiet --disabled-password --gecos "" linaro
-echo "linaro:linaro" | chpasswd
-usermod -aG sudo linaro
 
 if [ -f /root/.not_logged_in_yet ]; then
   rm -f /root/.not_logged_in_yet
