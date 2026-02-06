@@ -128,30 +128,41 @@ jobs:
           removeArtifacts: false
           replacesArtifacts: true
           token: ${{ secrets.GITHUB_TOKEN }}
-          body: |
-            ### armbian rootfs
+          body: | # Armbian RootFS
+            ## 1. 镜像命名规则
 
-            1. 镜像命名规则
-            以 **armbian_${RELEASE}_${DESKTOP}.rar** 为例, 默认架构aarch64
+              镜像文件以 armbian_${RELEASE}_${DESKTOP}.rar 格式命名（默认架构为 aarch64）。
 
-            - "${RELEASE}" 发行版，可选一下几种发行版
-              - bullseye - Debian 11
-              - bookworm - Debian 12
-              - trixie   - Debian 13
-              - forky    - Debian 14
-              - focal    - Ubuntu 20.04 LTS
-              - jammy    - Ubuntu 22.04 LTS
-              - noble    - Ubuntu 24.04 LTS
-              - oracular - Ubuntu 24.10
-              - plucky   - Ubuntu 25.04
-              - resolute - Ubuntu 25.10
-            - "${DESKTOP}" 桌面环境，可选 (mini,xfce,gnome)
-              - mini - 最小化构建
-              - xfce - 带XFce图形界面
-              - gnome - 带GNome图形界面
+            - **${RELEASE}**：发行版名称
+            - **${DESKTOP}**：桌面环境
+                - `mini`：最小化构建（无图形界面）
+                - `xfce`：带 XFce 图形界面
+                - `gnome`：带 GNome 图形界面
 
-            2. 系统密码
+            ## 2. 发行版与维护周期
 
-            - 用户名: root   密码: admin
-            - 用户名: admin  密码: admin
+              | 发行版名称 | 操作系统           | 发布时间   | 结束维护时间         |
+              |------------|--------------------|------------|----------------------|
+              | bullseye   | Debian 11          | 2021-08-14 | 2026-06-30（LTS）    |
+              | bookworm   | Debian 12          | 2023-06-10 | 2028-06-10（LTS）    |
+              | trixie     | Debian 13          | 预计 2025  | 预计 2030            |
+              | forky      | Debian 14          | 预计 2027  | 预计 2032            |
+              | focal      | Ubuntu 20.04 LTS   | 2020-04-23 | 2025-04-30 |
+              | jammy      | Ubuntu 22.04 LTS   | 2022-04-21 | 2027-04-30 |
+              | noble      | Ubuntu 24.04 LTS   | 2024-04-25 | 2029-04-30 |
+              | oracular   | Ubuntu 24.10       | 2024-10-10 | 2025-07-31           |
+              | plucky     | Ubuntu 25.04       | 预计 2025-04 | 预计 2026-01        |
+              | resolute   | Ubuntu 25.10       | 预计 2025-10 | 预计 2026-07        |
 
+              > **说明**：
+              > - LTS 表示长期支持版本。
+              > - Ubuntu 非 LTS 版本通常提供 9 个月的支持周期。
+              > - Debian 每个版本通常提供约 5 年的支持（包括 LTS 阶段）。
+              > - 具体日期可能因官方调整而变化，请以发行方公告为准。
+
+            ## 3. 系统默认账户
+
+              | 用户名 | 密码  |
+              |--------|-------|
+              | root   | admin |
+              | admin  | admin |
