@@ -66,13 +66,14 @@ else
       DESKTOP_ENVIRONMENT=${set_desktop} \
       DESKTOP_ENVIRONMENT_CONFIG_NAME=config_base"
 fi
-git clone -q --single-branch \
-  --depth=1 \
+git clone --single-branch \
   --branch=main \
   https://github.com/armbian/build.git armbian.git
+
 ls -alh ${WORKDIR}/rootfs/armbian.git
 
 cd ${WORKDIR}/rootfs/armbian.git
+git checkout main
 ./compile.sh RELEASE=${set_release} \
   BOARD=nanopct6 \
   BRANCH=current \
