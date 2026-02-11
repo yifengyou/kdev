@@ -1,0 +1,94 @@
+name: Build rockylinux rootfs
+
+on:
+  repository_dispatch:
+  workflow_dispatch:
+    inputs:
+
+env:
+  TZ: America/New_York
+
+jobs:
+  kdevbuild:
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - set_vendor: rockylinux
+            set_version: 8
+            set_arch: x86_64
+          - set_vendor: rockylinux
+            set_version: 8
+            set_arch: aarch64
+
+          - set_vendor: rockylinux
+            set_version: 9
+            set_arch: x86_64
+          - set_vendor: rockylinux
+            set_version: 9
+            set_arch: aarch64
+
+          - set_vendor: rockylinux
+            set_version: 10
+            set_arch: x86_64
+          - set_vendor: rockylinux
+            set_version: 10
+            set_arch: aarch64
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Show environment
+        id: basic_info
+        run: |
+          nproc
+          uname -a
+          cat /etc/*release
+          free -h
+          mount
+          df -h
+          cat /proc/cpuinfo
+          cat /proc/meminfo
+
+      - name: Run build in Ubuntu 22.04 container
+        working-directory: ${{ github.workspace }}
+        run: |
+          pwd
+          ls -alh
+          sudo docker run --rm \
+            --privileged \
+            --cap-add SYS_ADMIN \
+            -v /dev:/dev \
+            -v ${{ github.workspace }}:/workspace \
+            -w /workspace \
+            -e set_vendor=${{ matrix.set_vendor }} \
+            -e set_version=${{ matrix.set_version }} \
+            -e set_arch=${{ matrix.set_arch }} \
+            ubuntu:22.04 \
+            bash -c "
+              chmod +x /workspace/kdevbuild/build-rockylinux-rootfs.sh ;
+              /workspace/kdevbuild/build-rockylinux-rootfs.sh
+            "
+
+      - name: List build output
+        run: |
+          ls -alh  ${{ github.workspace }}/release/*
+          md5sum ${{ github.workspace }}/release/*
+
+      - name: Upload Image to Release
+        uses: ncipollo/release-action@main
+        with:
+          tag: rockylinux-rootfs
+          artifacts: ${{ github.workspace }}/release/*
+          allowUpdates: true
+          removeArtifacts: false
+          replacesArtifacts: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+          body: |
+            # rockylinux rootfs
+
+            1. 镜像命名规则: rockylinux_${VERSION}.rar 格式命名
+            2. 母盘镜像获取方式： https://rockylinux.org/zh-CN/download
+
