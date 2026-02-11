@@ -36,26 +36,26 @@ localedef -i zh_CN -f UTF-8 zh_CN.UTF-8 || true
 mkdir -p ${WORKDIR}/release
 
 #==========================================================================#
-# Task: Build Root Filesystem (rootfs) using FNOS Build System             #
+# Task: Build Root Filesystem (rootfs)                                     #
 #==========================================================================#
 if [ -z "${set_vendor}" ] || [ -z "${set_version}" ]; then
   echo "skip rootfs build"
   echo "Build completed successfully!"
   exit 0
 fi
-mkdir -p ${WORKDIR}/centos
-cd ${WORKDIR}/centos
+mkdir -p ${WORKDIR}/rockylinux
+cd ${WORKDIR}/rockylinux
 
-# https://cloud.centos.org/centos/10-stream/x86_64/images/CentOS-Stream-GenericCloud-10-latest.x86_64.qcow2
-# https://cloud.centos.org/centos/9-stream/x86_64/images/CentOS-Stream-GenericCloud-9-latest.x86_64.qcow2
-# https://cloud.centos.org/centos/8-stream/x86_64/images/CentOS-Stream-GenericCloud-8-latest.x86_64.qcow2
+# https://dl.rockylinux.org/pub/rocky/8/images/x86_64/Rocky-8-GenericCloud-Base.latest.x86_64.qcow2
+# https://dl.rockylinux.org/pub/rocky/9/images/x86_64/Rocky-9-GenericCloud-Base.latest.x86_64.qcow2
+# https://dl.rockylinux.org/pub/rocky/10/images/x86_64/Rocky-10-GenericCloud-Base.latest.x86_64.qcow2
 
-# https://cloud.centos.org/centos/10-stream/aarch64/images/CentOS-Stream-GenericCloud-10-latest.aarch64.qcow2
-# https://cloud.centos.org/centos/9-stream/aarch64/images/CentOS-Stream-GenericCloud-9-latest.aarch64.qcow2
-# https://cloud.centos.org/centos/8-stream/aarch64/images/CentOS-Stream-GenericCloud-8-latest.aarch64.qcow2
+# https://dl.rockylinux.org/pub/rocky/8/images/aarch64/Rocky-8-GenericCloud-Base.latest.aarch64.qcow2
+# https://dl.rockylinux.org/pub/rocky/9/images/aarch64/Rocky-9-GenericCloud-Base.latest.aarch64.qcow2
+# https://dl.rockylinux.org/pub/rocky/10/images/aarch64/Rocky-10-GenericCloud-Base.latest.aarch64.qcow2
 
-export QCOW2="CentOS-Stream-GenericCloud-${set_version}-latest.${set_arch}.qcow2"
-export QCOW2_URL="https://cloud.centos.org/centos/${set_version}-stream/${set_arch}/images/${QCOW2}"
+export QCOW2="Rocky-${set_version}-GenericCloud-Base.latest.${set_arch}.qcow2"
+export QCOW2_URL="https://dl.rockylinux.org/pub/rocky/${set_version}/images/${set_arch}/${QCOW2}"
 export build_tag="${set_vendor}_${set_version}_${set_arch}"
 
 aria2c --check-certificate=false \
@@ -81,8 +81,8 @@ fi
 echo "Extracting partition (start=$start, sectors=$sectors) → rootfs.img"
 dd if=qcow2.raw of=rootfs.img bs=512 skip="$start" count="$sectors" conv=sparse
 
-ls -alh ${WORKDIR}/centos/rootfs.img
-file ${WORKDIR}/centos/rootfs.img
+ls -alh ${WORKDIR}/rockylinux/rootfs.img
+file ${WORKDIR}/rockylinux/rootfs.img
 
 rar a ${WORKDIR}/release/${build_tag}.rar rootfs.img
 ls -alh ${WORKDIR}/release/${build_tag}.rar

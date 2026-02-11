@@ -1,4 +1,4 @@
-name: Build centos rootfs
+name: Build rockylinux rootfs
 
 on:
   repository_dispatch:
@@ -15,24 +15,24 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - set_vendor: centos
+          - set_vendor: rockylinux
             set_version: 8
             set_arch: x86_64
-          - set_vendor: centos
+          - set_vendor: rockylinux
             set_version: 8
             set_arch: aarch64
 
-          - set_vendor: centos
+          - set_vendor: rockylinux
             set_version: 9
             set_arch: x86_64
-          - set_vendor: centos
+          - set_vendor: rockylinux
             set_version: 9
             set_arch: aarch64
 
-          - set_vendor: centos
+          - set_vendor: rockylinux
             set_version: 10
             set_arch: x86_64
-          - set_vendor: centos
+          - set_vendor: rockylinux
             set_version: 10
             set_arch: aarch64
 
@@ -68,8 +68,8 @@ jobs:
             -e set_arch=${{ matrix.set_arch }} \
             ubuntu:22.04 \
             bash -c "
-              chmod +x /workspace/kdevbuild/build-centos-rootfs.sh ;
-              /workspace/kdevbuild/build-centos-rootfs.sh
+              chmod +x /workspace/kdevbuild/build-rockylinux-rootfs.sh ;
+              /workspace/kdevbuild/build-rockylinux-rootfs.sh
             "
 
       - name: List build output
@@ -80,14 +80,14 @@ jobs:
       - name: Upload Image to Release
         uses: ncipollo/release-action@main
         with:
-          tag: centos-rootfs
+          tag: rockylinux-rootfs
           artifacts: ${{ github.workspace }}/release/*
           allowUpdates: true
           removeArtifacts: false
           replacesArtifacts: true
           token: ${{ secrets.GITHUB_TOKEN }}
-          body: | # centos rootfs
+          body: | # rockylinux rootfs
 
-            1. 镜像命名规则: centos_${VERSION}.rar 格式命名（默认架构为 aarch64）
-            2. 母盘镜像获取方式： https://cloud.centos.org/centos/
+            1. 镜像命名规则: rockylinux_${VERSION}.rar 格式命名
+            2. 母盘镜像获取方式： https://rockylinux.org/zh-CN/download
 
