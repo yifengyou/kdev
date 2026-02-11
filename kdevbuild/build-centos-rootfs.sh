@@ -1,0 +1,83 @@
+#!/bin/bash
+
+set -euxo pipefail
+
+WORKDIR=$(pwd)
+export build_tag="${set_vendor}_${set_version}"
+export DEBIAN_FRONTEND=noninteractive
+
+#==========================================================================#
+#                        init build env                                    #
+#==========================================================================#
+apt-get update
+apt-get install -y ca-certificates
+apt-get install -y --no-install-recommends \
+  acl aptly aria2 axel bc binfmt-support binutils-aarch64-linux-gnu bison \
+  bsdextrautils btrfs-progs build-essential busybox ca-certificates ccache \
+  clang coreutils cpio crossbuild-essential-arm64 cryptsetup curl \
+  debian-archive-keyring debian-keyring debootstrap device-tree-compiler \
+  dialog dirmngr distcc dosfstools dwarves e2fsprogs expect f2fs-tools \
+  fakeroot fdisk file flex gawk gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi \
+  gdisk git gnupg gzip htop imagemagick jq kmod lib32ncurses-dev \
+  lib32stdc++6 libbison-dev libc6-dev-armhf-cross libc6-i386 libcrypto++-dev \
+  libelf-dev libfdt-dev libfile-fcntllock-perl libfl-dev libfuse-dev \
+  libgcc-12-dev-arm64-cross libgmp3-dev liblz4-tool libmpc-dev libncurses-dev \
+  libncurses5 libncurses5-dev libncursesw5-dev libpython2.7-dev \
+  libpython3-dev libssl-dev libusb-1.0-0-dev linux-base lld llvm locales \
+  lsb-release lz4 lzma lzop make mtools ncurses-base ncurses-term \
+  nfs-kernel-server ntpdate openssl p7zip p7zip-full parallel parted patch \
+  patchutils pbzip2 pigz pixz pkg-config pv python2 python2-dev python3 \
+  python3-dev python3-distutils python3-pip python3-setuptools \
+  python-is-python3 qemu-user-static rar rdfind rename rsync sed \
+  squashfs-tools swig tar tree u-boot-tools udev unzip util-linux uuid \
+  uuid-dev uuid-runtime vim wget whiptail xfsprogs xsltproc xxd xz-utils \
+  zip zlib1g-dev zstd binwalk ripgrep sudo libguestfs-tools
+localedef -i zh_CN -f UTF-8 zh_CN.UTF-8 || true
+mkdir -p ${WORKDIR}/release
+
+#==========================================================================#
+# Task: Build Root Filesystem (rootfs) using FNOS Build System             #
+#==========================================================================#
+if [ -z "${set_vendor}" ] || [ -z "${set_version}" ]; then
+  echo "skip rootfs build"
+  echo "Build completed successfully!"
+  exit 0
+fi
+mkdir -p ${WORKDIR}/centos
+cd ${WORKDIR}/centos
+
+# https://cloud.centos.org/centos/10-stream/x86_64/images/CentOS-Stream-GenericCloud-10-latest.x86_64.qcow2
+# https://cloud.centos.org/centos/9-stream/x86_64/images/CentOS-Stream-GenericCloud-9-latest.x86_64.qcow2
+# https://cloud.centos.org/centos/8-stream/x86_64/images/CentOS-Stream-GenericCloud-8-latest.x86_64.qcow2
+
+# https://cloud.centos.org/centos/10-stream/aarch64/images/CentOS-Stream-GenericCloud-10-latest.aarch64.qcow2
+# https://cloud.centos.org/centos/9-stream/aarch64/images/CentOS-Stream-GenericCloud-9-latest.aarch64.qcow2
+# https://cloud.centos.org/centos/8-stream/aarch64/images/CentOS-Stream-GenericCloud-8-latest.aarch64.qcow2
+
+export QCOW2="CentOS-Stream-GenericCloud-${set_version}-latest.${set_arch}.qcow2"
+export QCOW2_URL="https://cloud.centos.org/centos/${set_version}-stream/${set_arch}/images/${QCOW2}"
+export build_tag="${set_vendor}_${set_version}"
+
+aria2c --check-certificate=false \
+  --max-connection-per-server=16 \
+  --split=16 \
+  --human-readable=true \
+  --summary-interval=5 \
+  -o ${QCOW2} \
+  "${QCOW2_URL}"
+
+qemu-img convert -f qcow2 -O raw ${QCOW2} qcow2.raw
+ls -alh qcow2.raw
+
+OFFSET=$(fdisk -l qcow2.raw 2>/dev/null | awk '/Linux.*[0-9]+$/ {print $2, $4}' | sort -nk2 | tail -1 | cut -d' ' -f1)
+dd if=qcow2.raw of=rootfs.img bs=512 skip=${OFFSET:-0} status=none
+
+ls -alh ${WORKDIR}/centos/rootfs.img
+file ${WORKDIR}/centos/rootfs.img
+
+rar a ${WORKDIR}/release/${build_tag}.rar rootfs.img
+ls -alh ${WORKDIR}/release/${build_tag}.rar
+md5sum ${WORKDIR}/release/${build_tag}.rar
+
+echo "Build completed successfully!"
+exit 0
