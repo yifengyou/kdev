@@ -49,6 +49,15 @@ cd ${WORKDIR}/ubuntu
 # https://cloud-images.ubuntu.com/daily/server/bionic/current/bionic-server-cloudimg-amd64.img
 # https://cloud-images.ubuntu.com/daily/server/bionic/current/bionic-server-cloudimg-arm64.img
 
+# https://cloud-images.ubuntu.com/daily/server/focal/current/focal-server-cloudimg-amd64.img
+# https://cloud-images.ubuntu.com/daily/server/focal/current/focal-server-cloudimg-arm64.img
+
+# https://cloud-images.ubuntu.com/daily/server/jammy/current/jammy-server-cloudimg-amd64.img
+# https://cloud-images.ubuntu.com/daily/server/jammy/current/jammy-server-cloudimg-arm64.img
+
+# https://cloud-images.ubuntu.com/daily/server/noble/current/noble-server-cloudimg-amd64.img
+# https://cloud-images.ubuntu.com/daily/server/noble/current/noble-server-cloudimg-arm64.img
+
 export QCOW2="${set_release}-server-cloudimg-arm64.img"
 export QCOW2_URL="https://cloud-images.ubuntu.com/daily/server/${set_release}/current/${QCOW2}"
 
