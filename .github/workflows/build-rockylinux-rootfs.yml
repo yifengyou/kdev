@@ -88,6 +88,6 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           body: | # rockylinux rootfs
 
-            1. 镜像命名规则: rockylinux_${VERSION}.rar 格式命名
+            1. 镜像命名规则: rockylinux_$VERSION_$ARCH.rar 格式命名
             2. 母盘镜像获取方式： https://rockylinux.org/zh-CN/download
 

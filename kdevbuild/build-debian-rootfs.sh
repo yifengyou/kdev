@@ -3,7 +3,6 @@
 set -euxo pipefail
 
 WORKDIR=$(pwd)
-export build_tag="${set_vendor}_${set_version}"
 export DEBIAN_FRONTEND=noninteractive
 
 #==========================================================================#
@@ -36,27 +35,27 @@ localedef -i zh_CN -f UTF-8 zh_CN.UTF-8 || true
 mkdir -p ${WORKDIR}/release
 
 #==========================================================================#
-# Task: Build Root Filesystem (rootfs) using FNOS Build System             #
+# Task: Build Root Filesystem (rootfs)                                     #
 #==========================================================================#
 if [ -z "${set_vendor}" ] || [ -z "${set_version}" ]; then
   echo "skip rootfs build"
   echo "Build completed successfully!"
   exit 0
 fi
-mkdir -p ${WORKDIR}/centos
-cd ${WORKDIR}/centos
+mkdir -p ${WORKDIR}/debian
+cd ${WORKDIR}/debian
 
-# https://cloud.centos.org/centos/10-stream/x86_64/images/CentOS-Stream-GenericCloud-10-latest.x86_64.qcow2
-# https://cloud.centos.org/centos/9-stream/x86_64/images/CentOS-Stream-GenericCloud-9-latest.x86_64.qcow2
-# https://cloud.centos.org/centos/8-stream/x86_64/images/CentOS-Stream-GenericCloud-8-latest.x86_64.qcow2
+# https://cdimage.debian.org/cdimage/cloud/trixie/latest/debian-13-generic-amd64.qcow2
+# https://cdimage.debian.org/cdimage/cloud/bookworm/latest/debian-12-generic-amd64.qcow2
+# https://cdimage.debian.org/cdimage/cloud/bullseye/latest/debian-11-generic-amd64.qcow2
 
-# https://cloud.centos.org/centos/10-stream/aarch64/images/CentOS-Stream-GenericCloud-10-latest.aarch64.qcow2
-# https://cloud.centos.org/centos/9-stream/aarch64/images/CentOS-Stream-GenericCloud-9-latest.aarch64.qcow2
-# https://cloud.centos.org/centos/8-stream/aarch64/images/CentOS-Stream-GenericCloud-8-latest.aarch64.qcow2
+# https://cdimage.debian.org/cdimage/cloud/trixie/latest/debian-13-generic-arm64.qcow2
+# https://cdimage.debian.org/cdimage/cloud/bookworm/latest/debian-12-generic-arm64.qcow2
+# https://cdimage.debian.org/cdimage/cloud/bullseye/latest/debian-11-generic-arm64.qcow2
 
-export QCOW2="CentOS-Stream-GenericCloud-${set_version}-latest.${set_arch}.qcow2"
-export QCOW2_URL="https://cloud.centos.org/centos/${set_version}-stream/${set_arch}/images/${QCOW2}"
-export build_tag="${set_vendor}_${set_version}_${set_arch}"
+export QCOW2="debian-${set_version}-generic-${set_arch}.qcow2"
+export QCOW2_URL="https://cdimage.debian.org/cdimage/cloud/${set_release}/latest/${QCOW2}"
+export build_tag="${set_vendor}_${set_release}_${set_version}_${set_arch}"
 
 aria2c --check-certificate=false \
   --max-connection-per-server=16 \
@@ -94,8 +93,8 @@ fi
 echo "Extracting partition (start=$start, sectors=$sectors) → rootfs.img"
 dd if=qcow2.raw of=rootfs.img bs=512 skip="$start" count="$sectors" conv=sparse
 
-ls -alh ${WORKDIR}/centos/rootfs.img
-file ${WORKDIR}/centos/rootfs.img
+ls -alh ${WORKDIR}/debian/rootfs.img
+file ${WORKDIR}/debian/rootfs.img
 
 rar a ${WORKDIR}/release/${build_tag}.rar rootfs.img
 ls -alh ${WORKDIR}/release/${build_tag}.rar

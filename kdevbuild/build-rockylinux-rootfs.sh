@@ -70,9 +70,22 @@ qemu-img convert -f qcow2 -O raw ${QCOW2} qcow2.raw
 ls -alh qcow2.raw
 fdisk -l qcow2.raw
 
-read start end < <(sgdisk -p qcow2.raw | awk '/^ *[0-9]+/ {s=$2; e=$3} END {print s, e}')
+read start end < <(
+  sgdisk -p qcow2.raw | awk '
+    /^ *[0-9]+/ {
+      s = $2; e = $3;
+      size = e - s + 1;
+      if (size > max_size) {
+        max_size = size;
+        best_s = s;
+        best_e = e;
+      }
+    }
+    END {
+      if (max_size) print best_s, best_e;
+    }'
+)
 sectors=$((end - start + 1))
-
 if [ -z "$sectors" ]; then
   echo "No partition found"
   exit 1

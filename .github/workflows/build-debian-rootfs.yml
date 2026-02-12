@@ -1,4 +1,4 @@
-name: Build centos rootfs
+name: Build debian rootfs
 
 on:
   repository_dispatch:
@@ -15,26 +15,32 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - set_vendor: centos
-            set_version: 8
-            set_arch: x86_64
-          - set_vendor: centos
-            set_version: 8
-            set_arch: aarch64
+          - set_vendor: debian
+            set_release: trixie
+            set_version: 13
+            set_arch: amd64
+          - set_vendor: debian
+            set_release: trixie
+            set_version: 13
+            set_arch: arm64
 
-          - set_vendor: centos
-            set_version: 9
-            set_arch: x86_64
-          - set_vendor: centos
-            set_version: 9
-            set_arch: aarch64
+          - set_vendor: debian
+            set_release: bookworm
+            set_version: 12
+            set_arch: amd64
+          - set_vendor: debian
+            set_release: bookworm
+            set_version: 12
+            set_arch: arm64
 
-          - set_vendor: centos
-            set_version: 10
-            set_arch: x86_64
-          - set_vendor: centos
-            set_version: 10
-            set_arch: aarch64
+          - set_vendor: debian
+            set_release: bullseye
+            set_version: 11
+            set_arch: amd64
+          - set_vendor: debian
+            set_release: bullseye
+            set_version: 11
+            set_arch: arm64
 
     steps:
       - name: Checkout
@@ -64,12 +70,13 @@ jobs:
             -v ${{ github.workspace }}:/workspace \
             -w /workspace \
             -e set_vendor=${{ matrix.set_vendor }} \
+            -e set_release=${{ matrix.set_release }} \
             -e set_version=${{ matrix.set_version }} \
             -e set_arch=${{ matrix.set_arch }} \
             ubuntu:22.04 \
             bash -c "
-              chmod +x /workspace/kdevbuild/build-centos-rootfs.sh ;
-              /workspace/kdevbuild/build-centos-rootfs.sh
+              chmod +x /workspace/kdevbuild/build-debian-rootfs.sh ;
+              /workspace/kdevbuild/build-debian-rootfs.sh
             "
 
       - name: List build output
@@ -80,14 +87,14 @@ jobs:
       - name: Upload Image to Release
         uses: ncipollo/release-action@main
         with:
-          tag: centos-rootfs
+          tag: debian-rootfs
           artifacts: ${{ github.workspace }}/release/*
           allowUpdates: true
           removeArtifacts: false
           replacesArtifacts: true
           token: ${{ secrets.GITHUB_TOKEN }}
-          body: | # centos rootfs
+          body: | # debian rootfs
 
-            1. 镜像命名规则: centos_$VERSION_$ARCH.rar 格式命名
-            2. 母盘镜像获取方式： https://cloud.centos.org/centos/
+            1. 镜像命名规则: debian_$RELEASE_$VERSION_$ARCH.rar 格式命名
+            2. 母盘镜像获取方式： https://cdimage.debian.org/images/cloud/
 
