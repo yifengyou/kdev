@@ -1,4 +1,4 @@
-name: Build rockylinux rootfs
+name: Build fedora rootfs
 
 on:
   repository_dispatch:
@@ -15,26 +15,28 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - set_vendor: rockylinux
-            set_version: 8
-            set_arch: x86_64
-          - set_vendor: rockylinux
-            set_version: 8
-            set_arch: aarch64
-
-          - set_vendor: rockylinux
-            set_version: 9
-            set_arch: x86_64
-          - set_vendor: rockylinux
-            set_version: 9
-            set_arch: aarch64
-
-          - set_vendor: rockylinux
-            set_version: 10
-            set_arch: x86_64
-          - set_vendor: rockylinux
-            set_version: 10
-            set_arch: aarch64
+          - set_vendor: fedora
+            set_version: 43
+          - set_vendor: fedora
+            set_version: 42
+          - set_vendor: fedora
+            set_version: 41
+          - set_vendor: fedora
+            set_version: 40
+          - set_vendor: fedora
+            set_version: 39
+          - set_vendor: fedora
+            set_version: 38
+          - set_vendor: fedora
+            set_version: 37
+          - set_vendor: fedora
+            set_version: 36
+          - set_vendor: fedora
+            set_version: 35
+          - set_vendor: fedora
+            set_version: 34
+          - set_vendor: fedora
+            set_version: 33
 
     steps:
       - name: Checkout
@@ -84,11 +86,10 @@ jobs:
             -w /workspace \
             -e set_vendor=${{ matrix.set_vendor }} \
             -e set_version=${{ matrix.set_version }} \
-            -e set_arch=${{ matrix.set_arch }} \
             ubuntu:22.04 \
             bash -c "
-              chmod +x /workspace/kdevbuild/build-rockylinux-rootfs.sh ;
-              /workspace/kdevbuild/build-rockylinux-rootfs.sh
+              chmod +x /workspace/kdevbuild/build-fedora-rootfs.sh ;
+              /workspace/kdevbuild/build-fedora-rootfs.sh
             "
 
       - name: List build output
@@ -99,14 +100,14 @@ jobs:
       - name: Upload Image to Release
         uses: ncipollo/release-action@main
         with:
-          tag: rockylinux-rootfs
+          tag: fedora-rootfs
           artifacts: /builder/release/*
           allowUpdates: true
           removeArtifacts: false
           replacesArtifacts: true
           token: ${{ secrets.GITHUB_TOKEN }}
-          body: | # rockylinux rootfs
+          body: | # fedora rootfs
 
-            1. 镜像命名规则: rockylinux_$VERSION_$ARCH.rar 格式命名
-            2. 母盘镜像获取方式： https://rockylinux.org/zh-CN/download
+            1. 镜像命名规则: fedora_$VERSION_$ARCH.rar 格式命名
+            2. 母盘镜像获取方式： https://download.fedoraproject.org/pub/fedora/linux/releases/
 
