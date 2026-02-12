@@ -1,4 +1,4 @@
-name: Build opencloudos rootfs
+name: Build openanolis rootfs
 
 on:
   repository_dispatch:
@@ -15,22 +15,34 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - set_vendor: opencloudos
+          - set_vendor: openanolis
+            set_version: "7.9"
+          - set_vendor: openanolis
             set_version: "8"
-          - set_vendor: opencloudos
-            set_version: "8.10"
-          - set_vendor: opencloudos
+          - set_vendor: openanolis
+            set_version: "8.2"
+          - set_vendor: openanolis
+            set_version: "8.4"
+          - set_vendor: openanolis
             set_version: "8.6"
-          - set_vendor: opencloudos
+          - set_vendor: openanolis
             set_version: "8.8"
-          - set_vendor: opencloudos
-            set_version: "9"
-          - set_vendor: opencloudos
-            set_version: "9.0"
-          - set_vendor: opencloudos
-            set_version: "9.2"
-          - set_vendor: opencloudos
-            set_version: "9.4"
+          - set_vendor: openanolis
+            set_version: "8.9"
+          - set_vendor: openanolis
+            set_version: "8.10"
+          - set_vendor: openanolis
+            set_version: "23"
+          - set_vendor: openanolis
+            set_version: "23.0"
+          - set_vendor: openanolis
+            set_version: "23.1"
+          - set_vendor: openanolis
+            set_version: "23.2"
+          - set_vendor: openanolis
+            set_version: "23.3"
+          - set_vendor: openanolis
+            set_version: "23.4"
 
     steps:
       - name: Checkout
@@ -82,8 +94,8 @@ jobs:
             -e set_version=${{ matrix.set_version }} \
             ubuntu:22.04 \
             bash -c "
-              chmod +x /workspace/kdevbuild/build-opencloudos-rootfs.sh ;
-              /workspace/kdevbuild/build-opencloudos-rootfs.sh
+              chmod +x /workspace/kdevbuild/build-openanolis-rootfs.sh ;
+              /workspace/kdevbuild/build-openanolis-rootfs.sh
             "
 
       - name: List build output
@@ -94,15 +106,15 @@ jobs:
       - name: Upload Image to Release
         uses: ncipollo/release-action@main
         with:
-          tag: opencloudos-rootfs
+          tag: openanolis-rootfs
           artifacts: /builder/release/*
           allowUpdates: true
           removeArtifacts: false
           replacesArtifacts: true
           token: ${{ secrets.GITHUB_TOKEN }}
-          body: | # opencloudos rootfs
+          body: | # openanolis rootfs
 
-            1. 镜像命名规则: opencloudos_$VERSION_$ARCH.rar 格式命名
-            2. 母盘镜像获取方式： https://mirrors.opencloudos.tech/opencloudos/
+            1. 镜像命名规则: openanolis_$VERSION_$ARCH.rar 格式命名
+            2. 母盘镜像获取方式： https://mirrors.openanolis.cn/anolis/
             3. 所有资源均来自官方发布，严格遵守法律法规
 

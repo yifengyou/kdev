@@ -42,8 +42,8 @@ if [ -z "${set_vendor}" ] || [ -z "${set_version}" ]; then
   echo "Build completed successfully!"
   exit 0
 fi
-mkdir -p ${WORKDIR}/opencloudos
-cd ${WORKDIR}/opencloudos
+mkdir -p ${WORKDIR}/openanolis
+cd ${WORKDIR}/openanolis
 
 process_qcow2() {
   local QCOW2="$1"
@@ -85,8 +85,8 @@ process_qcow2() {
   echo "Extracting partition (start=$start, sectors=$sectors) → rootfs.img"
   dd if=qcow2.raw of=rootfs.img bs=512 skip="$start" count="$sectors" conv=sparse
 
-  ls -alh ${WORKDIR}/opencloudos/rootfs.img
-  file ${WORKDIR}/opencloudos/rootfs.img
+  ls -alh ${WORKDIR}/openanolis/rootfs.img
+  file ${WORKDIR}/openanolis/rootfs.img
 
   rar a ${WORKDIR}/release/${QCOW2%.qcow2}.rar rootfs.img
   ls -alh ${WORKDIR}/release/${QCOW2%.qcow2}.rar
@@ -97,51 +97,21 @@ process_qcow2() {
 }
 
 rm -f index.html qcow2.raw rootfs.img *.qcow2
-if wget --no-check-certificate "https://mirrors.opencloudos.tech/opencloudos/${set_version}/images/"; then
+if wget --no-check-certificate "https://mirrors.openanolis.cn/anolis/${set_version}/isos/GA/x86_64/"; then
   ls -alh index.html
   for QCOW2 in $(grep -oE 'href="([^"]+\.qcow2)"' index.html | cut -d'"' -f2); do
     rm -f qcow2.raw rootfs.img
-    export QCOW2_URL="https://mirrors.opencloudos.tech/opencloudos/${set_version}/images/${QCOW2}"
+    export QCOW2_URL="https://mirrors.openanolis.cn/anolis/${set_version}/isos/GA/x86_64/${QCOW2}"
     process_qcow2 "$QCOW2" "${QCOW2_URL}"
   done
 fi
 
 rm -f index.html qcow2.raw rootfs.img *.qcow2
-if wget --no-check-certificate "https://mirrors.opencloudos.tech/opencloudos/${set_version}/images/x86_64/"; then
+if wget --no-check-certificate "https://mirrors.openanolis.cn/anolis/${set_version}/isos/GA/aarch64/"; then
   ls -alh index.html
   for QCOW2 in $(grep -oE 'href="([^"]+\.qcow2)"' index.html | cut -d'"' -f2); do
     rm -f qcow2.raw rootfs.img
-    export QCOW2_URL="https://mirrors.opencloudos.tech/opencloudos/${set_version}/images/x86_64/${QCOW2}"
-    process_qcow2 "$QCOW2" "${QCOW2_URL}"
-  done
-fi
-
-rm -f index.html qcow2.raw rootfs.img *.qcow2
-if wget --no-check-certificate "https://mirrors.opencloudos.tech/opencloudos/${set_version}/images/aarch64/"; then
-  ls -alh index.html
-  for QCOW2 in $(grep -oE 'href="([^"]+\.qcow2)"' index.html | cut -d'"' -f2); do
-    rm -f qcow2.raw rootfs.img
-    export QCOW2_URL="https://mirrors.opencloudos.tech/opencloudos/${set_version}/images/aarch64/${QCOW2}"
-    process_qcow2 "$QCOW2" "${QCOW2_URL}"
-  done
-fi
-
-rm -f index.html qcow2.raw rootfs.img *.qcow2
-if wget --no-check-certificate "https://mirrors.opencloudos.tech/opencloudos/${set_version}/images/qcow2/x86_64/"; then
-  ls -alh index.html
-  for QCOW2 in $(grep -oE 'href="([^"]+\.qcow2)"' index.html | cut -d'"' -f2); do
-    rm -f qcow2.raw rootfs.img
-    export QCOW2_URL="https://mirrors.opencloudos.tech/opencloudos/${set_version}/images/qcow2/x86_64/${QCOW2}"
-    process_qcow2 "$QCOW2" "${QCOW2_URL}"
-  done
-fi
-
-rm -f index.html qcow2.raw rootfs.img *.qcow2
-if wget --no-check-certificate "https://mirrors.opencloudos.tech/opencloudos/${set_version}/images/qcow2/aarch64/"; then
-  ls -alh index.html
-  for QCOW2 in $(grep -oE 'href="([^"]+\.qcow2)"' index.html | cut -d'"' -f2); do
-    rm -f qcow2.raw rootfs.img
-    export QCOW2_URL="https://mirrors.opencloudos.tech/opencloudos/${set_version}/images/qcow2/aarch64/${QCOW2}"
+    export QCOW2_URL="https://mirrors.openanolis.cn/anolis/${set_version}/isos/GA/aarch64/${QCOW2}"
     process_qcow2 "$QCOW2" "${QCOW2_URL}"
   done
 fi
