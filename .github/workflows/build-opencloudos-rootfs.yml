@@ -76,7 +76,7 @@ jobs:
             --privileged \
             --cap-add SYS_ADMIN \
             -v /dev:/dev \
-            -v ${{ github.workspace }}:/workspace \
+            -v /builder:/workspace \
             -w /workspace \
             -e set_vendor=${{ matrix.set_vendor }} \
             -e set_version=${{ matrix.set_version }} \
