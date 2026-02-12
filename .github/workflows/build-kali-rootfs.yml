@@ -93,5 +93,5 @@ jobs:
           body: | # kali rootfs
 
             1. 镜像命名规则: kali_$VERSION_$ARCH.rar 格式命名
-            2. 母盘镜像获取方式： https://kali.org/zh-CN/download
+            2. 母盘镜像获取方式： https://kali.download/cloud-images/
 
