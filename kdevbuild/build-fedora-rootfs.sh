@@ -42,12 +42,13 @@ if [ -z "${set_vendor}" ] || [ -z "${set_version}" ]; then
   echo "Build completed successfully!"
   exit 0
 fi
-mkdir -p ${WORKDIR}/opencloudos
-cd ${WORKDIR}/opencloudos
+mkdir -p ${WORKDIR}/fedora
+cd ${WORKDIR}/fedora
 
 process_qcow2() {
   local QCOW2="$1"
   local QCOW2_URL="$2"
+  local set_arch="$3"
 
   aria2c --check-certificate=false \
     --max-connection-per-server=16 \
@@ -57,8 +58,7 @@ process_qcow2() {
     -o ${QCOW2} \
     "${QCOW2_URL}"
 
-  xz -d ${QCOW2}
-  qemu-img convert -f qcow2 -O raw ${QCOW2%.xz} qcow2.raw
+  qemu-img convert -f qcow2 -O raw ${QCOW2} qcow2.raw
   ls -alh qcow2.raw
   fdisk -l qcow2.raw
 
@@ -86,34 +86,36 @@ process_qcow2() {
   echo "Extracting partition (start=$start, sectors=$sectors) → rootfs.img"
   dd if=qcow2.raw of=rootfs.img bs=512 skip="$start" count="$sectors" conv=sparse
 
-  ls -alh ${WORKDIR}/opencloudos/rootfs.img
-  file ${WORKDIR}/opencloudos/rootfs.img
+  ls -alh ${WORKDIR}/fedora/rootfs.img
+  file ${WORKDIR}/fedora/rootfs.img
 
-  rar a ${WORKDIR}/release/${QCOW2%.qcow2.xz}.rar rootfs.img
-  ls -alh ${WORKDIR}/release/${QCOW2%.qcow2.xz}.rar
-  md5sum ${WORKDIR}/release/${QCOW2%.qcow2.xz}.rar
+  rar a ${WORKDIR}/release/${QCOW2%.qcow2}.rar rootfs.img
+  ls -alh ${WORKDIR}/release/${QCOW2%.qcow2}.rar
+  md5sum ${WORKDIR}/release/${QCOW2%.qcow2}.rar
 
   ls -alh ${WORKDIR}/release/
   df -h
 }
 
-rm -f index.html qcow2.raw rootfs.img *.qcow2 *.xz
-if wget --no-check-certificate "https://mirrors.ocf.berkeley.edu/openeuler/${set_version}/virtual_machine_img/aarch64/"; then
+# https://download.fedoraproject.org/pub/fedora/linux/releases/43/Server/x86_64/images/Fedora-Server-Guest-Generic-43-1.6.x86_64.qcow2
+
+rm -f index.html qcow2.raw rootfs.img *.qcow2
+if wget --no-check-certificate "https://download.fedoraproject.org/pub/fedora/linux/releases/${set_version}/Server/x86_64/images/"; then
   ls -alh index.html
-  for QCOW2 in $(grep -oE 'href="([^"]+\.qcow2.xz)"' index.html | cut -d'"' -f2); do
+  for QCOW2 in $(grep -oE 'href="([^"]+\.qcow2)"' index.html | cut -d'"' -f2); do
     rm -f qcow2.raw rootfs.img
-    export QCOW2_URL="https://mirrors.ocf.berkeley.edu/openeuler/${set_version}/virtual_machine_img/aarch64/${QCOW2}"
-    process_qcow2 "$QCOW2" "${QCOW2_URL}"
+    export QCOW2_URL="https://download.fedoraproject.org/pub/fedora/linux/releases/${set_version}/Server/x86_64/images/${QCOW2}"
+    process_qcow2 "$QCOW2" "${QCOW2_URL}" "x86_64"
   done
 fi
 
-rm -f index.html qcow2.raw rootfs.img *.qcow2 *.xz
-if wget --no-check-certificate "https://mirrors.ocf.berkeley.edu/openeuler/${set_version}/virtual_machine_img/x86_64/"; then
+rm -f index.html qcow2.raw rootfs.img *.qcow2
+if wget --no-check-certificate "https://download.fedoraproject.org/pub/fedora/linux/releases/${set_version}/Server/aarch64/images/"; then
   ls -alh index.html
-  for QCOW2 in $(grep -oE 'href="([^"]+\.qcow2.xz)"' index.html | cut -d'"' -f2); do
+  for QCOW2 in $(grep -oE 'href="([^"]+\.qcow2)"' index.html | cut -d'"' -f2); do
     rm -f qcow2.raw rootfs.img
-    export QCOW2_URL="https://mirrors.ocf.berkeley.edu/openeuler/${set_version}/virtual_machine_img/x86_64/${QCOW2}"
-    process_qcow2 "$QCOW2" "${QCOW2_URL}"
+    export QCOW2_URL="https://download.fedoraproject.org/pub/fedora/linux/releases/${set_version}/Server/aarch64/images/${QCOW2}"
+    process_qcow2 "$QCOW2" "${QCOW2_URL}" "aarch64"
   done
 fi
 
@@ -122,23 +124,23 @@ if ls -alh ${WORKDIR}/release/*.rar; then
   exit 0
 fi
 
-rm -f index.html qcow2.raw rootfs.img *.qcow2 *.xz
-if wget --no-check-certificate "https://archives.openeuler.openatom.cn/${set_version}/virtual_machine_img/aarch64/"; then
+rm -f index.html qcow2.raw rootfs.img *.qcow2
+if wget --no-check-certificate "https://archives.fedoraproject.org/pub/archive/fedora/linux/releases/${set_version}/Cloud/x86_64/images/"; then
   ls -alh index.html
-  for QCOW2 in $(grep -oE 'href="([^"]+\.qcow2.xz)"' index.html | cut -d'"' -f2); do
+  for QCOW2 in $(grep -oE 'href="([^"]+\.qcow2)"' index.html | cut -d'"' -f2); do
     rm -f qcow2.raw rootfs.img
-    export QCOW2_URL="https://archives.openeuler.openatom.cn/${set_version}/virtual_machine_img/aarch64/${QCOW2}"
-    process_qcow2 "$QCOW2" "${QCOW2_URL}"
+    export QCOW2_URL="https://archives.fedoraproject.org/pub/archive/fedora/linux/releases/${set_version}/Cloud/x86_64/images//${QCOW2}"
+    process_qcow2 "$QCOW2" "${QCOW2_URL}" "x86_64"
   done
 fi
 
-rm -f index.html qcow2.raw rootfs.img *.qcow2 *.xz
-if wget --no-check-certificate "https://archives.openeuler.openatom.cn/${set_version}/virtual_machine_img/x86_64/"; then
+rm -f index.html qcow2.raw rootfs.img *.qcow2
+if wget --no-check-certificate "https://archives.fedoraproject.org/pub/archive/fedora/linux/releases/${set_version}/Cloud/aarch64/images/"; then
   ls -alh index.html
-  for QCOW2 in $(grep -oE 'href="([^"]+\.qcow2.xz)"' index.html | cut -d'"' -f2); do
+  for QCOW2 in $(grep -oE 'href="([^"]+\.qcow2)"' index.html | cut -d'"' -f2); do
     rm -f qcow2.raw rootfs.img
-    export QCOW2_URL="https://archives.openeuler.openatom.cn/${set_version}/virtual_machine_img/x86_64/${QCOW2}"
-    process_qcow2 "$QCOW2" "${QCOW2_URL}"
+    export QCOW2_URL="https://archives.fedoraproject.org/pub/archive/fedora/linux/releases/${set_version}/Cloud/aarch64/images//${QCOW2}"
+    process_qcow2 "$QCOW2" "${QCOW2_URL}" "x86_64"
   done
 fi
 
