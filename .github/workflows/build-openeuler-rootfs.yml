@@ -1,4 +1,4 @@
-name: Build opencloudos rootfs
+name: Build openeuler rootfs
 
 on:
   repository_dispatch:
@@ -15,22 +15,54 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - set_vendor: opencloudos
-            set_version: "8"
-          - set_vendor: opencloudos
-            set_version: "8.10"
-          - set_vendor: opencloudos
-            set_version: "8.6"
-          - set_vendor: opencloudos
-            set_version: "8.8"
-          - set_vendor: opencloudos
-            set_version: "9"
-          - set_vendor: opencloudos
-            set_version: "9.0"
-          - set_vendor: opencloudos
-            set_version: "9.2"
-          - set_vendor: opencloudos
-            set_version: "9.4"
+          - set_vendor: openeuler
+            set_version: "openEuler-20.03-LTS"
+          - set_vendor: openeuler
+            set_version: "openEuler-20.03-LTS-SP1"
+          - set_vendor: openeuler
+            set_version: "openEuler-20.03-LTS-SP2"
+          - set_vendor: openeuler
+            set_version: "openEuler-20.03-LTS-SP3"
+          - set_vendor: openeuler
+            set_version: "openEuler-20.03-LTS-SP4"
+          - set_vendor: openeuler
+            set_version: "openEuler-20.09"
+          - set_vendor: openeuler
+            set_version: "openEuler-21.03"
+          - set_vendor: openeuler
+            set_version: "openEuler-21.09"
+          - set_vendor: openeuler
+            set_version: "openEuler-22.03-LTS"
+          - set_vendor: openeuler
+            set_version: "openEuler-22.03-LTS-64"
+          - set_vendor: openeuler
+            set_version: "openEuler-22.03-LTS-SP1"
+          - set_vendor: openeuler
+            set_version: "openEuler-22.03-LTS-SP2"
+          - set_vendor: openeuler
+            set_version: "openEuler-22.03-LTS-SP3"
+          - set_vendor: openeuler
+            set_version: "openEuler-22.03-LTS-SP4"
+          - set_vendor: openeuler
+            set_version: "openEuler-22.09"
+          - set_vendor: openeuler
+            set_version: "openEuler-23.03"
+          - set_vendor: openeuler
+            set_version: "openEuler-23.09"
+          - set_vendor: openeuler
+            set_version: "openEuler-24.03-LTS"
+          - set_vendor: openeuler
+            set_version: "openEuler-24.03-LTS-SP1"
+          - set_vendor: openeuler
+            set_version: "openEuler-24.03-LTS-SP2"
+          - set_vendor: openeuler
+            set_version: "openEuler-24.03-LTS-SP3"
+          - set_vendor: openeuler
+            set_version: "openEuler-24.09"
+          - set_vendor: openeuler
+            set_version: "openEuler-25.03"
+          - set_vendor: openeuler
+            set_version: "openEuler-25.09"
 
     steps:
       - name: Checkout
@@ -82,8 +114,8 @@ jobs:
             -e set_version=${{ matrix.set_version }} \
             ubuntu:22.04 \
             bash -c "
-              chmod +x /workspace/kdevbuild/build-opencloudos-rootfs.sh ;
-              /workspace/kdevbuild/build-opencloudos-rootfs.sh
+              chmod +x /workspace/kdevbuild/build-openeuler-rootfs.sh ;
+              /workspace/kdevbuild/build-openeuler-rootfs.sh
             "
 
       - name: List build output
@@ -94,15 +126,15 @@ jobs:
       - name: Upload Image to Release
         uses: ncipollo/release-action@main
         with:
-          tag: opencloudos-rootfs
+          tag: openeuler-rootfs
           artifacts: /builder/release/*
           allowUpdates: true
           removeArtifacts: false
           replacesArtifacts: true
           token: ${{ secrets.GITHUB_TOKEN }}
-          body: | # opencloudos rootfs
+          body: | # openeuler rootfs
 
-            1. 镜像命名规则: opencloudos_$VERSION_$ARCH.rar 格式命名
-            2. 母盘镜像获取方式： https://mirrors.opencloudos.tech/opencloudos/
+            1. 镜像命名规则: openeuler_$VERSION_$ARCH.rar 格式命名
+            2. 母盘镜像获取方式： https://mirrors.ocf.berkeley.edu/openeuler/
             3. 所有资源均来自官方发布，严格遵守法律法规
 
