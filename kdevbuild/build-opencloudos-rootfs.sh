@@ -3,7 +3,6 @@
 set -euxo pipefail
 
 WORKDIR=$(pwd)
-export build_tag="${set_vendor}_${set_release}_${set_version}_${set_arch}"
 export DEBIAN_FRONTEND=noninteractive
 
 #==========================================================================#
@@ -38,43 +37,39 @@ mkdir -p ${WORKDIR}/release
 #==========================================================================#
 # Task: Build Root Filesystem (rootfs)                                     #
 #==========================================================================#
-if [ -z "${set_vendor}" ] || [ -z "${set_release}" ]; then
+if [ -z "${set_vendor}" ] || [ -z "${set_version}" ]; then
   echo "skip rootfs build"
   echo "Build completed successfully!"
   exit 0
 fi
-mkdir -p ${WORKDIR}/ubuntu
-cd ${WORKDIR}/ubuntu
+mkdir -p ${WORKDIR}/opencloudos
+cd ${WORKDIR}/opencloudos
 
-# https://cloud-images.ubuntu.com/daily/server/bionic/current/bionic-server-cloudimg-amd64.img
-# https://cloud-images.ubuntu.com/daily/server/bionic/current/bionic-server-cloudimg-arm64.img
+# download official web list
+if ! wget --no-check-certificate https://mirrors.opencloudos.tech/opencloudos/${set_version}/images/ ; then
+  echo "download index page failed!"
+  exit 1
+fi
+ls -alh index.html
 
-# https://cloud-images.ubuntu.com/daily/server/focal/current/focal-server-cloudimg-amd64.img
-# https://cloud-images.ubuntu.com/daily/server/focal/current/focal-server-cloudimg-arm64.img
+for QCOW2 in $(grep -oE 'href="([^"]+\.qcow2)"' index.html | cut -d'"' -f2); do
+  rm -f qcow2.raw rootfs.img
+  export QCOW2_URL="https://mirrors.opencloudos.tech/opencloudos/${set_version}/images/${QCOW2}"
 
-# https://cloud-images.ubuntu.com/daily/server/jammy/current/jammy-server-cloudimg-amd64.img
-# https://cloud-images.ubuntu.com/daily/server/jammy/current/jammy-server-cloudimg-arm64.img
+  aria2c --check-certificate=false \
+    --max-connection-per-server=16 \
+    --split=16 \
+    --human-readable=true \
+    --summary-interval=5 \
+    -o ${QCOW2} \
+    "${QCOW2_URL}"
 
-# https://cloud-images.ubuntu.com/daily/server/noble/current/noble-server-cloudimg-amd64.img
-# https://cloud-images.ubuntu.com/daily/server/noble/current/noble-server-cloudimg-arm64.img
+  qemu-img convert -f qcow2 -O raw ${QCOW2} qcow2.raw
+  ls -alh qcow2.raw
+  fdisk -l qcow2.raw
 
-export QCOW2="${set_release}-server-cloudimg-arm64.img"
-export QCOW2_URL="https://cloud-images.ubuntu.com/daily/server/${set_release}/current/${QCOW2}"
-
-aria2c --check-certificate=false \
-  --max-connection-per-server=16 \
-  --split=16 \
-  --human-readable=true \
-  --summary-interval=5 \
-  -o ${QCOW2} \
-  "${QCOW2_URL}"
-
-qemu-img convert -f qcow2 -O raw ${QCOW2} qcow2.raw
-ls -alh qcow2.raw
-fdisk -l qcow2.raw
-
-read start end < <(
-  sgdisk -p qcow2.raw | awk '
+  read start end < <(
+    sgdisk -p qcow2.raw | awk '
     /^ *[0-9]+/ {
       s = $2; e = $3;
       size = e - s + 1;
@@ -87,22 +82,23 @@ read start end < <(
     END {
       if (max_size) print best_s, best_e;
     }'
-)
-sectors=$((end - start + 1))
-if [ -z "$sectors" ]; then
-  echo "No partition found"
-  exit 1
-fi
+  )
+  sectors=$((end - start + 1))
+  if [ -z "$sectors" ]; then
+    echo "No partition found"
+    exit 1
+  fi
 
-echo "Extracting partition (start=$start, sectors=$sectors) → rootfs.img"
-dd if=qcow2.raw of=rootfs.img bs=512 skip="$start" count="$sectors" conv=sparse
+  echo "Extracting partition (start=$start, sectors=$sectors) → rootfs.img"
+  dd if=qcow2.raw of=rootfs.img bs=512 skip="$start" count="$sectors" conv=sparse
 
-ls -alh ${WORKDIR}/ubuntu/rootfs.img
-file ${WORKDIR}/ubuntu/rootfs.img
+  ls -alh ${WORKDIR}/opencloudos/rootfs.img
+  file ${WORKDIR}/opencloudos/rootfs.img
 
-rar a ${WORKDIR}/release/${build_tag}.rar rootfs.img
-ls -alh ${WORKDIR}/release/${build_tag}.rar
-md5sum ${WORKDIR}/release/${build_tag}.rar
+  rar a ${WORKDIR}/release/${QCOW2%.qcow2}.rar rootfs.img
+  ls -alh ${WORKDIR}/release/${QCOW2%.qcow2}.rar
+  md5sum ${WORKDIR}/release/${QCOW2%.qcow2}.rar
+done
 
 echo "Build completed successfully!"
 exit 0
