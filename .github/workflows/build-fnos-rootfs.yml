@@ -67,8 +67,7 @@ jobs:
           removeArtifacts: false
           replacesArtifacts: true
           token: ${{ secrets.GITHUB_TOKEN }}
-          body: |
-            # fnos rootfs
+          body: | # fnos rootfs
 
             1. 镜像命名规则: fnos_${VERSION}.rar 格式命名（默认架构为 aarch64）
             2. 母盘镜像获取方式： https://www.fnnas.com/download-arm

@@ -89,6 +89,14 @@ process_qcow2() {
   ls -alh ${WORKDIR}/fedora/rootfs.img
   file ${WORKDIR}/fedora/rootfs.img
 
+  USED_BLOCKS=$(resize2fs -P rootfs.img 2>/dev/null | grep -o '[0-9]*' | tail -1)
+  BLOCK_SIZE=$(tune2fs -l rootfs.img | grep "Block size" | awk '{print $3}')
+  TARGET_BLOCKS=$(echo "$USED_BLOCKS * 1.3 / 1" | bc)
+  e2fsck -f -y rootfs.img
+  resize2fs rootfs.img ${TARGET_BLOCKS}
+
+  ls -alh ${WORKDIR}/fedora/rootfs.img
+
   rar a ${WORKDIR}/release/${QCOW2%.qcow2}.rar rootfs.img
   ls -alh ${WORKDIR}/release/${QCOW2%.qcow2}.rar
   md5sum ${WORKDIR}/release/${QCOW2%.qcow2}.rar

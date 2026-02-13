@@ -42,8 +42,8 @@ if [ -z "${set_vendor}" ] || [ -z "${set_version}" ]; then
   echo "Build completed successfully!"
   exit 0
 fi
-mkdir -p ${WORKDIR}/opencloudos
-cd ${WORKDIR}/opencloudos
+mkdir -p ${WORKDIR}/openeuler
+cd ${WORKDIR}/openeuler
 
 process_qcow2() {
   local QCOW2="$1"
@@ -86,8 +86,16 @@ process_qcow2() {
   echo "Extracting partition (start=$start, sectors=$sectors) → rootfs.img"
   dd if=qcow2.raw of=rootfs.img bs=512 skip="$start" count="$sectors" conv=sparse
 
-  ls -alh ${WORKDIR}/opencloudos/rootfs.img
-  file ${WORKDIR}/opencloudos/rootfs.img
+  ls -alh ${WORKDIR}/openeuler/rootfs.img
+  file ${WORKDIR}/openeuler/rootfs.img
+
+  USED_BLOCKS=$(resize2fs -P rootfs.img 2>/dev/null | grep -o '[0-9]*' | tail -1)
+  BLOCK_SIZE=$(tune2fs -l rootfs.img | grep "Block size" | awk '{print $3}')
+  TARGET_BLOCKS=$(echo "$USED_BLOCKS * 1.3 / 1" | bc)
+  e2fsck -f -y rootfs.img
+  resize2fs rootfs.img ${TARGET_BLOCKS}
+
+  ls -alh ${WORKDIR}/openeuler/rootfs.img
 
   rar a ${WORKDIR}/release/${QCOW2%.qcow2.xz}.rar rootfs.img
   ls -alh ${WORKDIR}/release/${QCOW2%.qcow2.xz}.rar

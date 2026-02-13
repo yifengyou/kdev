@@ -173,6 +173,17 @@ sync
 
 # archive rootfs image
 cd ${WORKDIR}/rootfs/armbian.git/output/images/
+
+ls -alh rootfs.img
+file rootfs.img
+USED_BLOCKS=$(resize2fs -P rootfs.img 2>/dev/null | grep -o '[0-9]*' | tail -1)
+BLOCK_SIZE=$(tune2fs -l rootfs.img | grep "Block size" | awk '{print $3}')
+TARGET_BLOCKS=$(echo "$USED_BLOCKS * 1.3 / 1" | bc)
+e2fsck -f -y rootfs.img
+resize2fs rootfs.img ${TARGET_BLOCKS}
+
+ls -alh rootfs.img
+
 rar a ${WORKDIR}/release/${build_tag}.rar rootfs.img
 ls -alh ${WORKDIR}/release/${build_tag}.rar
 md5sum ${WORKDIR}/release/${build_tag}.rar
