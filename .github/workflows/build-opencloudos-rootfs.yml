@@ -103,6 +103,6 @@ jobs:
           body: | # opencloudos rootfs
 
             1. 镜像命名规则: opencloudos_$VERSION_$ARCH.rar 格式命名
-            2. 母盘镜像获取方式： https://mirrors.opencloudos.tech/opencloudos/
+            2. 母盘镜像获取方式： https://mirrors.cloud.tencent.com/opencloudos/
             3. 所有资源均来自官方发布，严格遵守法律法规
 

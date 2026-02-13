@@ -102,51 +102,51 @@ process_qcow2() {
 }
 
 rm -f index.html qcow2.raw rootfs.img *.qcow2
-if wget --no-check-certificate "https://mirrors.opencloudos.tech/opencloudos/${set_version}/images/"; then
+if wget --no-check-certificate "https://mirrors.cloud.tencent.com/opencloudos/${set_version}/images/"; then
   ls -alh index.html
   for QCOW2 in $(grep -oE 'href="([^"]+\.qcow2)"' index.html | cut -d'"' -f2); do
     rm -f qcow2.raw rootfs.img
-    export QCOW2_URL="https://mirrors.opencloudos.tech/opencloudos/${set_version}/images/${QCOW2}"
+    export QCOW2_URL="https://mirrors.cloud.tencent.com/opencloudos/${set_version}/images/${QCOW2}"
     process_qcow2 "$QCOW2" "${QCOW2_URL}"
   done
 fi
 
 rm -f index.html qcow2.raw rootfs.img *.qcow2
-if wget --no-check-certificate "https://mirrors.opencloudos.tech/opencloudos/${set_version}/images/x86_64/"; then
+if wget --no-check-certificate "https://mirrors.cloud.tencent.com/opencloudos/${set_version}/images/x86_64/"; then
   ls -alh index.html
   for QCOW2 in $(grep -oE 'href="([^"]+\.qcow2)"' index.html | cut -d'"' -f2); do
     rm -f qcow2.raw rootfs.img
-    export QCOW2_URL="https://mirrors.opencloudos.tech/opencloudos/${set_version}/images/x86_64/${QCOW2}"
+    export QCOW2_URL="https://mirrors.cloud.tencent.com/opencloudos/${set_version}/images/x86_64/${QCOW2}"
     process_qcow2 "$QCOW2" "${QCOW2_URL}"
   done
 fi
 
 rm -f index.html qcow2.raw rootfs.img *.qcow2
-if wget --no-check-certificate "https://mirrors.opencloudos.tech/opencloudos/${set_version}/images/aarch64/"; then
+if wget --no-check-certificate "https://mirrors.cloud.tencent.com/opencloudos/${set_version}/images/aarch64/"; then
   ls -alh index.html
   for QCOW2 in $(grep -oE 'href="([^"]+\.qcow2)"' index.html | cut -d'"' -f2); do
     rm -f qcow2.raw rootfs.img
-    export QCOW2_URL="https://mirrors.opencloudos.tech/opencloudos/${set_version}/images/aarch64/${QCOW2}"
+    export QCOW2_URL="https://mirrors.cloud.tencent.com/opencloudos/${set_version}/images/aarch64/${QCOW2}"
     process_qcow2 "$QCOW2" "${QCOW2_URL}"
   done
 fi
 
 rm -f index.html qcow2.raw rootfs.img *.qcow2
-if wget --no-check-certificate "https://mirrors.opencloudos.tech/opencloudos/${set_version}/images/qcow2/x86_64/"; then
+if wget --no-check-certificate "https://mirrors.cloud.tencent.com/opencloudos/${set_version}/images/qcow2/x86_64/"; then
   ls -alh index.html
   for QCOW2 in $(grep -oE 'href="([^"]+\.qcow2)"' index.html | cut -d'"' -f2); do
     rm -f qcow2.raw rootfs.img
-    export QCOW2_URL="https://mirrors.opencloudos.tech/opencloudos/${set_version}/images/qcow2/x86_64/${QCOW2}"
+    export QCOW2_URL="https://mirrors.cloud.tencent.com/opencloudos/${set_version}/images/qcow2/x86_64/${QCOW2}"
     process_qcow2 "$QCOW2" "${QCOW2_URL}"
   done
 fi
 
 rm -f index.html qcow2.raw rootfs.img *.qcow2
-if wget --no-check-certificate "https://mirrors.opencloudos.tech/opencloudos/${set_version}/images/qcow2/aarch64/"; then
+if wget --no-check-certificate "https://mirrors.cloud.tencent.com/opencloudos/${set_version}/images/qcow2/aarch64/"; then
   ls -alh index.html
   for QCOW2 in $(grep -oE 'href="([^"]+\.qcow2)"' index.html | cut -d'"' -f2); do
     rm -f qcow2.raw rootfs.img
-    export QCOW2_URL="https://mirrors.opencloudos.tech/opencloudos/${set_version}/images/qcow2/aarch64/${QCOW2}"
+    export QCOW2_URL="https://mirrors.cloud.tencent.com/opencloudos/${set_version}/images/qcow2/aarch64/${QCOW2}"
     process_qcow2 "$QCOW2" "${QCOW2_URL}"
   done
 fi
