@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -euxo pipefail
+set -uxo pipefail
 
 WORKDIR=$(pwd)
 export DEBIAN_FRONTEND=noninteractive
@@ -93,14 +93,33 @@ fi
 echo "Extracting partition (start=$start, sectors=$sectors) → rootfs.img"
 dd if=qcow2.raw of=rootfs.img bs=512 skip="$start" count="$sectors" conv=sparse
 
-ls -alh ${WORKDIR}/debian/rootfs.img
-file ${WORKDIR}/debian/rootfs.img
-USED_BLOCKS=$(resize2fs -P rootfs.img 2>/dev/null | grep -o '[0-9]*' | tail -1)
-BLOCK_SIZE=$(tune2fs -l rootfs.img | grep "Block size" | awk '{print $3}')
-TARGET_BLOCKS=$(echo "$USED_BLOCKS * 1.3 / 1" | bc)
-e2fsck -f -y rootfs.img
-resize2fs rootfs.img ${TARGET_BLOCKS}
-ls -alh ${WORKDIR}/debian/rootfs.img
+# resize filesystem
+ls -alh rootfs.img
+file rootfs.img
+if file rootfs.img | grep -qi "ext[234] filesystem"; then
+  USED_BLOCKS=$(resize2fs -P rootfs.img 2>/dev/null | grep -o '[0-9]*' | tail -1)
+  BLOCK_SIZE=$(tune2fs -l rootfs.img | grep "Block size" | awk '{print $3}')
+  TARGET_BLOCKS=$(echo "$USED_BLOCKS * 1.3 / 1" | bc)
+  if [ -z "$USED_BLOCKS" ] || [ -z "$BLOCK_SIZE" ] || [ -z "$TARGET_BLOCKS" ]; then
+    echo "not available for resize2fs"
+  else
+    e2fsck -f -y rootfs.img
+    resize2fs rootfs.img ${TARGET_BLOCKS}
+  fi
+elif file rootfs.img | grep -qi "xfs filesystem"; then
+  echo "skip xfs shrink"
+elif file rootfs.img | grep -qi "btrfs filesystem"; then
+  echo "skip btrfs shrink"
+else
+  echo "rootfs.img is not ext[234]/xfs/btrfs filesystem!"
+  exit 1
+fi
+ls -alh rootfs.img
+if find rootfs.img -type f -size +8G | grep -q .; then
+  echo "rootfs.img is too bigger! >8G"
+  exit 1
+fi
+
 rar a ${WORKDIR}/release/${build_tag}.rar rootfs.img
 ls -alh ${WORKDIR}/release/${build_tag}.rar
 md5sum ${WORKDIR}/release/${build_tag}.rar

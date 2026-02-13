@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -euxo pipefail
+set -uxo pipefail
 
 WORKDIR=$(pwd)
 export build_tag="${set_vendor}_${set_version}_arm64"
@@ -95,16 +95,32 @@ read start sectors < <(fdisk -l "$img" | awk -v img="$img" '
 echo "Extracting partition (start=$start, sectors=$sectors) → rootfs.img"
 dd if="$img" of=rootfs.img bs=512 skip="$start" count="$sectors" conv=sparse
 
-ls -alh ${WORKDIR}/fnos/rootfs.img
-file ${WORKDIR}/fnos/rootfs.img
-
-USED_BLOCKS=$(resize2fs -P rootfs.img 2>/dev/null | grep -o '[0-9]*' | tail -1)
-BLOCK_SIZE=$(tune2fs -l rootfs.img | grep "Block size" | awk '{print $3}')
-TARGET_BLOCKS=$(echo "$USED_BLOCKS * 1.3 / 1" | bc)
-e2fsck -f -y rootfs.img
-resize2fs rootfs.img ${TARGET_BLOCKS}
-
-ls -alh ${WORKDIR}/fnos/rootfs.img
+# resize filesystem
+ls -alh rootfs.img
+file rootfs.img
+if file rootfs.img | grep -qi "ext[234] filesystem"; then
+  USED_BLOCKS=$(resize2fs -P rootfs.img 2>/dev/null | grep -o '[0-9]*' | tail -1)
+  BLOCK_SIZE=$(tune2fs -l rootfs.img | grep "Block size" | awk '{print $3}')
+  TARGET_BLOCKS=$(echo "$USED_BLOCKS * 1.3 / 1" | bc)
+  if [ -z "$USED_BLOCKS" ] || [ -z "$BLOCK_SIZE" ] || [ -z "$TARGET_BLOCKS" ]; then
+    echo "not available for resize2fs"
+  else
+    e2fsck -f -y rootfs.img
+    resize2fs rootfs.img ${TARGET_BLOCKS}
+  fi
+elif file rootfs.img | grep -qi "xfs filesystem"; then
+  echo "skip xfs shrink"
+elif file rootfs.img | grep -qi "btrfs filesystem"; then
+  echo "skip btrfs shrink"
+else
+  echo "rootfs.img is not ext[234]/xfs/btrfs filesystem!"
+  exit 1
+fi
+ls -alh rootfs.img
+if find rootfs.img -type f -size +8G | grep -q .; then
+  echo "rootfs.img is too bigger! >8G"
+  exit 1
+fi
 
 # push ${set_vendor}_${set_version}.tar to release
 rar a ${WORKDIR}/release/${build_tag}.rar rootfs.img
