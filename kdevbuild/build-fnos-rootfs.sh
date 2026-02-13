@@ -3,7 +3,7 @@
 set -euxo pipefail
 
 WORKDIR=$(pwd)
-export build_tag="${set_vendor}_${set_version}"
+export build_tag="${set_vendor}_${set_version}_arm64"
 export DEBIAN_FRONTEND=noninteractive
 
 #==========================================================================#
@@ -68,12 +68,12 @@ if [ -z "${TARGET_URL}" ]; then
 fi
 
 aria2c --check-certificate=false \
-       --max-connection-per-server=16 \
-       --split=16 \
-       --human-readable=true \
-       --summary-interval=5 \
-       -o ${GZ_FILE} \
-       "${TARGET_URL}"
+  --max-connection-per-server=16 \
+  --split=16 \
+  --human-readable=true \
+  --summary-interval=5 \
+  -o ${GZ_FILE} \
+  "${TARGET_URL}"
 
 ls -alh
 gunzip -kdf "${GZ_FILE}"

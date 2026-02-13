@@ -3,7 +3,7 @@
 set -euxo pipefail
 
 WORKDIR=$(pwd)
-export build_tag="armbian_${set_release}_${set_desktop}"
+export build_tag="armbian_${set_release}_${set_desktop}_aarch64"
 export DEBIAN_FRONTEND=noninteractive
 
 #==========================================================================#
