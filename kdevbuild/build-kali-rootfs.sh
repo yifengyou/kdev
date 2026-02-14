@@ -9,8 +9,8 @@ export DEBIAN_FRONTEND=noninteractive
 #                        init build env                                    #
 #==========================================================================#
 apt-get update
-apt-get install -y ca-certificates
-apt-get install -y --no-install-recommends \
+apt-get install -qq -y ca-certificates
+apt-get install -qq -y --no-install-recommends \
   acl aptly aria2 axel bc binfmt-support binutils-aarch64-linux-gnu bison \
   bsdextrautils btrfs-progs build-essential busybox ca-certificates ccache \
   clang coreutils cpio crossbuild-essential-arm64 cryptsetup curl \
@@ -20,18 +20,17 @@ apt-get install -y --no-install-recommends \
   gdisk git gnupg gzip htop imagemagick jq kmod lib32ncurses-dev \
   lib32stdc++6 libbison-dev libc6-dev-armhf-cross libc6-i386 libcrypto++-dev \
   libelf-dev libfdt-dev libfile-fcntllock-perl libfl-dev libfuse-dev \
-  libgcc-12-dev-arm64-cross libgmp3-dev liblz4-tool libmpc-dev libncurses-dev \
-  libncurses5 libncurses5-dev libncursesw5-dev libpython2.7-dev \
+  libgcc-12-dev-arm64-cross libgmp3-dev liblz4-tool libmpc-dev  \
   libpython3-dev libssl-dev libusb-1.0-0-dev linux-base lld llvm locales \
   lsb-release lz4 lzma lzop make mtools ncurses-base ncurses-term \
   nfs-kernel-server ntpdate openssl p7zip p7zip-full parallel parted patch \
-  patchutils pbzip2 pigz pixz pkg-config pv python2 python2-dev python3 \
-  python3-dev python3-distutils python3-pip python3-setuptools \
+  patchutils pbzip2 pigz pixz pkg-config pv python3 \
+  python3-dev python3-pip python3-setuptools \
   python-is-python3 qemu-user-static rar rdfind rename rsync sed \
   squashfs-tools swig tar tree u-boot-tools udev unzip util-linux uuid \
   uuid-dev uuid-runtime vim wget whiptail xfsprogs xsltproc xxd xz-utils \
   zip zlib1g-dev zstd binwalk ripgrep sudo libguestfs-tools
-localedef -i zh_CN -f UTF-8 zh_CN.UTF-8 || true
+
 mkdir -p ${WORKDIR}/release
 
 #==========================================================================#
@@ -86,31 +85,48 @@ process_qcow2() {
   dd if=disk.raw of=rootfs.img bs=512 skip="$start" count="$sectors" conv=sparse
 
   # resize filesystem
-  ls -alh rootfs.img
-  file rootfs.img
-  if file rootfs.img | grep -qi "ext[234] filesystem"; then
-    USED_BLOCKS=$(resize2fs -P rootfs.img 2>/dev/null | grep -o '[0-9]*' | tail -1)
-    BLOCK_SIZE=$(tune2fs -l rootfs.img | grep "Block size" | awk '{print $3}')
-    TARGET_BLOCKS=$(echo "$USED_BLOCKS * 1.3 / 1" | bc)
-    if [ -z "$USED_BLOCKS" ] || [ -z "$BLOCK_SIZE" ] || [ -z "$TARGET_BLOCKS" ]; then
-      echo "not available for resize2fs"
-    else
-      e2fsck -f -y rootfs.img
-      resize2fs rootfs.img ${TARGET_BLOCKS}
-    fi
-  elif file rootfs.img | grep -qi "xfs filesystem"; then
-    echo "skip xfs shrink"
-  elif file rootfs.img | grep -qi "btrfs filesystem"; then
-    echo "skip btrfs shrink"
-  else
-    echo "rootfs.img is not ext[234]/xfs/btrfs filesystem!"
-    exit 1
-  fi
-  ls -alh rootfs.img
-  if find rootfs.img -type f -size +8G | grep -q .; then
-    echo "rootfs.img is too bigger! >8G"
-    exit 1
-  fi
+  while [ -f rootfs.img ]; do
+    ls -alh rootfs.img
+    file rootfs.img
+
+    # Skip if file is too small
+    [ $(stat -c%s rootfs.img) -lt $((4 * 1024 ** 3)) ] && break
+
+    case $(file rootfs.img) in
+    *ext[234]*filesystem*)
+      # Get filesystem parameters
+      BLOCK_SIZE=$(tune2fs -l rootfs.img | awk -F': *' '/Block size/{print $2}')
+      USED_BLOCKS=$(resize2fs -P rootfs.img 2>/dev/null | grep -o '[0-9]*$')
+
+      # Validate parameters
+      [ -z "$BLOCK_SIZE" ] || [ -z "$USED_BLOCKS" ] && {
+        resize2fs -P rootfs.img
+        echo "Error: Cannot determine filesystem parameters" >&2
+        exit 1
+      }
+
+      # Resize with 30% buffer
+      e2fsck -f -y rootfs.img &&
+        resize2fs rootfs.img $(echo "$USED_BLOCKS * 1.3 / 1" | bc) || exit 1
+      ;;
+
+    *xfs*filesystem* | *btrfs*filesystem*)
+      echo "Skip $(file rootfs.img | grep -oiE 'xfs|btrfs') shrink" >&2
+      ;;
+
+    *)
+      echo "Error: Unsupported filesystem type" >&2
+      exit 1
+      ;;
+    esac
+
+    # Size validation
+    ls -alh rootfs.img
+    [ $(stat -c%s rootfs.img) -gt $((8 * 1024 ** 3)) ] && {
+      echo "Error: rootfs.img exceeds 8GB" >&2
+      exit 1
+    }
+  done
 
   rar a ${WORKDIR}/release/${QCOW2%.tar.xz}.rar rootfs.img
   ls -alh ${WORKDIR}/release/${QCOW2%.tar.xz}.rar

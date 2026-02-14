@@ -36,26 +36,21 @@ localedef -i zh_CN -f UTF-8 zh_CN.UTF-8 || true
 mkdir -p ${WORKDIR}/release
 
 #==========================================================================#
-# Task: Build Root Filesystem (rootfs) using FNOS Build System             #
+# Task: Build Root Filesystem (rootfs)                                     #
 #==========================================================================#
 if [ -z "${set_vendor}" ] || [ -z "${set_version}" ]; then
   echo "skip rootfs build"
   echo "Build completed successfully!"
   exit 0
 fi
-mkdir -p ${WORKDIR}/centos
-cd ${WORKDIR}/centos
+mkdir -p ${WORKDIR}/openwrt
+cd ${WORKDIR}/openwrt
 
-# https://cloud.centos.org/centos/10-stream/x86_64/images/CentOS-Stream-GenericCloud-10-latest.x86_64.qcow2
-# https://cloud.centos.org/centos/9-stream/x86_64/images/CentOS-Stream-GenericCloud-9-latest.x86_64.qcow2
-# https://cloud.centos.org/centos/8-stream/x86_64/images/CentOS-Stream-GenericCloud-8-latest.x86_64.qcow2
+# https://downloads.openwrt.org/releases/24.10.4/targets/rockchip/armv8/openwrt-24.10.4-rockchip-armv8-friendlyarm_nanopc-t6-ext4-sysupgrade.img.gz
+# https://downloads.openwrt.org/releases/24.10.5/targets/rockchip/armv8/openwrt-24.10.5-rockchip-armv8-friendlyarm_nanopc-t6-ext4-sysupgrade.img.gz
 
-# https://cloud.centos.org/centos/10-stream/aarch64/images/CentOS-Stream-GenericCloud-10-latest.aarch64.qcow2
-# https://cloud.centos.org/centos/9-stream/aarch64/images/CentOS-Stream-GenericCloud-9-latest.aarch64.qcow2
-# https://cloud.centos.org/centos/8-stream/aarch64/images/CentOS-Stream-GenericCloud-8-latest.aarch64.qcow2
-
-export QCOW2="CentOS-Stream-GenericCloud-${set_version}-latest.${set_arch}.qcow2"
-export QCOW2_URL="https://cloud.centos.org/centos/${set_version}-stream/${set_arch}/images/${QCOW2}"
+export QCOW2="openwrt-${set_version}-rockchip-armv8-friendlyarm_nanopc-t6-ext4-sysupgrade.img.gz"
+export QCOW2_URL="https://downloads.openwrt.org/releases/${set_version}/targets/rockchip/armv8/${QCOW2}"
 export build_tag="${set_vendor}_${set_version}_${set_arch}"
 
 aria2c --check-certificate=false \
@@ -66,12 +61,12 @@ aria2c --check-certificate=false \
   -o ${QCOW2} \
   "${QCOW2_URL}"
 
-qemu-img convert -f qcow2 -O raw ${QCOW2} qcow2.raw
-ls -alh qcow2.raw
-fdisk -l qcow2.raw
+gunzip ${QCOW2}
+ls -alh ${QCOW2%.gz}
+mv ${QCOW2%.gz} disk.img
 
 read start end < <(
-  sgdisk -p qcow2.raw | awk '
+  sgdisk -p disk.img | awk '
     /^ *[0-9]+/ {
       s = $2; e = $3;
       size = e - s + 1;
@@ -92,39 +87,50 @@ if [ -z "$sectors" ]; then
 fi
 
 echo "Extracting partition (start=$start, sectors=$sectors) → rootfs.img"
-dd if=qcow2.raw of=rootfs.img bs=512 skip="$start" count="$sectors" conv=sparse
+dd if=disk.img of=rootfs.img bs=512 skip="$start" count="$sectors" conv=sparse
 
 # resize filesystem
-ls -alh rootfs.img
-file rootfs.img
-if file rootfs.img | grep -qi "ext[234] filesystem"; then
-  USED_BLOCKS=$(resize2fs -P rootfs.img 2>/dev/null | grep -o '[0-9]*' | tail -1)
-  if [ -z "$USED_BLOCKS" ]; then
-    resize2fs -P rootfs.img
-    echo "not available for resize2fs"
+while [ -f rootfs.img ]; do
+  ls -alh rootfs.img
+  file rootfs.img
+
+  # Skip if file is too small
+  [ $(stat -c%s rootfs.img) -lt $((4 * 1024 ** 3)) ] && break
+
+  case $(file rootfs.img) in
+  *ext[234]*filesystem*)
+    # Get filesystem parameters
+    BLOCK_SIZE=$(tune2fs -l rootfs.img | awk -F': *' '/Block size/{print $2}')
+    USED_BLOCKS=$(resize2fs -P rootfs.img 2>/dev/null | grep -o '[0-9]*$')
+
+    # Validate parameters
+    [ -z "$BLOCK_SIZE" ] || [ -z "$USED_BLOCKS" ] && {
+      echo "Error: Cannot determine filesystem parameters" >&2
+      exit 1
+    }
+
+    # Resize with 30% buffer
+    e2fsck -f -y rootfs.img &&
+      resize2fs rootfs.img $(echo "$USED_BLOCKS * 1.3 / 1" | bc) || exit 1
+    ;;
+
+  *xfs*filesystem* | *btrfs*filesystem*)
+    echo "Skip $(file rootfs.img | grep -oiE 'xfs|btrfs') shrink" >&2
+    ;;
+
+  *)
+    echo "Error: Unsupported filesystem type" >&2
     exit 1
-  fi
-  BLOCK_SIZE=$(tune2fs -l rootfs.img | grep "Block size" | awk '{print $3}')
-  TARGET_BLOCKS=$(echo "$USED_BLOCKS * 1.3 / 1" | bc)
-  if [ -z "$USED_BLOCKS" ] || [ -z "$BLOCK_SIZE" ] || [ -z "$TARGET_BLOCKS" ]; then
-    echo "not available for resize2fs"
-  else
-    e2fsck -f -y rootfs.img
-    resize2fs rootfs.img ${TARGET_BLOCKS}
-  fi
-elif file rootfs.img | grep -qi "xfs filesystem"; then
-  echo "skip xfs shrink"
-elif file rootfs.img | grep -qi "btrfs filesystem"; then
-  echo "skip btrfs shrink"
-else
-  echo "rootfs.img is not ext[234]/xfs/btrfs filesystem!"
-  exit 1
-fi
-ls -alh rootfs.img
-if find rootfs.img -type f -size +8G | grep -q .; then
-  echo "rootfs.img is too bigger! >8G"
-  exit 1
-fi
+    ;;
+  esac
+
+  # Size validation
+  ls -alh rootfs.img
+  [ $(stat -c%s rootfs.img) -gt $((8 * 1024 ** 3)) ] && {
+    echo "Error: rootfs.img exceeds 8GB" >&2
+    exit 1
+  }
+done
 
 rar a ${WORKDIR}/release/${build_tag}.rar rootfs.img
 ls -alh ${WORKDIR}/release/${build_tag}.rar

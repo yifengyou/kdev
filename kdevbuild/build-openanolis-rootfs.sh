@@ -9,8 +9,8 @@ export DEBIAN_FRONTEND=noninteractive
 #                        init build env                                    #
 #==========================================================================#
 apt-get update
-apt-get install -y ca-certificates
-apt-get install -y --no-install-recommends \
+apt-get install -qq -y ca-certificates
+apt-get install -qq -y --no-install-recommends \
   acl aptly aria2 axel bc binfmt-support binutils-aarch64-linux-gnu bison \
   bsdextrautils btrfs-progs build-essential busybox ca-certificates ccache \
   clang coreutils cpio crossbuild-essential-arm64 cryptsetup curl \
@@ -90,6 +90,11 @@ process_qcow2() {
   file rootfs.img
   if file rootfs.img | grep -qi "ext[234] filesystem"; then
     USED_BLOCKS=$(resize2fs -P rootfs.img 2>/dev/null | grep -o '[0-9]*' | tail -1)
+    if [ -z "$USED_BLOCKS" ]; then
+      resize2fs -P rootfs.img
+      echo "not available for resize2fs"
+      exit 1
+    fi
     BLOCK_SIZE=$(tune2fs -l rootfs.img | grep "Block size" | awk '{print $3}')
     TARGET_BLOCKS=$(echo "$USED_BLOCKS * 1.3 / 1" | bc)
     if [ -z "$USED_BLOCKS" ] || [ -z "$BLOCK_SIZE" ] || [ -z "$TARGET_BLOCKS" ]; then

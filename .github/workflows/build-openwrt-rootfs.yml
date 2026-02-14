@@ -1,4 +1,4 @@
-name: Build kali rootfs
+name: Build openwrt rootfs
 
 on:
   repository_dispatch:
@@ -15,12 +15,21 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - set_vendor: kali
-            set_version: current
-          - set_vendor: kali
-            set_version: kali-2025.4
-          - set_vendor: kali
-            set_version: kali-2025.3
+          - set_vendor: openwrt
+            set_version: 24.10.5
+            set_arch: aarch
+          - set_vendor: openwrt
+            set_version: 24.10.4
+            set_arch: aarch
+          - set_vendor: openwrt
+            set_version: 24.10.3
+            set_arch: aarch
+          - set_vendor: openwrt
+            set_version: 24.10.2
+            set_arch: aarch
+          - set_vendor: openwrt
+            set_version: 24.10.1
+            set_arch: aarch
 
     steps:
       - name: Checkout
@@ -70,10 +79,11 @@ jobs:
             -w /workspace \
             -e set_vendor=${{ matrix.set_vendor }} \
             -e set_version=${{ matrix.set_version }} \
-            ubuntu:24.04 \
+            -e set_arch=${{ matrix.set_arch }} \
+            ubuntu:22.04 \
             bash -c "
-              chmod +x /workspace/kdevbuild/build-kali-rootfs.sh ;
-              /workspace/kdevbuild/build-kali-rootfs.sh
+              chmod +x /workspace/kdevbuild/build-openwrt-rootfs.sh ;
+              /workspace/kdevbuild/build-openwrt-rootfs.sh
             "
 
       - name: List build output
@@ -84,14 +94,14 @@ jobs:
       - name: Upload Image to Release
         uses: ncipollo/release-action@main
         with:
-          tag: kali-rootfs
+          tag: openwrt-rootfs
           artifacts: /builder/release/*
           allowUpdates: true
           removeArtifacts: false
           replacesArtifacts: true
           token: ${{ secrets.GITHUB_TOKEN }}
-          body: | # kali rootfs
+          body: | # openwrt rootfs
 
-            1. 镜像命名规则: kali_$VERSION_$ARCH.rar 格式命名
-            2. 母盘镜像获取方式： https://kali.download/cloud-images/
+            1. 镜像命名规则: openwrt_$VERSION_$ARCH.rar 格式命名
+            2. 母盘镜像获取方式： https://openwrt.org/zh-CN/download
 
