@@ -56,7 +56,7 @@ jobs:
           sudo chown -R runner.runner /builder
           df -Th
 
-      - name: Run build in Ubuntu 22.04 container
+      - name: Run build in Ubuntu 24.04 container
         working-directory: /builder
         run: |
           pwd
