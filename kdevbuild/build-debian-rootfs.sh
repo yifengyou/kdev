@@ -25,7 +25,7 @@ apt-get install -qq -y --no-install-recommends \
   lsb-release lz4 lzma lzop make mtools ncurses-base ncurses-term \
   nfs-kernel-server ntpdate openssl p7zip p7zip-full parallel parted patch \
   patchutils pbzip2 pigz pixz pkg-config pv python3 \
-  python3-dev python3-pip python3-setuptools \
+  python3-dev python3-pip python3-setuptools lvm2 \
   python-is-python3 qemu-user-static rar rdfind rename rsync sed \
   squashfs-tools swig tar tree u-boot-tools udev unzip util-linux uuid \
   uuid-dev uuid-runtime vim wget whiptail xfsprogs xsltproc xxd xz-utils \
@@ -111,7 +111,8 @@ if file rootfs.img | grep -qi "ext[234] filesystem"; then
     resize2fs rootfs.img ${TARGET_BLOCKS}
   fi
 elif file rootfs.img | grep -qi "xfs filesystem"; then
-  echo "skip xfs shrink"
+
+
 elif file rootfs.img | grep -qi "btrfs filesystem"; then
   echo "skip btrfs shrink"
 else

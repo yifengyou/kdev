@@ -58,7 +58,7 @@ jobs:
           cat /proc/cpuinfo
           cat /proc/meminfo
 
-      - name: Run build in Ubuntu 22.04 container
+      - name: Run build in Ubuntu 24.04 container
         working-directory: ${{ github.workspace }}
         run: |
           pwd
