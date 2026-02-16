@@ -85,7 +85,7 @@ jobs:
             -e set_vendor=${{ matrix.set_vendor }} \
             -e set_version=${{ matrix.set_version }} \
             -e set_arch=${{ matrix.set_arch }} \
-            ubuntu:22.04 \
+            ubuntu:24.04 \
             bash -c "
               chmod +x /workspace/kdevbuild/build-rockylinux-rootfs.sh ;
               /workspace/kdevbuild/build-rockylinux-rootfs.sh

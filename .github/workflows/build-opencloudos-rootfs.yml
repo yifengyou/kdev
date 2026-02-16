@@ -80,7 +80,7 @@ jobs:
             -w /workspace \
             -e set_vendor=${{ matrix.set_vendor }} \
             -e set_version=${{ matrix.set_version }} \
-            ubuntu:22.04 \
+            ubuntu:24.04 \
             bash -c "
               chmod +x /workspace/kdevbuild/build-opencloudos-rootfs.sh ;
               /workspace/kdevbuild/build-opencloudos-rootfs.sh

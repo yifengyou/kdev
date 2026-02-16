@@ -20,18 +20,17 @@ apt-get install -qq -y --no-install-recommends \
   gdisk git gnupg gzip htop imagemagick jq kmod lib32ncurses-dev \
   lib32stdc++6 libbison-dev libc6-dev-armhf-cross libc6-i386 libcrypto++-dev \
   libelf-dev libfdt-dev libfile-fcntllock-perl libfl-dev libfuse-dev \
-  libgcc-12-dev-arm64-cross libgmp3-dev liblz4-tool libmpc-dev libncurses-dev \
-  libncurses5 libncurses5-dev libncursesw5-dev libpython2.7-dev \
+  libgcc-12-dev-arm64-cross libgmp3-dev liblz4-tool libmpc-dev \
   libpython3-dev libssl-dev libusb-1.0-0-dev linux-base lld llvm locales \
   lsb-release lz4 lzma lzop make mtools ncurses-base ncurses-term \
   nfs-kernel-server ntpdate openssl p7zip p7zip-full parallel parted patch \
-  patchutils pbzip2 pigz pixz pkg-config pv python2 python2-dev python3 \
-  python3-dev python3-distutils python3-pip python3-setuptools \
+  patchutils pbzip2 pigz pixz pkg-config pv python3 \
+  python3-dev python3-pip python3-setuptools lvm2 \
   python-is-python3 qemu-user-static rar rdfind rename rsync sed \
   squashfs-tools swig tar tree u-boot-tools udev unzip util-linux uuid \
   uuid-dev uuid-runtime vim wget whiptail xfsprogs xsltproc xxd xz-utils \
   zip zlib1g-dev zstd binwalk ripgrep sudo libguestfs-tools
-localedef -i zh_CN -f UTF-8 zh_CN.UTF-8 || true
+
 mkdir -p ${WORKDIR}/release
 
 #==========================================================================#
@@ -107,6 +106,28 @@ process_qcow2() {
     echo "skip xfs shrink"
   elif file rootfs.img | grep -qi "btrfs filesystem"; then
     echo "skip btrfs shrink"
+  elif file rootfs.img | grep -qi "Linux Logical Volume Manager"; then
+    mv rootfs.img lvm.img
+    losetup -f --show lvm.img
+    vgchange -ay
+    sync
+    sleep 3
+    mkdir -p /mnt
+    ls -alh /dev/mapper
+    TARGET_MAPPER=$(ls /dev/mapper/ | grep -Ei "system|root")
+    mount /dev/mapper/${TARGET_MAPPER} /mnt
+    SIZE_MB=$(du -sm /mnt | cut -f1)
+    IMG_SIZE=$((SIZE_MB * 13 / 10 + 100))
+    dd if=/dev/zero of=rootfs.img bs=1M count=$IMG_SIZE
+    mkfs.ext4 -F rootfs.img
+    mkdir -p /ext4
+    mount rootfs.img /ext4
+    cp -a /mnt/* /ext4/
+    sync
+    umount /mnt
+    umount /ext4
+    ls -alh rootfs.img
+    file rootfs.img
   else
     echo "rootfs.img is not ext[234]/xfs/btrfs filesystem!"
     exit 1
