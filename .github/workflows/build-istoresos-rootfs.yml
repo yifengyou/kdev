@@ -1,0 +1,115 @@
+name: Build istoreos rootfs
+
+on:
+  repository_dispatch:
+  workflow_dispatch:
+    inputs:
+
+env:
+  TZ: America/New_York
+
+jobs:
+  kdevbuild:
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - set_vendor: istoreos
+            set_version: 24.10.5
+            set_arch: aarch64
+          - set_vendor: istoreos
+            set_version: 24.10.4
+            set_arch: aarch64
+          - set_vendor: istoreos
+            set_version: 24.10.3
+            set_arch: aarch64
+          - set_vendor: istoreos
+            set_version: 24.10.2
+            set_arch: aarch64
+          - set_vendor: istoreos
+            set_version: 24.10.1
+            set_arch: aarch64
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Show environment
+        id: basic_info
+        run: |
+          nproc
+          uname -a
+          cat /etc/*release
+          free -h
+          mount
+          df -h
+          cat /proc/cpuinfo
+          cat /proc/meminfo
+
+      - name: Create simulated physical disk
+        run: |
+          mnt_size=$(expr $(df -h /mnt | tail -1 | awk '{print $4}' | sed 's/[[:alpha:]]//g' | sed 's/\..*//') - 1)
+          root_size=$(expr $(df -h / | tail -1 | awk '{print $4}' | sed 's/[[:alpha:]]//g' | sed 's/\..*//') - 4)
+          sudo truncate -s "${mnt_size}"G /mnt/mnt.img
+          sudo truncate -s "${root_size}"G /root.img
+          sudo losetup /dev/loop6 /mnt/mnt.img
+          sudo losetup /dev/loop7 /root.img
+          sudo pvcreate /dev/loop6
+          sudo pvcreate /dev/loop7
+          sudo vgcreate github /dev/loop6 /dev/loop7
+          sudo lvcreate -n runner -l 100%FREE github
+          sudo mkfs.xfs /dev/github/runner
+          sudo mkdir -p /builder
+          sudo mount /dev/github/runner /builder
+          sudo chown -R runner.runner /builder
+          df -Th
+
+      - name: Run build in Ubuntu 24.04 container
+        working-directory: /builder
+        run: |
+          pwd
+          sudo /bin/cp -a ${{ github.workspace }}/* .
+          ls -alh
+          sudo docker run --rm \
+            --privileged \
+            --cap-add SYS_ADMIN \
+            -v /dev:/dev \
+            -v /builder:/workspace \
+            -w /workspace \
+            -e set_vendor=${{ matrix.set_vendor }} \
+            -e set_version=${{ matrix.set_version }} \
+            -e set_arch=${{ matrix.set_arch }} \
+            ubuntu:24.04 \
+            bash -c "
+              chmod +x /workspace/kdevbuild/build-istoreos-rootfs.sh ;
+              /workspace/kdevbuild/build-istoreos-rootfs.sh
+            "
+
+      - name: List build output
+        run: |
+          ls -alh  /builder/release/*
+          md5sum /builder/release/*
+
+      - name: Upload Image to Release
+        uses: ncipollo/release-action@main
+        with:
+          tag: istoreos-rootfs
+          artifacts: /builder/release/*
+          allowUpdates: true
+          removeArtifacts: false
+          replacesArtifacts: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+          body: | # istoreos rootfs
+
+            ## 镜像信息
+
+            1. 母盘镜像来源：https://istoreos.org/zh-CN/download
+            2. 支持架构：x86_64 / aarch64
+
+            ## 免责声明
+
+            - **按原样提供**：本镜像不作任何明示或暗示保证，使用风险由用户自行承担
+            - **无官方关联**：istoreos 是开源社区项目，本镜像与 istoreos 团队无官方关联
+            - **生命周期**：稳定版约1-2年发布，滚动更新，嵌入式设备请确认硬件兼容性后再刷写
+            - **安全提示**：刷写固件有风险，请备份原固件，修改默认密码，配置防火墙，路由器设备请谨慎开放端口
