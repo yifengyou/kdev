@@ -102,7 +102,15 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           body: | # opencloudos rootfs
 
-            1. 镜像命名规则: opencloudos_$VERSION_$ARCH.rar 格式命名
-            2. 母盘镜像获取方式： https://mirrors.cloud.tencent.com/opencloudos/
-            3. 所有资源均来自官方发布，严格遵守法律法规
+            ## 镜像信息
+
+            1. 母盘镜像来源：https://mirrors.cloud.tencent.com/opencloudos/
+            2. 支持架构：x86_64 / aarch64
+
+            ## 免责声明
+
+            - **按原样提供**：本镜像不作任何明示或暗示保证，使用风险由用户自行承担
+            - **无官方关联**：OpenCloudOS 是开放原子开源基金会项目，本镜像与 OpenCloudOS 社区无官方关联
+            - **生命周期**：CentOS 替代方案，提供长期支持版本，生产环境建议使用最新 LTS 版本
+            - **安全提示**：请定期更新补丁，修改默认密码，配置防火墙，企业级场景建议开启安全加固
 

@@ -95,6 +95,15 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           body: | # debian rootfs
 
-            1. 镜像命名规则: debian_$RELEASE_$VERSION_$ARCH.rar 格式命名
-            2. 母盘镜像获取方式： https://cdimage.debian.org/images/cloud/
+            ## 镜像信息
+
+            1. 母盘镜像来源：https://cdimage.debian.org/images/cloud/
+            2. 支持架构：x86_64 / aarch64
+
+            ## 免责声明
+
+            - **按原样提供**：本镜像不作任何明示或暗示保证，使用风险由用户自行承担
+            - **无官方关联**：Debian 是 Debian 项目的注册商标，本镜像与 Debian 项目无官方关联
+            - **生命周期**：稳定版约2年发布周期，每版本提供约5年支持，生产环境建议使用稳定版（Stable）
+            - **安全提示**：请定期更新补丁，修改默认密码，配置防火墙，启用安全更新源
 

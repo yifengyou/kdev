@@ -107,6 +107,14 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           body: | # rockylinux rootfs
 
-            1. 镜像命名规则: rockylinux_$VERSION_$ARCH.rar 格式命名
-            2. 母盘镜像获取方式： https://rockylinux.org/zh-CN/download
+            ## 镜像信息
 
+            1. 母盘镜像来源：https://rockylinux.org/zh-CN/download
+            2. 支持架构：x86_64 / aarch64
+
+            ## 免责声明
+
+            - **按原样提供**：本镜像不作任何明示或暗示保证，使用风险由用户自行承担
+            - **无官方关联**：Rocky Linux 是 Rocky Enterprise Software Foundation 项目，本镜像与 RESF 无官方关联
+            - **生命周期**：RHEL 兼容，每主版本提供10年支持，CentOS 最佳替代方案，生产环境推荐使用
+            - **安全提示**：请定期更新补丁，修改默认密码，配置防火墙，企业级场景建议开启 SELinux

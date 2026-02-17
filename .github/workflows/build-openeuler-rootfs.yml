@@ -134,9 +134,14 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           body: | # openeuler rootfs
 
-            1. 镜像命名规则: openeuler_$VERSION_$ARCH.rar 格式命名
-            2. 母盘镜像获取方式：
-              - https://mirrors.ocf.berkeley.edu/openeuler/
-              - https://archives.openeuler.openatom.cn/
-            3. 所有资源均来自官方发布，严格遵守法律法规
+            ## 镜像信息
 
+            1. 母盘镜像来源：https://archives.openeuler.openatom.cn/
+            2. 支持架构：x86_64 / aarch64
+
+            ## 免责声明
+
+            - **按原样提供**：本镜像不作任何明示或暗示保证，使用风险由用户自行承担
+            - **无官方关联**：openEuler 是开放原子开源基金会项目，本镜像与 openEuler 社区无官方关联
+            - **生命周期**：提供 LTS 长期支持版本（4年）和创新版本（6个月），生产环境建议使用 LTS 版本
+            - **安全提示**：请定期更新补丁，修改默认密码，配置防火墙，关注官方安全公告和 CVE 修复

@@ -104,6 +104,14 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           body: | # ubuntu rootfs
 
-            1. 镜像命名规则: ubuntu_$RELEASE_$VERSION_$ARCH.rar 格式命名
-            2. 母盘镜像获取方式： https://cloud-images.ubuntu.com/daily/server/
+            ## 镜像信息
 
+            1. 母盘镜像来源：https://cloud-images.ubuntu.com/daily/server/
+            2. 支持架构：x86_64 / aarch64
+
+            ## 免责声明
+
+            - **按原样提供**：本镜像不作任何明示或暗示保证，使用风险由用户自行承担
+            - **无官方关联**：Ubuntu 是 Canonical Ltd. 的注册商标，本镜像与 Canonical 无官方关联
+            - **生命周期**：LTS 版本每2年发布，提供5年免费支持（可扩展至10年），生产环境建议使用 LTS 版本
+            - **安全提示**：请定期更新补丁，修改默认密码，配置防火墙，启用 Ubuntu Pro 获取扩展安全更新

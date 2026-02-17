@@ -114,7 +114,14 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           body: | # openanolis rootfs
 
-            1. 镜像命名规则: openanolis_$VERSION_$ARCH.rar 格式命名
-            2. 母盘镜像获取方式： https://mirrors.openanolis.cn/anolis/
-            3. 所有资源均来自官方发布，严格遵守法律法规
+            ## 镜像信息
 
+            1. 母盘镜像来源：https://mirrors.openanolis.cn/anolis/
+            2. 支持架构：x86_64 / aarch64
+
+            ## 免责声明
+
+            - **按原样提供**：本镜像不作任何明示或暗示保证，使用风险由用户自行承担
+            - **无官方关联**：龙蜥操作系统是开放原子开源基金会项目，本镜像与龙蜥社区无官方关联
+            - **生命周期**：CentOS 替代方案，提供长期支持版本
+            - **安全提示**：请定期更新补丁，修改默认密码，配置防火墙，关注官方安全公告

@@ -88,6 +88,15 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           body: | # centos rootfs
 
-            1. 镜像命名规则: centos_$VERSION_$ARCH.rar 格式命名
-            2. 母盘镜像获取方式： https://cloud.centos.org/centos/
+            ## 镜像信息
+
+            1. 母盘镜像来源：https://cloud.centos.org/centos/
+            2. 支持架构：x86_64 / aarch64
+
+            ## 免责声明
+
+            - **按原样提供**：本镜像不作任何明示或暗示保证，使用风险由用户自行承担
+            - **无官方关联**：CentOS 是 Red Hat, Inc. 的注册商标，本镜像与 Red Hat 无官方关联
+            - **生命周期**：CentOS 8 已于 2021-12-31 EOL，生产环境建议使用 CentOS Stream 或替代方案
+            - **安全提示**：请定期更新补丁，修改默认密码，配置防火墙
 

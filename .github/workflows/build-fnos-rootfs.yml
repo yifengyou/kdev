@@ -69,7 +69,14 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           body: | # fnos rootfs
 
-            1. 镜像命名规则: fnos_${VERSION}.rar 格式命名（默认架构为 aarch64）
-            2. 母盘镜像获取方式： https://www.fnnas.com/download-arm
-            3. **${VERSION}** fnos版本号
-              - 2026/02/10 - 1.1.19版本
+            ## 镜像信息
+
+            1. 母盘镜像来源：https://www.fnnas.com/download-arm
+            2. 支持架构：x86_64/aarch64
+
+            ## 免责声明
+
+            - **按原样提供**：本镜像不作任何明示或暗示保证，使用风险由用户自行承担
+            - **无官方关联**：飞牛fnOS 是独立商业项目，本镜像与飞牛团队无官方关联
+            - **生命周期**：基于 Debian 深度开发，版本迭代较快，生产环境建议关注官方安全公告
+            - **安全提示**：请定期更新补丁，修改默认密码，配置防火墙，NAS系统请特别注意网络隔离

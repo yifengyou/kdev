@@ -92,6 +92,14 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           body: | # kali rootfs
 
-            1. 镜像命名规则: kali_$VERSION_$ARCH.rar 格式命名
-            2. 母盘镜像获取方式： https://kali.download/cloud-images/
+            ## 镜像信息
 
+            1. 母盘镜像来源：https://kali.download/cloud-images/
+            2. 支持架构：x86_64 / aarch64
+
+            ## 免责声明
+
+            - **按原样提供**：本镜像不作任何明示或暗示保证，使用风险由用户自行承担
+            - **无官方关联**：Kali Linux 是 Offensive Security 的注册商标，本镜像与 Offensive Security 无官方关联
+            - **生命周期**：滚动更新模式，持续维护，预装渗透测试工具仅限合法安全测试使用
+            - **安全提示**：请仅在授权范围内使用，修改默认密码，配置防火墙，遵守当地法律法规

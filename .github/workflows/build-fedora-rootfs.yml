@@ -108,6 +108,14 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           body: | # fedora rootfs
 
-            1. 镜像命名规则: fedora_$VERSION_$ARCH.rar 格式命名
-            2. 母盘镜像获取方式： https://download.fedoraproject.org/pub/fedora/linux/releases/
+            ## 镜像信息
 
+            1. 母盘镜像来源： https://download.fedoraproject.org/pub/fedora/linux/releases/
+            2. 支持架构：x86_64 / aarch64
+
+            ## 免责声明
+
+            - **按原样提供**：本镜像不作任何明示或暗示保证，使用风险由用户自行承担
+            - **无官方关联**：Fedora 是 Red Hat, Inc. 的注册商标，本镜像与 Red Hat 无官方关联
+            - **生命周期**：每版本支持约13个月，生产环境建议使用最新稳定版或 Fedora LTS 替代方案
+            - **安全提示**：请定期更新补
