@@ -103,7 +103,22 @@ process_qcow2() {
       resize2fs rootfs.img ${TARGET_BLOCKS}
     fi
   elif file rootfs.img | grep -qi "xfs filesystem"; then
-    echo "skip xfs shrink"
+    mv rootfs.img xfs.img
+    mkdir -p /mnt
+    mount xfs.img /mnt
+    sync
+    SIZE_MB=$(du -sm /mnt | cut -f1)
+    IMG_SIZE=$((SIZE_MB * 13 / 10 + 100))
+    dd if=/dev/zero of=rootfs.img bs=1M count=$IMG_SIZE
+    mkfs.xfs rootfs.img
+    mkdir -p /xfs
+    mount rootfs.img /xfs
+    cp -a /mnt/* /xfs/
+    sync
+    umount /mnt
+    umount /xfs
+    ls -alh rootfs.img
+    file rootfs.img
   elif file rootfs.img | grep -qi "btrfs filesystem"; then
     echo "skip btrfs shrink"
   elif file rootfs.img | grep -qi "Linux Logical Volume Manager"; then
