@@ -17,19 +17,19 @@ jobs:
         include:
           - set_vendor: openwrt
             set_version: 24.10.5
-            set_arch: aarch
+            set_arch: aarch64
           - set_vendor: openwrt
             set_version: 24.10.4
-            set_arch: aarch
+            set_arch: aarch64
           - set_vendor: openwrt
             set_version: 24.10.3
-            set_arch: aarch
+            set_arch: aarch64
           - set_vendor: openwrt
             set_version: 24.10.2
-            set_arch: aarch
+            set_arch: aarch64
           - set_vendor: openwrt
             set_version: 24.10.1
-            set_arch: aarch
+            set_arch: aarch64
 
     steps:
       - name: Checkout
