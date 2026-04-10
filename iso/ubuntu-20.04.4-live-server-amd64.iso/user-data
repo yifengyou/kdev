@@ -34,6 +34,11 @@ autoinstall:
     install-server: true
   packages:
     - vim
+    - htop
+    - openssh-server
+    - curl
+    - wget
+    - git
   storage:
     swap:
       size: 0
