@@ -36,28 +36,40 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v5
 
-      - name: Install KVM/QEMU
+      - name: Create simulated physical disk
+        run: |
+          mnt_size=$(expr $(df -h /mnt | tail -1 | awk '{print $4}' | sed 's/[[:alpha:]]//g' | sed 's/\..*//') - 1)
+          root_size=$(expr $(df -h / | tail -1 | awk '{print $4}' | sed 's/[[:alpha:]]//g' | sed 's/\..*//') - 4)
+          sudo truncate -s "${mnt_size}"G /mnt/mnt.img
+          sudo truncate -s "${root_size}"G /root.img
+          sudo losetup /dev/loop6 /mnt/mnt.img
+          sudo losetup /dev/loop7 /root.img
+          sudo pvcreate /dev/loop6
+          sudo pvcreate /dev/loop7
+          sudo vgcreate github /dev/loop6 /dev/loop7
+          sudo lvcreate -n runner -l 100%FREE github
+          sudo mkfs.xfs /dev/github/runner
+          sudo mkdir -p /builder
+          sudo mount /dev/github/runner /builder
+          sudo chown -R runner.runner /builder
+          df -Th
+
+      - name: Install dependency
         run: |
           sudo apt update
-          sudo apt install -y qemu-kvm libvirt-daemon-system virtinst cpu-checker rar aria2
+          sudo apt install -qq -y qemu-kvm libvirt-daemon-system virtinst cpu-checker rar aria2 &> /dev/null
           sudo systemctl enable --now libvirtd
-          sudo mkdir -p /builder/
           sudo mkdir -p /builder/release
-          sudo chown -R runner.runner /builder
-
-      - name: Clone kdev project
-        id: clone_kdev
-        working-directory: /builder/
-        run: |
-          git clone -q --single-branch --depth=1 --branch=master https://github.com/yifengyou/kdev.git kdev.git
-          echo "status=success" >> ${GITHUB_OUTPUT}
 
       - name: Build rootfs in vm
         id: build_vm
-        working-directory: /builder/kdev.git/iso/${{ matrix.os_release }}
+        timeout-minutes: 20
+        working-directory: /builder/
         run: |
           set -x
+          sudo /bin/cp -a ${{ github.workspace }}/* .
           ls -alh
+          cd iso/${{ matrix.os_release }}
           sudo ./build-vm.sh
           echo "status=success" >> ${GITHUB_OUTPUT}
 
@@ -78,7 +90,7 @@ jobs:
 
       - name: Upload image to release
         uses: ncipollo/release-action@main
-        if: ${{ steps.compress_output.outputs.status }} == 'success' && !cancelled()
+        timeout-minutes: 10
         with:
           tag: ubuntu-qcow2
           artifacts: /builder/release/*
