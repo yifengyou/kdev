@@ -14,6 +14,8 @@ jobs:
     strategy:
       matrix:
         os_release: [
+          'ubuntu-24.04.4-live-server-amd64.iso',
+          'ubuntu-24.04.3-live-server-amd64.iso',
           'ubuntu-24.04.2-live-server-amd64.iso',
           'ubuntu-24.04.1-live-server-amd64.iso',
           'ubuntu-24.04-live-server-amd64.iso',
@@ -80,6 +82,17 @@ jobs:
           ls -alh
           sudo rar a /builder/release/kdev_${{ matrix.os_release }}.qcow2.rar rootfs.qcow2
           ls -alh /builder/release/
+          FILE_PATH="/builder/release/kdev_${{ matrix.os_release }}.qcow2.rar"
+          FILE_SIZE=$(stat -c%s "$FILE_PATH")
+          LIMIT_SIZE=$((80 * 1024 * 1024))
+          echo "文件大小: $FILE_SIZE 字节"
+          echo "限制大小: $LIMIT_SIZE 字节"
+          if [ "$FILE_SIZE" -lt "$LIMIT_SIZE" ]; then
+            echo "::error::❌ 打包失败：文件 $FILE_NAME 大小为 $(($FILE_SIZE / 1024 / 1024))M，小于 80M 的最低要求！"
+            exit 1
+          else
+            echo "✅ 检查通过：文件大小符合要求。"
+          fi
           echo "status=success" >> ${GITHUB_OUTPUT}
 
       - name: Upload image to release
@@ -94,7 +107,18 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           body: | # ubuntu qcow2
 
-            ### kdev release
+            ## 镜像信息
+
             - 默认用户名(Default username): kdev
             - 默认密码(Default password): linux
+
+            1. ISO来源于Ubuntu官方
+            2. 支持架构：x86_64 / aarch64
+
+            ## 免责声明
+
+            - **按原样提供**：本镜像不作任何明示或暗示保证，使用风险由用户自行承担
+            - **无官方关联**：Ubuntu 是开源社区项目，本镜像与 Ubuntu 团队无官方关联
+            - **安全提示**：刷写固件有风险，请备份原固件，修改默认密码，配置防火墙，路由器设备请谨慎开放端口
+
 

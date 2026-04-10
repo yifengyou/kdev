@@ -1,6 +1,8 @@
 #!/bin/bash
 
-ISOURL="https://old-releases.ubuntu.com/releases/24.04.2/ubuntu-24.04.2-live-server-amd64.iso"
+ISOURL="https://old-releases.ubuntu.com/releases/24.04/ubuntu-24.04-live-server-amd64.iso"
+ISOURL="https://mirrors.aliyun.com/ubuntu-releases/24.04/ubuntu-24.04.3-live-server-amd64.iso"
+ISOURL="https://releases.ubuntu.com/24.04/ubuntu-24.04.3-live-server-amd64.iso"
 
 WORKDIR=`pwd`
 FILE_SERVER_PORT="63336"
