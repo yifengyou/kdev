@@ -62,7 +62,6 @@ jobs:
           sudo mkdir -p /builder/release
 
       - name: Build rootfs in vm
-        id: build_vm
         timeout-minutes: 20
         working-directory: /builder/
         run: |
@@ -74,17 +73,12 @@ jobs:
           echo "status=success" >> ${GITHUB_OUTPUT}
 
       - name: Compress Rootfs image
-        id: compress_output
-        working-directory: /builder/kdev.git/iso/${{ matrix.os_release }}
+        working-directory: /builder/
         run: |
           set -x
-          sudo chown -R runner.runner /builder
+          cd iso/${{ matrix.os_release }}
           ls -alh
-          mv kdev.log /builder/release/kdev_${{ matrix.os_release }}.log
-          zstd -9 rootfs.qcow2 -o /builder/release/kdev_${{ matrix.os_release }}.qcow2.zst
-          sha256sum /builder/release/kdev_${{ matrix.os_release }}.qcow2.zst > /builder/release/kdev_${{ matrix.os_release }}.qcow2.zst.sha256
-          rar a /builder/release/kdev_${{ matrix.os_release }}.qcow2.rar rootfs.qcow2
-          sha256sum /builder/release/kdev_${{ matrix.os_release }}.qcow2.rar > /builder/release/kdev_${{ matrix.os_release }}.qcow2.rar.sha256
+          sudo rar a /builder/release/kdev_${{ matrix.os_release }}.qcow2.rar rootfs.qcow2
           ls -alh /builder/release/
           echo "status=success" >> ${GITHUB_OUTPUT}
 
