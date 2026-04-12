@@ -9,28 +9,15 @@ env:
 
 jobs:
   build:
-    runs-on: debian-22.04
+    runs-on: ubuntu-22.04
     timeout-minutes: 60
     strategy:
       matrix:
         os_release: [
-          'debian-24.04.4-live-server-amd64.iso',
-          'debian-24.04.3-live-server-amd64.iso',
-          'debian-24.04.2-live-server-amd64.iso',
-          'debian-24.04.1-live-server-amd64.iso',
-          'debian-24.04-live-server-amd64.iso',
-          'debian-22.04.5-live-server-amd64.iso',
-          'debian-22.04.4-live-server-amd64.iso',
-          'debian-22.04.3-live-server-amd64.iso',
-          'debian-22.04.2-live-server-amd64.iso',
-          'debian-22.04.1-live-server-amd64.iso',
-          'debian-22.04-live-server-amd64.iso',
-          'debian-20.04.5-live-server-amd64.iso',
-          'debian-20.04.4-live-server-amd64.iso',
-          'debian-20.04.3-live-server-amd64.iso',
-          'debian-20.04.2-live-server-amd64.iso',
-          'debian-20.04.1-live-server-amd64.iso',
-          'debian-20.04-live-server-amd64.iso',
+          'debian-13.4.0-amd64-DVD-1.iso',
+          'debian-13.3.0-amd64-DVD-1.iso',
+          'debian-12.13.0-amd64-DVD-1.iso',
+          'debian-11.11.0-amd64-DVD-1.iso',
         ]
       max-parallel: 64
       fail-fast: false

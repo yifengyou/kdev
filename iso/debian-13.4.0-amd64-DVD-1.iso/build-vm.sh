@@ -1,7 +1,7 @@
 #!/bin/bash
 
 set -x
-ISOURL="https://cdimage.debian.org/cdimage/archive/13.3.0/amd64/iso-dvd/debian-13.3.0-amd64-DVD-1.iso"
+ISOURL="https://cdimage.debian.org/debian-cd/13.4.0/amd64/iso-dvd/debian-13.4.0-amd64-DVD-1.iso"
 
 WORKDIR=`pwd`
 FILE_SERVER_PORT="63336"
