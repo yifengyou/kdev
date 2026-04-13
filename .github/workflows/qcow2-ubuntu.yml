@@ -1,0 +1,124 @@
+name: Build ubuntu qcow2
+
+on:
+  repository_dispatch:
+  workflow_dispatch:
+
+env:
+  TZ: America/New_York
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 60
+    strategy:
+      matrix:
+        os_release: [
+          'ubuntu-24.04.4-live-server-amd64.iso',
+          'ubuntu-24.04.3-live-server-amd64.iso',
+          'ubuntu-24.04.2-live-server-amd64.iso',
+          'ubuntu-24.04.1-live-server-amd64.iso',
+          'ubuntu-24.04-live-server-amd64.iso',
+          'ubuntu-22.04.5-live-server-amd64.iso',
+          'ubuntu-22.04.4-live-server-amd64.iso',
+          'ubuntu-22.04.3-live-server-amd64.iso',
+          'ubuntu-22.04.2-live-server-amd64.iso',
+          'ubuntu-22.04.1-live-server-amd64.iso',
+          'ubuntu-22.04-live-server-amd64.iso',
+          'ubuntu-20.04.5-live-server-amd64.iso',
+          'ubuntu-20.04.4-live-server-amd64.iso',
+          'ubuntu-20.04.3-live-server-amd64.iso',
+          'ubuntu-20.04.2-live-server-amd64.iso',
+          'ubuntu-20.04.1-live-server-amd64.iso',
+          'ubuntu-20.04-live-server-amd64.iso',
+        ]
+      max-parallel: 64
+      fail-fast: false
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Create simulated physical disk
+        run: |
+          mnt_size=$(expr $(df -h /mnt | tail -1 | awk '{print $4}' | sed 's/[[:alpha:]]//g' | sed 's/\..*//') - 1)
+          root_size=$(expr $(df -h / | tail -1 | awk '{print $4}' | sed 's/[[:alpha:]]//g' | sed 's/\..*//') - 4)
+          sudo truncate -s "${mnt_size}"G /mnt/mnt.img
+          sudo truncate -s "${root_size}"G /root.img
+          sudo losetup /dev/loop6 /mnt/mnt.img
+          sudo losetup /dev/loop7 /root.img
+          sudo pvcreate /dev/loop6
+          sudo pvcreate /dev/loop7
+          sudo vgcreate github /dev/loop6 /dev/loop7
+          sudo lvcreate -n runner -l 100%FREE github
+          sudo mkfs.xfs /dev/github/runner
+          sudo mkdir -p /builder
+          sudo mount /dev/github/runner /builder
+          sudo chown -R runner.runner /builder
+          df -Th
+
+      - name: Install dependency
+        run: |
+          sudo apt update
+          sudo apt install -qq -y qemu-kvm libvirt-daemon-system virtinst cpu-checker rar aria2 &> /dev/null
+          sudo systemctl enable --now libvirtd
+          sudo mkdir -p /builder/release
+
+      - name: Build rootfs in vm
+        timeout-minutes: 20
+        working-directory: /builder/
+        run: |
+          set -x
+          sudo /bin/cp -a ${{ github.workspace }}/* .
+          ls -alh
+          cd iso/${{ matrix.os_release }}
+          sudo ./build-vm.sh
+          echo "status=success" >> ${GITHUB_OUTPUT}
+
+      - name: Compress Rootfs image
+        working-directory: /builder/
+        run: |
+          set -x
+          cd iso/${{ matrix.os_release }}
+          ls -alh
+          sudo rar a /builder/release/kdev_${{ matrix.os_release }}.qcow2.rar rootfs.qcow2
+          ls -alh /builder/release/
+          FILE_PATH="/builder/release/kdev_${{ matrix.os_release }}.qcow2.rar"
+          FILE_SIZE=$(stat -c%s "$FILE_PATH")
+          LIMIT_SIZE=$((80 * 1024 * 1024))
+          echo "文件大小: $FILE_SIZE 字节"
+          echo "限制大小: $LIMIT_SIZE 字节"
+          if [ "$FILE_SIZE" -lt "$LIMIT_SIZE" ]; then
+            echo "::error::❌ 打包失败：文件 $FILE_NAME 大小为 $(($FILE_SIZE / 1024 / 1024))M，小于 80M 的最低要求！"
+            exit 1
+          else
+            echo "✅ 检查通过：文件大小符合要求。"
+          fi
+          echo "status=success" >> ${GITHUB_OUTPUT}
+
+      - name: Upload image to release
+        uses: ncipollo/release-action@main
+        timeout-minutes: 10
+        with:
+          tag: ubuntu-qcow2
+          artifacts: /builder/release/*
+          allowUpdates: true
+          removeArtifacts: false
+          replacesArtifacts: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+          body: | # ubuntu qcow2
+
+            ## 镜像信息
+
+            - 默认用户名(Default username): kdev
+            - 默认密码(Default password): linux
+
+            1. ISO来源于Ubuntu官方
+            2. 支持架构：x86_64 / aarch64
+
+            ## 免责声明
+
+            - **按原样提供**：本镜像不作任何明示或暗示保证，使用风险由用户自行承担
+            - **无官方关联**：Ubuntu 是开源社区项目，本镜像与 Ubuntu 团队无官方关联
+            - **安全提示**：刷写固件有风险，请备份原固件，修改默认密码，配置防火墙，路由器设备请谨慎开放端口
+
+

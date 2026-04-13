@@ -1,0 +1,117 @@
+name: Build ubuntu rootfs
+
+on:
+  repository_dispatch:
+  workflow_dispatch:
+    inputs:
+
+env:
+  TZ: America/New_York
+
+jobs:
+  kdevbuild:
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - set_vendor: ubuntu
+            set_release: bionic
+            set_version: 18.04
+            set_arch: amd64
+          - set_vendor: ubuntu
+            set_release: bionic
+            set_version: 18.04
+            set_arch: arm64
+          # ubuntu 20.04
+          - set_vendor: ubuntu
+            set_release: focal
+            set_version: 20.04
+            set_arch: amd64
+          - set_vendor: ubuntu
+            set_release: focal
+            set_version: 20.04
+            set_arch: arm64
+          # ubuntu 22.04
+          - set_vendor: ubuntu
+            set_release: jammy
+            set_version: 22.04
+            set_arch: amd64
+          - set_vendor: ubuntu
+            set_release: jammy
+            set_version: 22.04
+            set_arch: arm64
+          # ubuntu 24.04
+          - set_vendor: ubuntu
+            set_release: noble
+            set_version: 24.04
+            set_arch: amd64
+          - set_vendor: ubuntu
+            set_release: noble
+            set_version: 24.04
+            set_arch: arm64
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Show environment
+        id: basic_info
+        run: |
+          nproc
+          uname -a
+          cat /etc/*release
+          free -h
+          mount
+          df -h
+          cat /proc/cpuinfo
+          cat /proc/meminfo
+
+      - name: Run build in Ubuntu 22.04 container
+        working-directory: ${{ github.workspace }}
+        run: |
+          pwd
+          ls -alh
+          sudo docker run --rm \
+            --privileged \
+            --cap-add SYS_ADMIN \
+            -v /dev:/dev \
+            -v ${{ github.workspace }}:/workspace \
+            -w /workspace \
+            -e set_vendor=${{ matrix.set_vendor }} \
+            -e set_release=${{ matrix.set_release }} \
+            -e set_version=${{ matrix.set_version }} \
+            -e set_arch=${{ matrix.set_arch }} \
+            ubuntu:22.04 \
+            bash -c "
+              chmod +x /workspace/kdevbuild/build-ubuntu-rootfs.sh ;
+              /workspace/kdevbuild/build-ubuntu-rootfs.sh
+            "
+
+      - name: List build output
+        run: |
+          ls -alh  ${{ github.workspace }}/release/*
+          md5sum ${{ github.workspace }}/release/*
+
+      - name: Upload Image to Release
+        uses: ncipollo/release-action@main
+        with:
+          tag: ubuntu-rootfs
+          artifacts: ${{ github.workspace }}/release/*
+          allowUpdates: true
+          removeArtifacts: false
+          replacesArtifacts: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+          body: | # ubuntu rootfs
+
+            ## 镜像信息
+
+            1. 母盘镜像来源：https://cloud-images.ubuntu.com/daily/server/
+            2. 支持架构：x86_64 / aarch64
+
+            ## 免责声明
+
+            - **按原样提供**：本镜像不作任何明示或暗示保证，使用风险由用户自行承担
+            - **无官方关联**：Ubuntu 是 Canonical Ltd. 的注册商标，本镜像与 Canonical 无官方关联
+            - **生命周期**：LTS 版本每2年发布，提供5年免费支持（可扩展至10年），生产环境建议使用 LTS 版本
+            - **安全提示**：请定期更新补丁，修改默认密码，配置防火墙，启用 Ubuntu Pro 获取扩展安全更新

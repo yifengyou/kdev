@@ -1,0 +1,116 @@
+name: Build opencloudos rootfs
+
+on:
+  repository_dispatch:
+  workflow_dispatch:
+    inputs:
+
+env:
+  TZ: America/New_York
+
+jobs:
+  kdevbuild:
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - set_vendor: opencloudos
+            set_version: "8"
+          - set_vendor: opencloudos
+            set_version: "8.10"
+          - set_vendor: opencloudos
+            set_version: "8.6"
+          - set_vendor: opencloudos
+            set_version: "8.8"
+          - set_vendor: opencloudos
+            set_version: "9"
+          - set_vendor: opencloudos
+            set_version: "9.0"
+          - set_vendor: opencloudos
+            set_version: "9.2"
+          - set_vendor: opencloudos
+            set_version: "9.4"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Show environment
+        id: basic_info
+        run: |
+          nproc
+          uname -a
+          cat /etc/*release
+          free -h
+          mount
+          df -h
+          cat /proc/cpuinfo
+          cat /proc/meminfo
+
+      - name: Create simulated physical disk
+        run: |
+          mnt_size=$(expr $(df -h /mnt | tail -1 | awk '{print $4}' | sed 's/[[:alpha:]]//g' | sed 's/\..*//') - 1)
+          root_size=$(expr $(df -h / | tail -1 | awk '{print $4}' | sed 's/[[:alpha:]]//g' | sed 's/\..*//') - 4)
+          sudo truncate -s "${mnt_size}"G /mnt/mnt.img
+          sudo truncate -s "${root_size}"G /root.img
+          sudo losetup /dev/loop6 /mnt/mnt.img
+          sudo losetup /dev/loop7 /root.img
+          sudo pvcreate /dev/loop6
+          sudo pvcreate /dev/loop7
+          sudo vgcreate github /dev/loop6 /dev/loop7
+          sudo lvcreate -n runner -l 100%FREE github
+          sudo mkfs.xfs /dev/github/runner
+          sudo mkdir -p /builder
+          sudo mount /dev/github/runner /builder
+          sudo chown -R runner.runner /builder
+          df -Th
+
+      - name: Run build in Ubuntu 22.04 container
+        working-directory: /builder/
+        run: |
+          pwd
+          sudo /bin/cp -a ${{ github.workspace }}/* .
+          ls -alh
+          sudo docker run --rm \
+            --privileged \
+            --cap-add SYS_ADMIN \
+            -v /dev:/dev \
+            -v /builder:/workspace \
+            -w /workspace \
+            -e set_vendor=${{ matrix.set_vendor }} \
+            -e set_version=${{ matrix.set_version }} \
+            ubuntu:24.04 \
+            bash -c "
+              chmod +x /workspace/kdevbuild/build-opencloudos-rootfs.sh ;
+              /workspace/kdevbuild/build-opencloudos-rootfs.sh
+            "
+
+      - name: List build output
+        run: |
+          ls -alh  /builder/release/*
+          md5sum /builder/release/*
+
+      - name: Upload Image to Release
+        uses: ncipollo/release-action@main
+        with:
+          tag: opencloudos-rootfs
+          artifacts: /builder/release/*
+          allowUpdates: true
+          removeArtifacts: false
+          replacesArtifacts: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+          body: | # opencloudos rootfs
+
+            ## 镜像信息
+
+            1. 母盘镜像来源：https://mirrors.cloud.tencent.com/opencloudos/
+            2. 支持架构：x86_64 / aarch64
+
+            ## 免责声明
+
+            - **按原样提供**：本镜像不作任何明示或暗示保证，使用风险由用户自行承担
+            - **无官方关联**：OpenCloudOS 是开放原子开源基金会项目，本镜像与 OpenCloudOS 社区无官方关联
+            - **生命周期**：CentOS 替代方案，提供长期支持版本，生产环境建议使用最新 LTS 版本
+            - **安全提示**：请定期更新补丁，修改默认密码，配置防火墙，企业级场景建议开启安全加固
+

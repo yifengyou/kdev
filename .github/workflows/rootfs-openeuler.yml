@@ -1,0 +1,147 @@
+name: Build openeuler rootfs
+
+on:
+  repository_dispatch:
+  workflow_dispatch:
+    inputs:
+
+env:
+  TZ: America/New_York
+
+jobs:
+  kdevbuild:
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - set_vendor: openeuler
+            set_version: "openEuler-20.03-LTS"
+          - set_vendor: openeuler
+            set_version: "openEuler-20.03-LTS-SP1"
+          - set_vendor: openeuler
+            set_version: "openEuler-20.03-LTS-SP2"
+          - set_vendor: openeuler
+            set_version: "openEuler-20.03-LTS-SP3"
+          - set_vendor: openeuler
+            set_version: "openEuler-20.03-LTS-SP4"
+          - set_vendor: openeuler
+            set_version: "openEuler-20.09"
+          - set_vendor: openeuler
+            set_version: "openEuler-21.03"
+          - set_vendor: openeuler
+            set_version: "openEuler-21.09"
+          - set_vendor: openeuler
+            set_version: "openEuler-22.03-LTS"
+          - set_vendor: openeuler
+            set_version: "openEuler-22.03-LTS-64kb"
+          - set_vendor: openeuler
+            set_version: "openEuler-22.03-LTS-SP1"
+          - set_vendor: openeuler
+            set_version: "openEuler-22.03-LTS-SP2"
+          - set_vendor: openeuler
+            set_version: "openEuler-22.03-LTS-SP3"
+          - set_vendor: openeuler
+            set_version: "openEuler-22.03-LTS-SP4"
+          - set_vendor: openeuler
+            set_version: "openEuler-22.09"
+          - set_vendor: openeuler
+            set_version: "openEuler-23.03"
+          - set_vendor: openeuler
+            set_version: "openEuler-23.09"
+          - set_vendor: openeuler
+            set_version: "openEuler-24.03-LTS"
+          - set_vendor: openeuler
+            set_version: "openEuler-24.03-LTS-SP1"
+          - set_vendor: openeuler
+            set_version: "openEuler-24.03-LTS-SP2"
+          - set_vendor: openeuler
+            set_version: "openEuler-24.03-LTS-SP3"
+          - set_vendor: openeuler
+            set_version: "openEuler-24.09"
+          - set_vendor: openeuler
+            set_version: "openEuler-25.03"
+          - set_vendor: openeuler
+            set_version: "openEuler-25.09"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Show environment
+        id: basic_info
+        run: |
+          nproc
+          uname -a
+          cat /etc/*release
+          free -h
+          mount
+          df -h
+          cat /proc/cpuinfo
+          cat /proc/meminfo
+
+      - name: Create simulated physical disk
+        run: |
+          mnt_size=$(expr $(df -h /mnt | tail -1 | awk '{print $4}' | sed 's/[[:alpha:]]//g' | sed 's/\..*//') - 1)
+          root_size=$(expr $(df -h / | tail -1 | awk '{print $4}' | sed 's/[[:alpha:]]//g' | sed 's/\..*//') - 4)
+          sudo truncate -s "${mnt_size}"G /mnt/mnt.img
+          sudo truncate -s "${root_size}"G /root.img
+          sudo losetup /dev/loop6 /mnt/mnt.img
+          sudo losetup /dev/loop7 /root.img
+          sudo pvcreate /dev/loop6
+          sudo pvcreate /dev/loop7
+          sudo vgcreate github /dev/loop6 /dev/loop7
+          sudo lvcreate -n runner -l 100%FREE github
+          sudo mkfs.xfs /dev/github/runner
+          sudo mkdir -p /builder
+          sudo mount /dev/github/runner /builder
+          sudo chown -R runner.runner /builder
+          df -Th
+
+      - name: Run build in Ubuntu 22.04 container
+        working-directory: /builder/
+        run: |
+          pwd
+          sudo /bin/cp -a ${{ github.workspace }}/* .
+          ls -alh
+          sudo docker run --rm \
+            --privileged \
+            --cap-add SYS_ADMIN \
+            -v /dev:/dev \
+            -v /builder:/workspace \
+            -w /workspace \
+            -e set_vendor=${{ matrix.set_vendor }} \
+            -e set_version=${{ matrix.set_version }} \
+            ubuntu:22.04 \
+            bash -c "
+              chmod +x /workspace/kdevbuild/build-openeuler-rootfs.sh ;
+              /workspace/kdevbuild/build-openeuler-rootfs.sh
+            "
+
+      - name: List build output
+        run: |
+          ls -alh  /builder/release/*
+          md5sum /builder/release/*
+
+      - name: Upload Image to Release
+        uses: ncipollo/release-action@main
+        with:
+          tag: openeuler-rootfs
+          artifacts: /builder/release/*
+          allowUpdates: true
+          removeArtifacts: false
+          replacesArtifacts: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+          body: | # openeuler rootfs
+
+            ## 镜像信息
+
+            1. 母盘镜像来源：https://archives.openeuler.openatom.cn/
+            2. 支持架构：x86_64 / aarch64
+
+            ## 免责声明
+
+            - **按原样提供**：本镜像不作任何明示或暗示保证，使用风险由用户自行承担
+            - **无官方关联**：openEuler 是开放原子开源基金会项目，本镜像与 openEuler 社区无官方关联
+            - **生命周期**：提供 LTS 长期支持版本（4年）和创新版本（6个月），生产环境建议使用 LTS 版本
+            - **安全提示**：请定期更新补丁，修改默认密码，配置防火墙，关注官方安全公告和 CVE 修复

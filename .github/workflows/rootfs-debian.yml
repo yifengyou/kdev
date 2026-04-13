@@ -1,0 +1,109 @@
+name: Build debian rootfs
+
+on:
+  repository_dispatch:
+  workflow_dispatch:
+    inputs:
+
+env:
+  TZ: America/New_York
+
+jobs:
+  kdevbuild:
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - set_vendor: debian
+            set_release: trixie
+            set_version: 13
+            set_arch: amd64
+          - set_vendor: debian
+            set_release: trixie
+            set_version: 13
+            set_arch: arm64
+
+          - set_vendor: debian
+            set_release: bookworm
+            set_version: 12
+            set_arch: amd64
+          - set_vendor: debian
+            set_release: bookworm
+            set_version: 12
+            set_arch: arm64
+
+          - set_vendor: debian
+            set_release: bullseye
+            set_version: 11
+            set_arch: amd64
+          - set_vendor: debian
+            set_release: bullseye
+            set_version: 11
+            set_arch: arm64
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Show environment
+        id: basic_info
+        run: |
+          nproc
+          uname -a
+          cat /etc/*release
+          free -h
+          mount
+          df -h
+          cat /proc/cpuinfo
+          cat /proc/meminfo
+
+      - name: Run build in Ubuntu 24.04 container
+        working-directory: ${{ github.workspace }}
+        run: |
+          pwd
+          ls -alh
+          sudo docker run --rm \
+            --privileged \
+            --cap-add SYS_ADMIN \
+            -v /dev:/dev \
+            -v ${{ github.workspace }}:/workspace \
+            -w /workspace \
+            -e set_vendor=${{ matrix.set_vendor }} \
+            -e set_release=${{ matrix.set_release }} \
+            -e set_version=${{ matrix.set_version }} \
+            -e set_arch=${{ matrix.set_arch }} \
+            ubuntu:24.04 \
+            bash -c "
+              chmod +x /workspace/kdevbuild/build-debian-rootfs.sh ;
+              /workspace/kdevbuild/build-debian-rootfs.sh
+            "
+
+      - name: List build output
+        run: |
+          ls -alh  ${{ github.workspace }}/release/*
+          md5sum ${{ github.workspace }}/release/*
+
+      - name: Upload Image to Release
+        uses: ncipollo/release-action@main
+        with:
+          tag: debian-rootfs
+          artifacts: ${{ github.workspace }}/release/*
+          allowUpdates: true
+          removeArtifacts: false
+          replacesArtifacts: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+          body: | # debian rootfs
+
+            ## 镜像信息
+
+            1. 母盘镜像来源：https://cdimage.debian.org/images/cloud/
+            2. 支持架构：x86_64 / aarch64
+
+            ## 免责声明
+
+            - **按原样提供**：本镜像不作任何明示或暗示保证，使用风险由用户自行承担
+            - **无官方关联**：Debian 是 Debian 项目的注册商标，本镜像与 Debian 项目无官方关联
+            - **生命周期**：稳定版约2年发布周期，每版本提供约5年支持，生产环境建议使用稳定版（Stable）
+            - **安全提示**：请定期更新补丁，修改默认密码，配置防火墙，启用安全更新源
+

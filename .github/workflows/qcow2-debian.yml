@@ -1,0 +1,279 @@
+name: Build debian qcow2
+
+on:
+  repository_dispatch:
+  workflow_dispatch:
+    inputs:
+      arch_type:
+        description: '架构'
+        required: false
+        default: 'amd64'
+        type: choice
+        options:
+          - amd64
+          - arm64
+
+env:
+  TZ: America/New_York
+  ACTIONS_STEP_DEBUG: true
+
+jobs:
+  build-amd64:
+    if: ${{ github.event.inputs.arch_type == 'amd64' }}
+    runs-on: ubuntu-22.04
+    timeout-minutes: 60
+    strategy:
+      matrix:
+        os_release: [
+          'debian-13.4.0-amd64-DVD-1.iso',
+          'debian-13.3.0-amd64-DVD-1.iso',
+          'debian-13.2.0-amd64-DVD-1.iso',
+          'debian-13.1.0-amd64-DVD-1.iso',
+          'debian-13.0.0-amd64-DVD-1.iso',
+          'debian-12.13.0-amd64-DVD-1.iso',
+          'debian-12.12.0-amd64-DVD-1.iso',
+          'debian-12.11.0-amd64-DVD-1.iso',
+          'debian-12.10.0-amd64-DVD-1.iso',
+          'debian-12.9.0-amd64-DVD-1.iso',
+          'debian-12.8.0-amd64-DVD-1.iso',
+          'debian-12.7.0-amd64-DVD-1.iso',
+          'debian-12.6.0-amd64-DVD-1.iso',
+          'debian-12.5.0-amd64-DVD-1.iso',
+          'debian-12.4.0-amd64-DVD-1.iso',
+          'debian-12.2.0-amd64-DVD-1.iso',
+          'debian-12.1.0-amd64-DVD-1.iso',
+          'debian-12.0.0-amd64-DVD-1.iso',
+          'debian-11.11.0-amd64-DVD-1.iso',
+          'debian-11.10.0-amd64-DVD-1.iso',
+          'debian-11.9.0-amd64-DVD-1.iso',
+          'debian-11.8.0-amd64-DVD-1.iso',
+          'debian-11.7.0-amd64-DVD-1.iso',
+          'debian-11.6.0-amd64-DVD-1.iso',
+          'debian-11.5.0-amd64-DVD-1.iso',
+          'debian-11.4.0-amd64-DVD-1.iso',
+          'debian-11.3.0-amd64-DVD-1.iso',
+          'debian-11.2.0-amd64-DVD-1.iso',
+          'debian-11.1.0-amd64-DVD-1.iso',
+          'debian-11.0.0-amd64-DVD-1.iso',
+        ]
+      max-parallel: 64
+      fail-fast: false
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Create simulated physical disk
+        run: |
+          mnt_size=$(expr $(df -h /mnt | tail -1 | awk '{print $4}' | sed 's/[[:alpha:]]//g' | sed 's/\..*//') - 1)
+          root_size=$(expr $(df -h / | tail -1 | awk '{print $4}' | sed 's/[[:alpha:]]//g' | sed 's/\..*//') - 4)
+          sudo truncate -s "${mnt_size}"G /mnt/mnt.img
+          sudo truncate -s "${root_size}"G /root.img
+          sudo losetup /dev/loop6 /mnt/mnt.img
+          sudo losetup /dev/loop7 /root.img
+          sudo pvcreate /dev/loop6
+          sudo pvcreate /dev/loop7
+          sudo vgcreate github /dev/loop6 /dev/loop7
+          sudo lvcreate -n runner -l 100%FREE github
+          sudo mkfs.xfs /dev/github/runner
+          sudo mkdir -p /builder
+          sudo mount /dev/github/runner /builder
+          sudo chown -R runner.runner /builder
+          df -Th
+
+      - name: Install dependency
+        run: |
+          sudo apt update
+          sudo apt install -qq -y qemu-kvm libvirt-daemon-system virtinst cpu-checker rar aria2
+          sudo systemctl enable --now libvirtd
+          sudo mkdir -p /builder/release
+
+      - name: Build rootfs in vm
+        timeout-minutes: 20
+        working-directory: /builder/
+        run: |
+          set -x
+          sudo /bin/cp -a ${{ github.workspace }}/* .
+          ls -alh
+          cd iso/${{ matrix.os_release }}
+          sudo ./build-vm.sh
+          echo "status=success" >> ${GITHUB_OUTPUT}
+
+      - name: Compress Rootfs image
+        working-directory: /builder/
+        run: |
+          set -x
+          cd iso/${{ matrix.os_release }}
+          ls -alh
+          sudo rar a /builder/release/kdev_${{ matrix.os_release }}.qcow2.rar rootfs.qcow2
+          ls -alh /builder/release/
+          FILE_PATH="/builder/release/kdev_${{ matrix.os_release }}.qcow2.rar"
+          FILE_SIZE=$(stat -c%s "$FILE_PATH")
+          LIMIT_SIZE=$((80 * 1024 * 1024))
+          echo "文件大小: $FILE_SIZE 字节"
+          echo "限制大小: $LIMIT_SIZE 字节"
+          if [ "$FILE_SIZE" -lt "$LIMIT_SIZE" ]; then
+            echo "::error::❌ 打包失败：文件 $FILE_NAME 大小为 $(($FILE_SIZE / 1024 / 1024))M，小于 80M 的最低要求！"
+            exit 1
+          else
+            echo "✅ 检查通过：文件大小符合要求。"
+          fi
+          echo "status=success" >> ${GITHUB_OUTPUT}
+
+      - name: Upload image to release
+        uses: ncipollo/release-action@main
+        timeout-minutes: 10
+        with:
+          tag: debian-qcow2
+          artifacts: /builder/release/*
+          allowUpdates: true
+          removeArtifacts: false
+          replacesArtifacts: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+          body: | # debian qcow2
+
+            ## 镜像信息
+
+            - 默认用户名(Default username): kdev
+            - 默认密码(Default password): linux
+
+            1. ISO来源于debian官方
+            2. 支持架构：amd64 / arm64
+
+            ## 免责声明
+
+            - **按原样提供**：本镜像不作任何明示或暗示保证，使用风险由用户自行承担
+            - **无官方关联**：debian 是开源社区项目，本镜像与 debian 团队无官方关联
+            - **安全提示**：刷写固件有风险，请备份原固件，修改默认密码，配置防火墙，路由器设备请谨慎开放端口
+
+  build-arm64:
+    if: ${{ github.event.inputs.arch_type == 'arm64' }}
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 60
+    strategy:
+      matrix:
+        os_release: [
+            'debian-13.4.0-arm64-DVD-1.iso',
+            'debian-13.3.0-arm64-DVD-1.iso',
+            'debian-13.2.0-arm64-DVD-1.iso',
+            'debian-13.1.0-arm64-DVD-1.iso',
+            'debian-13.0.0-arm64-DVD-1.iso',
+            'debian-12.13.0-arm64-DVD-1.iso',
+            'debian-12.12.0-arm64-DVD-1.iso',
+            'debian-12.11.0-arm64-DVD-1.iso',
+            'debian-12.10.0-arm64-DVD-1.iso',
+            'debian-12.9.0-arm64-DVD-1.iso',
+            'debian-12.8.0-arm64-DVD-1.iso',
+            'debian-12.7.0-arm64-DVD-1.iso',
+            'debian-12.6.0-arm64-DVD-1.iso',
+            'debian-12.5.0-arm64-DVD-1.iso',
+            'debian-12.4.0-arm64-DVD-1.iso',
+            'debian-12.2.0-arm64-DVD-1.iso',
+            'debian-12.1.0-arm64-DVD-1.iso',
+            'debian-12.0.0-arm64-DVD-1.iso',
+            'debian-11.11.0-arm64-DVD-1.iso',
+            'debian-11.10.0-arm64-DVD-1.iso',
+            'debian-11.9.0-arm64-DVD-1.iso',
+            'debian-11.8.0-arm64-DVD-1.iso',
+            'debian-11.7.0-arm64-DVD-1.iso',
+            'debian-11.6.0-arm64-DVD-1.iso',
+            'debian-11.5.0-arm64-DVD-1.iso',
+            'debian-11.4.0-arm64-DVD-1.iso',
+            'debian-11.3.0-arm64-DVD-1.iso',
+            'debian-11.2.0-arm64-DVD-1.iso',
+            'debian-11.1.0-arm64-DVD-1.iso',
+            'debian-11.0.0-arm64-DVD-1.iso',
+        ]
+      max-parallel: 64
+      fail-fast: false
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Create simulated physical disk
+        run: |
+          mnt_size=$(expr $(df -h /mnt | tail -1 | awk '{print $4}' | sed 's/[[:alpha:]]//g' | sed 's/\..*//') - 1)
+          root_size=$(expr $(df -h / | tail -1 | awk '{print $4}' | sed 's/[[:alpha:]]//g' | sed 's/\..*//') - 4)
+          sudo truncate -s "${mnt_size}"G /mnt/mnt.img
+          sudo truncate -s "${root_size}"G /root.img
+          sudo losetup /dev/loop6 /mnt/mnt.img
+          sudo losetup /dev/loop7 /root.img
+          sudo pvcreate /dev/loop6
+          sudo pvcreate /dev/loop7
+          sudo vgcreate github /dev/loop6 /dev/loop7
+          sudo lvcreate -n runner -l 100%FREE github
+          sudo mkfs.xfs /dev/github/runner
+          sudo mkdir -p /builder
+          sudo mount /dev/github/runner /builder
+          sudo chown -R runner.runner /builder
+          df -Th
+
+      - name: Install dependency
+        run: |
+          set -x
+          uname -a
+          lscpu
+          ls -alh /dev/kvm || :
+          sudo apt update
+          sudo apt install -qq -y qemu-kvm libvirt-daemon-system virtinst cpu-checker aria2
+          sudo systemctl enable --now libvirtd
+          sudo mkdir -p /builder/release
+
+      - name: Build rootfs in vm
+        timeout-minutes: 20
+        working-directory: /builder/
+        run: |
+          set -x
+          sudo /bin/cp -a ${{ github.workspace }}/* .
+          ls -alh
+          cd iso/${{ matrix.os_release }}
+          sudo ./build-vm.sh
+          echo "status=success" >> ${GITHUB_OUTPUT}
+
+      - name: Compress Rootfs image
+        working-directory: /builder/
+        run: |
+          set -x
+          cd iso/${{ matrix.os_release }}
+          ls -alh
+          sudo tar -zcvf /builder/release/kdev_${{ matrix.os_release }}.qcow2.tar.gz rootfs.qcow2
+          ls -alh /builder/release/
+          FILE_PATH="/builder/release/kdev_${{ matrix.os_release }}.qcow2.tar.gz"
+          FILE_SIZE=$(stat -c%s "$FILE_PATH")
+          LIMIT_SIZE=$((80 * 1024 * 1024))
+          echo "文件大小: $FILE_SIZE 字节"
+          echo "限制大小: $LIMIT_SIZE 字节"
+          if [ "$FILE_SIZE" -lt "$LIMIT_SIZE" ]; then
+            echo "::error::❌ 打包失败：文件 $FILE_NAME 大小为 $(($FILE_SIZE / 1024 / 1024))M，小于 80M 的最低要求！"
+            exit 1
+          else
+            echo "✅ 检查通过：文件大小符合要求。"
+          fi
+          echo "status=success" >> ${GITHUB_OUTPUT}
+
+      - name: Upload image to release
+        uses: ncipollo/release-action@main
+        timeout-minutes: 10
+        with:
+          tag: debian-qcow2
+          artifacts: /builder/release/*
+          allowUpdates: true
+          removeArtifacts: false
+          replacesArtifacts: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+          body: | # debian qcow2
+
+            ## 镜像信息
+
+            - 默认用户名(Default username): kdev
+            - 默认密码(Default password): linux
+
+            1. ISO来源于debian官方
+            2. 支持架构：amd64 / arm64
+
+            ## 免责声明
+
+            - **按原样提供**：本镜像不作任何明示或暗示保证，使用风险由用户自行承担
+            - **无官方关联**：debian 是开源社区项目，本镜像与 debian 团队无官方关联
+            - **安全提示**：刷写固件有风险，请备份原固件，修改默认密码，配置防火墙，路由器设备请谨慎开放端口
+
+

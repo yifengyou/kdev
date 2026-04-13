@@ -1,0 +1,116 @@
+#==========================================================================
+# Description: name: isobuild arm64
+#==========================================================================
+
+name: isobuild arm64
+
+on:
+  repository_dispatch:
+  workflow_dispatch:
+    inputs:
+      os_release:
+        description: "Select OS Release"
+        required: true
+        type: choice
+        options:
+          - "ubuntu-24.04.2-live-server-arm64.iso"
+          - "ubuntu-24.04.1-live-server-arm64.iso"
+          - "ubuntu-24.04-live-server-arm64.iso"
+          - "ubuntu-22.04.4-live-server-arm64.iso"
+          - "ubuntu-22.04.3-live-server-arm64.iso"
+          - "ubuntu-22.04.2-live-server-arm64.iso"
+          - "ubuntu-22.04.1-live-server-arm64.iso"
+          - "ubuntu-22.04-live-server-arm64.iso"
+          - "ubuntu-20.04.4-live-server-arm64.iso"
+          - "ubuntu-20.04.3-live-server-arm64.iso"
+          - "ubuntu-18.04.5-server-arm64.iso"
+          - "ubuntu-18.04.4-server-arm64.iso"
+          - "ubuntu-18.04.3-server-arm64.iso"
+          - "ubuntu-18.04.2-server-arm64.iso"
+          - "ubuntu-18.04.1-server-arm64.iso"
+          - "ubuntu-18.04-server-arm64.iso"
+          - "ubuntu-16.04.3-server-arm64.iso"
+          - "ubuntu-16.04.2-server-arm64.iso"
+          - "ubuntu-16.04.1-server-arm64.iso"
+
+env:
+  TZ: America/New_York
+
+jobs:
+  build:
+    # runs-on: ubuntu-22.04-arm
+    # runs-on: dca588
+    # runs-on: am60
+    runs-on: self-hosted
+    steps:
+      - name: Install dependency software
+        run: |
+          sudo apt update
+          sudo apt install -y aria2 qemu-kvm \
+            libvirt-daemon-system virtinst \
+            cpu-checker qemu-utils qemu-system-gui \
+            p7zip-full
+          sudo systemctl enable --now libvirtd
+          sudo mkdir -p /builder/
+          sudo mkdir -p /builder/release
+          sudo chown -R runner.runner /builder
+
+      - name: Clone kdev project
+        id: clone_kdev
+        working-directory: /builder/
+        continue-on-error: true
+        run: |
+          set +e
+          set -x
+          while true ; do
+            if [ -d kdev.git ] ; then
+              cd /builder/kdev.git
+              git pull
+              [ $? -eq 0 ] && break
+            else
+              cd /builder/
+              git clone -q --single-branch --depth=1 \
+                --branch=master https://github.com/yifengyou/kdev.git kdev.git
+              [ $? -eq 0 ] && break
+            fi
+          done
+          echo "status=success" >> ${GITHUB_OUTPUT}
+
+      - name: Build rootfs in vm
+        id: build_vm
+        working-directory: /builder/kdev.git/iso/${{ inputs.os_release }}
+        run: |
+          set -x
+          ls -alh
+          sudo ./build-vm.sh
+          echo "status=success" >> ${GITHUB_OUTPUT}
+
+      - name: Compress Rootfs image
+        id: compress_output
+        working-directory: /builder/kdev.git/iso/${{ inputs.os_release }}
+        run: |
+          set -x
+          ls -alh
+          # zstd -9 -f rootfs.qcow2 -o /builder/release/kdev_${{ inputs.os_release }}.qcow2.zst
+          # rar a /builder/release/kdev_${{ inputs.os_release }}.qcow2.rar rootfs.qcow2
+          7z a /builder/release/kdev_${{ inputs.os_release }}.qcow2.7z rootfs.qcow2
+          cd /builder/release
+          sha256sum kdev_${{ inputs.os_release }}.qcow2.7z > kdev_${{ inputs.os_release }}.qcow2.7z.sha256
+          ls -alh /builder/release/
+          echo "status=success" >> ${GITHUB_OUTPUT}
+
+      - name: Upload image to release
+        uses: ncipollo/release-action@main
+        if: ${{ steps.compress_output.outputs.status }} == 'success' && !cancelled()
+        with:
+          tag: "kdev_arm64_release"
+          artifacts: /builder/release/kdev_${{ inputs.os_release }}.qcow2.7z*
+          allowUpdates: true
+          removeArtifacts: false
+          replacesArtifacts: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+          body: |
+            ### kdev release
+            - 默认用户名(Default username): kdev
+            - 默认密码(Default password): linux
+

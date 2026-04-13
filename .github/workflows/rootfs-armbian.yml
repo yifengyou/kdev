@@ -1,0 +1,175 @@
+name: Build armbian rootfs
+
+on:
+  repository_dispatch:
+  workflow_dispatch:
+    inputs:
+
+env:
+  TZ: America/New_York
+
+jobs:
+  kdevbuild:
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Debian 11 (oldstable, EOL ～2026)
+          - set_release: bullseye
+            set_desktop: mini
+
+          # Debian 12 (stable)
+          - set_release: bookworm
+            set_desktop: mini
+          - set_release: bookworm
+            set_desktop: gnome
+          - set_release: bookworm
+            set_desktop: xfce
+
+          # Debian 13 (testing)
+          - set_release: trixie
+            set_desktop: mini
+          - set_release: trixie
+            set_desktop: gnome
+          - set_release: trixie
+            set_desktop: xfce
+
+          # Debian 14 (unstable, future)
+          - set_release: forky
+            set_desktop: mini
+          - set_release: forky
+            set_desktop: gnome
+          - set_release: forky
+            set_desktop: xfce
+
+          # Ubuntu 20.04 LTS (standard support ended Apr 2025)
+          #          - set_release: focal
+          #            set_desktop: mini
+
+          # Ubuntu 22.04 LTS (supported until 2027)
+          - set_release: jammy
+            set_desktop: mini
+          - set_release: jammy
+            set_desktop: gnome
+          - set_release: jammy
+            set_desktop: xfce
+
+          # Ubuntu 24.04 LTS (current LTS, supported until 2029)
+          - set_release: noble
+            set_desktop: mini
+          - set_release: noble
+            set_desktop: gnome
+          - set_release: noble
+            set_desktop: xfce
+
+          # Ubuntu 24.10 (interim release, EOL Jul 2025)
+          #          - set_release: oracular
+          #            set_desktop: mini
+          #          - set_release: oracular
+          #            set_desktop: gnome
+          #          - set_release: oracular
+          #            set_desktop: xfce
+
+          # Ubuntu 25.04 (planned interim, Apr 2025)
+          - set_release: plucky
+            set_desktop: mini
+          - set_release: plucky
+            set_desktop: gnome
+          - set_release: plucky
+            set_desktop: xfce
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Show environment
+        id: basic_info
+        run: |
+          nproc
+          uname -a
+          cat /etc/*release
+          free -h
+          mount
+          df -h
+          cat /proc/cpuinfo
+          cat /proc/meminfo
+
+      - name: Run build in Ubuntu 22.04 container
+        working-directory: ${{ github.workspace }}
+        run: |
+          pwd
+          ls -alh
+          sudo docker run --rm \
+            --privileged \
+            --cap-add SYS_ADMIN \
+            -v /dev:/dev \
+            -v ${{ github.workspace }}:/workspace \
+            -w /workspace \
+            -e set_release=${{ matrix.set_release }} \
+            -e set_desktop=${{ matrix.set_desktop }} \
+            ubuntu:22.04 \
+            bash -c "
+              chmod +x /workspace/kdevbuild/build-armbian-rootfs.sh ;
+              /workspace/kdevbuild/build-armbian-rootfs.sh
+            "
+
+      - name: List build output
+        run: |
+          ls -alh  ${{ github.workspace }}/release/*
+          md5sum ${{ github.workspace }}/release/*
+
+      - name: Upload Image to Release
+        uses: ncipollo/release-action@main
+        with:
+          tag: armbian-rootfs
+          artifacts: ${{ github.workspace }}/release/*
+          allowUpdates: true
+          removeArtifacts: false
+          replacesArtifacts: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+          body: | # Armbian RootFS
+            ## 镜像命名规则
+
+              镜像文件以 armbian_${RELEASE}_${DESKTOP}.rar 格式命名（默认架构为 aarch64）。
+
+            - **${RELEASE}**：发行版名称
+            - **${DESKTOP}**：桌面环境
+                - `mini`：最小化构建（无图形界面）
+                - `xfce`：带 XFce 图形界面
+                - `gnome`：带 GNome 图形界面
+
+            ## 发行版与维护周期
+
+              | 发行版名称 | 操作系统           | 发布时间   | 结束维护时间         |
+              |------------|--------------------|------------|----------------------|
+              | bullseye   | Debian 11          | 2021-08-14 | 2026-06-30（LTS）    |
+              | bookworm   | Debian 12          | 2023-06-10 | 2028-06-10（LTS）    |
+              | trixie     | Debian 13          | 预计 2025  | 预计 2030            |
+              | forky      | Debian 14          | 预计 2027  | 预计 2032            |
+              | focal      | Ubuntu 20.04 LTS   | 2020-04-23 | 2025-04-30 |
+              | jammy      | Ubuntu 22.04 LTS   | 2022-04-21 | 2027-04-30 |
+              | noble      | Ubuntu 24.04 LTS   | 2024-04-25 | 2029-04-30 |
+              | oracular   | Ubuntu 24.10       | 2024-10-10 | 2025-07-31           |
+              | plucky     | Ubuntu 25.04       | 预计 2025-04 | 预计 2026-01        |
+              | resolute   | Ubuntu 25.10       | 预计 2025-10 | 预计 2026-07        |
+
+              > **说明**：
+              > - LTS 表示长期支持版本。
+              > - Ubuntu 非 LTS 版本通常提供 9 个月的支持周期。
+              > - Debian 每个版本通常提供约 5 年的支持（包括 LTS 阶段）。
+              > - 具体日期可能因官方调整而变化，请以发行方公告为准。
+
+            ## 系统默认账户
+
+              | 用户名 | 密码  |
+              |--------|-------|
+              | root   | admin |
+              | admin  | admin |
+
+            ## 免责声明
+
+            - **按原样提供**：本镜像不作任何明示或暗示保证，使用风险由用户自行承担
+            - **无官方关联**：Armbian 是独立社区项目，本镜像与 Armbian 团队无官方关联
+            - **生命周期**：版本跟随 Debian/Ubuntu 基础系统，建议使用稳定版（Noble/Bookworm）用于生产环境
+            - **安全提示**：请定期更新补丁，修改默认密码，配置防火墙
