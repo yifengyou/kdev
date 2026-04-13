@@ -9,13 +9,13 @@ VMNAME="kdev-$RANDOM"
 ISONAME=$(basename ${ISOURL})
 JOBS=`nproc`
 
-#sudo apt-get install -y \
-#  tmux \
-#  qemu-system-arm \
-#  qemu-system-gui \
-#  qemu-efi-aarch64 \
-#  qemu-utils \
-#  ipxe-qemu
+sudo apt-get install -y \
+	tmux \
+	qemu-system-arm \
+	qemu-system-gui \
+	qemu-efi-aarch64 \
+	qemu-utils \
+	ipxe-qemu
 
 fileserver=$(lsof -ti :${FILE_SERVER_PORT})
 if [ ! -z "${fileserver}" ]; then
@@ -68,7 +68,7 @@ echo "kdev: ${ISONAME} ready!"
 
 python3 -m http.server ${FILE_SERVER_PORT} --directory $(pwd) &
 echo "kdev: http server ready!"
-sleep 5
+sleep 3
 
 cleanup() {
 	fileserver=$(lsof -ti :${FILE_SERVER_PORT})
@@ -83,8 +83,8 @@ trap cleanup EXIT
 mkdir -p mnt
 mount ${ISONAME} mnt
 if [ $? -ne 0 ]; then
-  echo "kdev: mount ${ISONAME} failed!"
-  exit 1
+	echo "kdev: mount ${ISONAME} failed!"
+	exit 1
 fi
 
 ls -alh mnt/install.a64
@@ -94,34 +94,36 @@ if [ $? -ne 0 ]; then
 fi
 
 if [ ! -f mnt/install.a64/vmlinuz ] ; then
-  echo "install.a64/vmlinuz does't exists!"
-  exit 1
+	echo "install.a64/vmlinuz does't exists!"
+	exit 1
 fi
 
 if [ ! -f mnt/install.a64/initrd.gz ] ; then
-  echo "install.a64/initrd.gz does't exists!"
-  exit 1
+	echo "install.a64/initrd.gz does't exists!"
+	exit 1
 fi
 
 ls -alh /dev/kvm
 
 qemu-system-aarch64 \
-  -name "${ISO_NAME%.*}" \
-  -machine virt,gic-version=3 \
-  -cpu max \
-  -smp ${JOBS} \
-  -m 4096 \
-  -cdrom "${ISONAME}" \
-  -hda rootfs.qcow2 \
-  -boot order=dc \
-  -kernel mnt/install.a64/vmlinuz \
-  -initrd mnt/install.a64/initrd.gz \
-  -append 'auto=true priority=critical preseed/url=http://10.0.2.1:63336/preseed.cfg earlyprintk console=ttyAMA0,115200n8 earlycon=pl011,mmio,0x09000000 level=10 ' \
-  -net user,host=10.0.2.1,hostfwd=tcp::60023-:22 \
-  -net nic,model=e1000 \
-  -display none \
-  -serial mon:stdio \
-  -nographic
+	-name "${ISO_NAME%.*}" \
+	-machine virt,gic-version=3 \
+	-cpu max \
+	-smp ${JOBS} \
+	-semihosting \
+	-m 4096 \
+	-drive file=/usr/share/AAVMF/AAVMF_CODE.fd,format=raw,if=pflash \
+	-drive file=rootfs.qcow2,format=qcow2 \
+	-drive file="${ISONAME}",format=raw,media=cdrom,readonly=on \
+	-boot order=dc \
+	-kernel mnt/install.a64/vmlinuz \
+	-initrd mnt/install.a64/initrd.gz \
+	-append 'auto=true priority=critical preseed/url=http://10.0.2.1:63336/preseed.cfg earlyprintk console=ttyAMA0,115200n8 earlycon=pl011,mmio,0x09000000 level=10 ' \
+	-net user,host=10.0.2.1,hostfwd=tcp::60023-:22 \
+	-net nic,model=e1000 \
+	-display none \
+	-serial mon:stdio \
+	-nographic
 
 sync
 ls -alh rootfs.qcow2
