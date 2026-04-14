@@ -275,7 +275,7 @@ jobs:
 
   build-arm64-runner:
     if: ${{ github.event.inputs.arch_type == 'arm64-runner' }}
-    runs-on: ubuntu-24.04-arm
+    runs-on: kunpeng920
     strategy:
       matrix:
         os_release: [
@@ -291,12 +291,10 @@ jobs:
       - name: Install dependency
         run: |
           set -x
-          uname -a
           lscpu
           ls -alh /dev/kvm || :
-          sudo apt update
-          sudo apt install -qq -y qemu-kvm libvirt-daemon-system virtinst cpu-checker aria2
-          sudo systemctl enable --now libvirtd
+          sudo apt-get update
+          sudo apt-get install -y qemu-kvm libvirt-daemon-system virtinst cpu-checker aria2
           sudo mkdir -p /builder/release
 
       - name: Build rootfs in vm
