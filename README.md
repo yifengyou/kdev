@@ -8,42 +8,43 @@ Bug report, questions and discussion are welcome, you can post an issue or pull 
 
 ## 目录
 
-<!-- MDTOC maxdepth:6 firsth1:1 numbering:0 flatten:0 bullets:1 updateOnSave:1 -->
 
-- [kdev (linux kernel development tools)](#kdev-linux-kernel-development-tools)   
-   - [目录](#目录)   
-   - [项目描述](#项目描述)   
-   - [极速入门](#极速入门)   
-      - [构建镜像](#构建镜像)   
-      - [添加配置文件](#添加配置文件)   
-      - [编译内核](#编译内核)   
-      - [构建rootfs](#构建rootfs)   
-      - [运行](#运行)   
-   - [TODO](#todo)   
-   - [详细说明](#详细说明)   
-      - [kdev kernel](#kdev-kernel)   
-      - [kdev rootfs](#kdev-rootfs)   
-      - [kdev run](#kdev-run)   
-   - [其他](#其他)   
-      - [待适配发行版信息](#待适配发行版信息)   
+- [项目描述](#项目描述)   
+- [极速入门](#极速入门)   
+  - [构建镜像](#构建镜像)   
+  - [添加配置文件](#添加配置文件)   
+  - [编译内核](#编译内核)   
+  - [构建rootfs](#构建rootfs)   
+  - [运行](#运行)   
+- [TODO](#todo)   
+- [详细说明](#详细说明)   
+  - [kdev kernel](#kdev-kernel)   
+  - [kdev rootfs](#kdev-rootfs)   
+  - [kdev run](#kdev-run)   
 
-<!-- /MDTOC -->
 
 ## 项目描述
 
-本仓库提供 kdev 工具，用于快速构建内核编译环境、测试环境（QEMU/KVM）。
+本仓库提供 kdev 工具，旨在为内核开发者打造一站式解决方案，实现从环境构建、内核编译到 QEMU/KVM 虚拟化运行的全流程自动化。
 
-1. 使用 Docker 容器编译内核，规避编译环境差异（工具链，dwarves，python3，etc...）
-2. 使用 Qemu-KVM 虚机运行内核
-3. 适配 Linux 2/3/4/5/6内核版本，发行版默认使用Ubuntu
+**核心特性**
 
-| Ubuntu 版本            | 代号                | 内核版本  | 源码仓库                                                |
+- **容器化编译环境**：利用 Docker 容器技术屏蔽宿主机差异，统一工具链（Toolchain）、dwarves、python3 等依赖，确保内核编译的一致性与可复现性。
+- **自动化镜像构建**：集成 GitHub Workflows，自动构建主流发行版（如 Ubuntu/Debian）的 QCOW2 磁盘镜像，支持一键拉起虚拟机进行内核调试。
+- **广泛的版本兼容**：全面适配 Linux 2.x 至 6.x 历代内核版本，默认基于 Ubuntu 发行版，兼顾经典与前沿。
+- **多场景适用**：专为内核研发、漏洞挖掘、红蓝对抗靶场搭建、开发板镜像构建等场景设计，大幅降低环境配置成本。
+
+
+| Ubuntu 版本             | 代号                 | 内核版本    | 源码仓库                                                 |
 | ---------------------- | ------------------- | --------- | ------------------------------------------------------- |
 | Ubuntu 24.04.X **LTS** | **Noble** Numbat    | 6.8.4     | [linux-6.git](https://github.com/yifengyou/linux-6.git) |
 | Ubuntu 22.04.X **LTS** | **Jammy** Jellyfish | 5.15.60   | [linux-5.git](https://github.com/yifengyou/linux-5.git) |
 | Ubuntu 18.04.X **LTS** | **Bionic** Beaver   | 4.15.18   | [linux-4.git](https://github.com/yifengyou/linux-4.git) |
 | Ubuntu 14.04.5 **LTS** | **Trusty** Tahr     | 3.13.11   | [linux-3.git](https://github.com/yifengyou/linux-3.git) |
 | Ubuntu 10.04.X **LTS** | **Lucid** Lynx      | 2.6.32.63 | [linux-2.git](https://github.com/yifengyou/linux-2.git) |
+
+
+
 
 ## 极速入门
 
@@ -138,7 +139,6 @@ kdev run
 
 
 ## 详细说明
-
 
 ### kdev kernel
 
@@ -354,23 +354,6 @@ Escape character is ^] (Ctrl + ])
       before booting or `c' for a command-line.                           
 
 ```
-
-
-
-
-
-
-
-## 其他
-
-### 待适配发行版信息
-
-* [Debian] (docs/Debian.md)
-* [CentOS] (docs/CentOS.md)
-* [RockyLinux] (docs/RockyLinux.md)
-
-
-
 
 
 

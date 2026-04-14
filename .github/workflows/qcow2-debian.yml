@@ -103,9 +103,9 @@ jobs:
           set -x
           cd iso/${{ matrix.os_release }}
           ls -alh
-          sudo rar a /builder/release/kdev_${{ matrix.os_release }}.qcow2.rar rootfs.qcow2
+          sudo tar -zcvf /builder/release/kdev_${{ matrix.os_release }}.qcow2.tar.gz rootfs.qcow2
           ls -alh /builder/release/
-          FILE_PATH="/builder/release/kdev_${{ matrix.os_release }}.qcow2.rar"
+          FILE_PATH="/builder/release/kdev_${{ matrix.os_release }}.qcow2.tar.gz"
           FILE_SIZE=$(stat -c%s "$FILE_PATH")
           LIMIT_SIZE=$((80 * 1024 * 1024))
           echo "文件大小: $FILE_SIZE 字节"
