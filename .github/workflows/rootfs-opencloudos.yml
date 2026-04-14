@@ -1,4 +1,4 @@
-name: Build opencloudos rootfs
+name: ROOTFS OpenCloudos
 
 on:
   repository_dispatch:

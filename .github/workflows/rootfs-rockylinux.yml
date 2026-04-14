@@ -1,4 +1,4 @@
-name: Build rockylinux rootfs
+name: ROOTFS RockyLinux
 
 on:
   repository_dispatch:

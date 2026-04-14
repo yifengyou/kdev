@@ -1,4 +1,4 @@
-name: Build ubuntu qcow2
+name: QCOW2 Ubuntu
 
 on:
   repository_dispatch:

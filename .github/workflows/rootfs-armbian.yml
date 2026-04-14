@@ -1,4 +1,4 @@
-name: Build armbian rootfs
+name: ROOTFS Armbian
 
 on:
   repository_dispatch:

@@ -1,4 +1,4 @@
-name: Build centos rootfs
+name: ROOTFS CentOS
 
 on:
   repository_dispatch:

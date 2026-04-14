@@ -1,4 +1,4 @@
-name: Build openanolis rootfs
+name: ROOTFS OpenAnolis
 
 on:
   repository_dispatch:

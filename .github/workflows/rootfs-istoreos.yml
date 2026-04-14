@@ -1,4 +1,4 @@
-name: Build istoreos rootfs
+name: ROOTFS istoreos
 
 on:
   repository_dispatch:

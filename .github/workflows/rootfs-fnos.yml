@@ -1,4 +1,4 @@
-name: Build fnos rootfs
+name: ROOTFS fnos
 
 on:
   repository_dispatch:

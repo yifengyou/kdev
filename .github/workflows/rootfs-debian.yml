@@ -1,4 +1,4 @@
-name: Build debian rootfs
+name: ROOTFS Debian
 
 on:
   repository_dispatch:

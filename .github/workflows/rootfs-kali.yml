@@ -1,4 +1,4 @@
-name: Build kali rootfs
+name: ROOTFS Kali
 
 on:
   repository_dispatch:

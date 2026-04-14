@@ -1,4 +1,4 @@
-name: Build ubuntu rootfs
+name: ROOTFS Ubuntu
 
 on:
   repository_dispatch:

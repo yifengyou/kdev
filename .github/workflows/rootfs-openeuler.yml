@@ -1,4 +1,4 @@
-name: Build openeuler rootfs
+name: ROOTFS OpenEuler
 
 on:
   repository_dispatch:

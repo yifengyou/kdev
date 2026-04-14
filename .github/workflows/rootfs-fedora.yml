@@ -1,4 +1,4 @@
-name: Build fedora rootfs
+name: ROOTFS fedora
 
 on:
   repository_dispatch:

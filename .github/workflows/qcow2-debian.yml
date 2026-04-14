@@ -1,4 +1,4 @@
-name: Build debian qcow2
+name: QCOW2 Debian
 
 on:
   repository_dispatch:

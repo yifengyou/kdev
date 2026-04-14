@@ -1,4 +1,4 @@
-name: Build openwrt rootfs
+name: ROOTFS OpenWrt
 
 on:
   repository_dispatch:
