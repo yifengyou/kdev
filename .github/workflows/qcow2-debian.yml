@@ -21,7 +21,6 @@ jobs:
   build-amd64:
     if: ${{ github.event.inputs.arch_type == 'amd64' }}
     runs-on: ubuntu-22.04
-    timeout-minutes: 60
     strategy:
       matrix:
         os_release: [
@@ -133,7 +132,7 @@ jobs:
 
             ## 镜像信息
 
-            1. ISO来源于debian官方
+            1. ISO来源于debian官方  <https://cdimage.debian.org/cdimage/archive/>
             2. 支持架构：amd64 / arm64
             3. root账号密码: root 密码 linux
             4. 普通用户账号密码： kdev 密码 linux
@@ -147,7 +146,6 @@ jobs:
   build-arm64:
     if: ${{ github.event.inputs.arch_type == 'arm64' }}
     runs-on: ubuntu-24.04-arm
-    timeout-minutes: 120
     strategy:
       matrix:
         os_release: [
@@ -263,7 +261,7 @@ jobs:
 
             ## 镜像信息
 
-            1. ISO来源于debian官方
+            1. ISO来源于debian官方 <https://cdimage.debian.org/cdimage/archive/>
             2. 支持架构：amd64 / arm64
             3. root账号密码: root 密码 linux
             4. 普通用户账号密码： kdev 密码 linux
