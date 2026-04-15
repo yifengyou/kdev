@@ -248,7 +248,7 @@ jobs:
 
   build-arm64-runner:
     if: ${{ github.event.inputs.arch_type == 'arm64-runner' }}
-    runs-on: ubuntu-22.04
+    runs-on: kunpeng920
     timeout-minutes: 60
     strategy:
       matrix:
