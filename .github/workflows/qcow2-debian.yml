@@ -395,7 +395,7 @@ jobs:
         timeout-minutes: 60
         with:
           tag: debian-qcow2
-          artifacts: /kdev/kdev.git/release/*
+          artifacts: /kdev/kdev.git/release/kdev_${{ matrix.os_release }}.qcow2.tar.gz
           allowUpdates: true
           removeArtifacts: false
           replacesArtifacts: true
