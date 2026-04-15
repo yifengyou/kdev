@@ -336,8 +336,8 @@ jobs:
             if [[ "$REMOTE_HASH" == "$LOCAL_HASH" ]]; then
               echo "已存在相同文件，忽略上传流程"
               echo "SKIP_UPLOAD=true" >> $GITHUB_ENV
-              exit 0
             fi
+            exit 0
           fi
 
           sudo tar -zcvf /kdev/kdev.git/release/kdev_${{ matrix.os_release }}.qcow2.tar.gz rootfs.qcow2
@@ -361,9 +361,7 @@ jobs:
           if [[ "$REMOTE_HASH" == "$LOCAL_HASH" ]]; then
             echo "已存在相同文件，忽略上传流程"
             echo "SKIP_UPLOAD=true" >> $GITHUB_ENV
-            exit 0
           fi
-
 
       - name: Upload image to release
         if: env.SKIP_UPLOAD != 'true'
