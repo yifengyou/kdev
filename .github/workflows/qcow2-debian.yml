@@ -333,8 +333,6 @@ jobs:
           set -x
           lscpu
           ls -alh /dev/kvm || :
-          sudo apt-get update
-          sudo apt-get install -y qemu-kvm libvirt-daemon-system virtinst cpu-checker aria2
           sudo mkdir -p /builder/release
 
       - name: Build rootfs in vm

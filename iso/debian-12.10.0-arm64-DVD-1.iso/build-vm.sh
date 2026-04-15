@@ -9,13 +9,37 @@ VMNAME="kdev-$RANDOM"
 ISONAME=$(basename ${ISOURL})
 JOBS=$(nproc)
 
-apt-get install -y \
-	tmux \
-	qemu-system-arm \
-	qemu-system-gui \
-	qemu-efi-aarch64 \
-	qemu-utils \
-	ipxe-qemu
+PKGS=(
+    "tmux"
+    "qemu-system-arm"
+    "qemu-system-gui"
+    "qemu-efi-aarch64"
+    "qemu-utils"
+    "ipxe-qemu"
+    "qemu-kvm"
+    "libvirt-daemon-system"
+    "virtinst"
+    "cpu-checker"
+    "aria2"
+)
+MISSING=()
+
+for p in "${PKGS[@]}"; do
+    if ! dpkg -s "$p" &>/dev/null; then
+        MISSING+=("$p")
+        echo "❌ 缺失: $p"
+    else
+        echo "✅ 已有: $p"
+    fi
+done
+
+if [ ${#MISSING[@]} -gt 0 ]; then
+    echo "--------------------------------"
+    sudo apt-get update && sudo apt-get install -y "${MISSING[@]}"
+else
+    echo "--------------------------------"
+    echo "✨ 所有软件包均已安装。"
+fi
 
 fileserver=$(lsof -ti :${FILE_SERVER_PORT})
 if [ ! -z "${fileserver}" ]; then
@@ -127,7 +151,7 @@ qemu-system-aarch64 \
 	-kernel mnt/install.a64/vmlinuz \
 	-initrd mnt/install.a64/initrd.gz \
 	-append "auto=true priority=critical preseed/url=http://10.0.2.1:${FILE_SERVER_PORT}/preseed.cfg earlyprintk console=ttyAMA0,115200n8 earlycon=pl011,mmio,0x09000000 level=10 " \
-	-net user,host=10.0.2.1,hostfwd=tcp::60023-:22 \
+	-net user,host=10.0.2.1 \
 	-net nic,model=e1000 \
 	-display none \
 	-serial mon:stdio \

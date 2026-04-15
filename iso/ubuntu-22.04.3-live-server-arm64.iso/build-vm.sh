@@ -9,13 +9,37 @@ VMNAME="kdev-$RANDOM"
 ISONAME=$(basename ${ISOURL})
 JOBS=`nproc`
 
-apt-get install -y \
-	tmux \
-	qemu-system-arm \
-	qemu-system-gui \
-	qemu-efi-aarch64 \
-	qemu-utils \
-	ipxe-qemu
+PKGS=(
+    "tmux"
+    "qemu-system-arm"
+    "qemu-system-gui"
+    "qemu-efi-aarch64"
+    "qemu-utils"
+    "ipxe-qemu"
+    "qemu-kvm"
+    "libvirt-daemon-system"
+    "virtinst"
+    "cpu-checker"
+    "aria2"
+)
+MISSING=()
+
+for p in "${PKGS[@]}"; do
+    if ! dpkg -s "$p" &>/dev/null; then
+        MISSING+=("$p")
+        echo "❌ 缺失: $p"
+    else
+        echo "✅ 已有: $p"
+    fi
+done
+
+if [ ${#MISSING[@]} -gt 0 ]; then
+    echo "--------------------------------"
+    sudo apt-get update && sudo apt-get install -y "${MISSING[@]}"
+else
+    echo "--------------------------------"
+    echo "✨ 所有软件包均已安装。"
+fi
 
 fileserver=$(lsof -ti :${FILE_SERVER_PORT})
 if [ ! -z "${fileserver}" ]; then

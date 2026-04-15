@@ -123,7 +123,7 @@ qemu-system-x86_64 \
 	-kernel mnt/install.amd/vmlinuz \
 	-initrd mnt/install.amd/initrd.gz \
 	-append "auto=true priority=critical preseed/url=http://10.0.2.1:${FILE_SERVER_PORT}/preseed.cfg earlyprintk console=ttyS0,115200n8" \
-	-net user,host=10.0.2.1,hostfwd=tcp::60023-:22 \
+	-net user,host=10.0.2.1 \
 	-net nic,model=e1000 \
 	-display none \
 	-serial mon:stdio \
