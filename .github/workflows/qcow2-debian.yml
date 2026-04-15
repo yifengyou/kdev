@@ -327,7 +327,10 @@ jobs:
           mkdir -p /kdev/kdev.git/release
           sudo tar -zcvf /kdev/kdev.git/release/kdev_${{ matrix.os_release }}.qcow2.tar.gz rootfs.qcow2
           ls -alh /kdev/kdev.git/release
+
+          # check file size
           FILE_PATH="/kdev/kdev.git/release/kdev_${{ matrix.os_release }}.qcow2.tar.gz"
+          FILE_NAME=$(basename ${FILE_PATH})
           FILE_SIZE=$(stat -c%s "$FILE_PATH")
           LIMIT_SIZE=$((80 * 1024 * 1024))
           echo "文件大小: $FILE_SIZE 字节"
@@ -338,8 +341,16 @@ jobs:
           else
             echo "✅ 检查通过：文件大小符合要求。"
           fi
+          # check upload
+          REMOTE_HASH=$(curl -s -H "Accept: application/vnd.github+json" "https://api.github.com/repos/yifengyou/kdev/releases/tags/debian-qcow2" | jq -r --arg n "${FILE_NAME}" '.assets[] | select(.name == $n) | .digest' | cut -d: -f2)
+          LOCAL_HASH=$(sha256sum ${FILE_NAME} | awk '{print $1}')
+          if [[ "$REMOTE_HASH" == "$LOCAL_HASH" ]]; then
+            echo "已存在相同文件，忽略上传流程"
+            echo "SKIP_UPLOAD=true" >> $GITHUB_ENV
+          fi
 
       - name: Upload image to release
+        if: env.SKIP_UPLOAD != 'true'
         uses: ncipollo/release-action@main
         timeout-minutes: 10
         with:
