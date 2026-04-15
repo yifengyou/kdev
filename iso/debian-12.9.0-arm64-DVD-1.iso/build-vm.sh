@@ -127,7 +127,7 @@ qemu-system-aarch64 \
 	-kernel mnt/install.a64/vmlinuz \
 	-initrd mnt/install.a64/initrd.gz \
 	-append "auto=true priority=critical preseed/url=http://10.0.2.1:${FILE_SERVER_PORT}/preseed.cfg earlyprintk console=ttyAMA0,115200n8 earlycon=pl011,mmio,0x09000000 level=10 " \
-	-net user,host=10.0.2.1,hostfwd=tcp::60023-:22 \
+	-net user,host=10.0.2.1 \
 	-net nic,model=e1000 \
 	-display none \
 	-serial mon:stdio \
