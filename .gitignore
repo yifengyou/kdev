@@ -17,3 +17,4 @@ rootfs
 *.aria2
 *.temp
 /release
+mnt
