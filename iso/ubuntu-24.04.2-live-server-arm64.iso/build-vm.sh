@@ -3,24 +3,47 @@
 ISOURL="https://old-releases.ubuntu.com/releases/24.04/ubuntu-24.04.2-live-server-arm64.iso"
 ISOURL="https://cdimage.ubuntu.com/releases/noble/release/ubuntu-24.04.2-live-server-arm64.iso"
 
-WORKDIR=`pwd`
+WORKDIR=$(pwd)
 FILE_SERVER_PORT=$(shuf -i 20000-65535 -n 1)
 VMNAME="kdev-$RANDOM"
 ISONAME=$(basename ${ISOURL})
-JOBS=`nproc`
+JOBS=$(nproc)
 
 if [ "$(id -u)" != "0" ]; then
 	echo "must run as root"
 	exit 1
 fi
 
-apt-get install -y \
-  tmux \
-  qemu-system-arm \
-  qemu-system-gui \
-  qemu-efi-aarch64 \
-  qemu-utils \
-  ipxe-qemu
+PKGS=(
+    "tmux"
+    "qemu-system-arm"
+    "qemu-system-gui"
+    "qemu-efi-aarch64"
+    "qemu-utils"
+    "ipxe-qemu"
+    "libvirt-daemon-system"
+    "virtinst"
+    "cpu-checker"
+    "aria2"
+)
+MISSING=()
+
+for p in "${PKGS[@]}"; do
+    if ! dpkg -s "$p" &>/dev/null; then
+        MISSING+=("$p")
+        echo "❌ 缺失: $p"
+    else
+        echo "✅ 已有: $p"
+    fi
+done
+
+if [ ${#MISSING[@]} -gt 0 ]; then
+    echo "--------------------------------"
+    sudo apt-get update && sudo apt-get install -y "${MISSING[@]}"
+else
+    echo "--------------------------------"
+    echo "✨ 所有软件包均已安装。"
+fi
 
 fileserver=$(lsof -ti :${FILE_SERVER_PORT})
 if [ ! -z "${fileserver}" ]; then
@@ -48,28 +71,28 @@ echo "kdev: rootfs.qcow2 ready!"
 
 sync
 
-if [ ! -f "${ISONAME}" ] ; then
+if [ ! -f "${ISONAME}" ]; then
 	which aria2c
-	if [ $? -eq 0 ] ; then
+	if [ $? -eq 0 ]; then
 		aria2c --max-tries=10 --retry-wait=5 ${ISOURL}
 	fi
 fi
 
-if [ ! -f "${ISONAME}" ] ; then
+if [ ! -f "${ISONAME}" ]; then
 	which wget
-	if [ $? -eq 0 ] ; then
+	if [ $? -eq 0 ]; then
 		wget -c ${ISOURL}
 	fi
 fi
 
-if [ ! -f "${ISONAME}" ] ; then
+if [ ! -f "${ISONAME}" ]; then
 	which curl
-	if [ $? -eq 0 ] ; then
+	if [ $? -eq 0 ]; then
 		curl -o ${ISONAME} ${ISOURL}
 	fi
 fi
 
-if [ ! -f "${ISONAME}" ] ; then
+if [ ! -f "${ISONAME}" ]; then
 	echo "kdev: cound't download ${ISONAME}"
 	exit 1
 fi
@@ -95,8 +118,8 @@ trap cleanup EXIT
 mkdir -p mnt
 mount ${ISONAME} mnt
 if [ $? -ne 0 ]; then
-  echo "kdev: mount ${ISONAME} failed!"
-  exit 1
+	echo "kdev: mount ${ISONAME} failed!"
+	exit 1
 fi
 
 ls -alh mnt/casper
@@ -105,40 +128,39 @@ if [ $? -ne 0 ]; then
 	exit 1
 fi
 
-if [ ! -f mnt/casper/vmlinuz ] ; then
-  echo "casper/vmlinuz does't exists!"
-  exit 1
+if [ ! -f mnt/casper/vmlinuz ]; then
+	echo "casper/vmlinuz does't exists!"
+	exit 1
 fi
 
-if [ ! -f mnt/casper/initrd ] ; then
-  echo "casper/initrd does't exists!"
-  exit 1
+if [ ! -f mnt/casper/initrd ]; then
+	echo "casper/initrd does't exists!"
+	exit 1
 fi
 
 ls -alh /dev/kvm
 ip -br a
-virsh net-list --all
 
 qemu-system-aarch64 \
-  -name "${ISONAME%.*}" \
-  -machine virt \
-  -cpu max \
-  -accel kvm \
-  -semihosting \
-  -drive file=/usr/share/AAVMF/AAVMF_CODE.fd,format=raw,if=pflash \
-  -smp ${JOBS} \
-  -m 4096 \
-  -cdrom ${ISONAME} \
-  -device virtio-scsi-pci,id=scsi \
-  -drive file=rootfs.qcow2,format=qcow2,if=virtio \
-  -boot order=dc \
-  -kernel mnt/casper/vmlinuz \
-  -initrd mnt/casper/initrd \
-  -append 'ds=nocloud-net;s=http://192.168.122.1:${FILE_SERVER_PORT}/ cloud-config-url=/dev/null autoinstall earlyprintk ignore_loglevel console=ttyAMA0,115200n8 earlycon=pl011,mmio,0x09000000 level=10 " \
-  -serial mon:stdio \
-  -net nic \
-  -net user,net=192.168.122.0/24,host=192.168.122.1 \
-  -nographic
+	-name "${ISONAME%.*}" \
+	-machine virt \
+	-cpu max \
+	-accel kvm \
+	-semihosting \
+	-drive file=/usr/share/AAVMF/AAVMF_CODE.fd,format=raw,if=pflash \
+	-smp ${JOBS} \
+	-m 4096 \
+	-cdrom ${ISONAME} \
+	-device virtio-scsi-pci,id=scsi \
+	-drive file=rootfs.qcow2,format=qcow2,if=virtio \
+	-boot order=dc \
+	-kernel mnt/casper/vmlinuz \
+	-initrd mnt/casper/initrd \
+	-append "ds=nocloud-net;s=http://192.168.122.1:${FILE_SERVER_PORT}/ cloud-config-url=/dev/null autoinstall earlyprintk ignore_loglevel console=ttyAMA0,115200n8 earlycon=pl011,mmio,0x09000000 level=10 " \
+	-serial mon:stdio \
+	-net nic \
+	-net user,net=192.168.122.0/24,host=192.168.122.1 \
+	-nographic
 
 sync
 ls -alh rootfs.qcow2

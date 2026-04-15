@@ -127,7 +127,7 @@ qemu-system-aarch64 \
   -boot order=dc \
   -kernel mnt/casper/vmlinuz \
   -initrd mnt/casper/initrd \
-  -append 'ds=nocloud-net;s=http://192.168.122.1:${FILE_SERVER_PORT}/ cloud-config-url=/dev/null autoinstall earlyprintk ignore_loglevel console=ttyAMA0,115200n8 earlycon=pl011,mmio,0x09000000 level=10 " \
+  -append "ds=nocloud-net;s=http://192.168.122.1:${FILE_SERVER_PORT}/ cloud-config-url=/dev/null autoinstall earlyprintk ignore_loglevel console=ttyAMA0,115200n8 earlycon=pl011,mmio,0x09000000 level=10 " \
   -serial mon:stdio \
   -net nic \
   -net user,net=192.168.122.0/24,host=192.168.122.1 \
@@ -135,7 +135,7 @@ qemu-system-aarch64 \
 
 sync
 ls -alh rootfs.qcow2
-size=$(du -s rootfs.qcow2 | awk '{print $1}')
+size=$(du -s rootfs.qcow2 | awk "{print $1}')
 if [ "$size" -gt 204800 ]; then
   qemu-img snapshot -c 'install os' rootfs.qcow2
   qemu-img snapshot -l rootfs.qcow2
