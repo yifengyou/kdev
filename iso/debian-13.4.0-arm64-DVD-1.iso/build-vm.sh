@@ -3,13 +3,13 @@
 set -x
 ISOURL="https://cdimage.debian.org/debian-cd/13.4.0/arm64/iso-dvd/debian-13.4.0-arm64-DVD-1.iso"
 
-WORKDIR=`pwd`
+WORKDIR=$(pwd)
 FILE_SERVER_PORT=$(shuf -i 20000-65535 -n 1)
 VMNAME="kdev-$RANDOM"
 ISONAME=$(basename ${ISOURL})
-JOBS=`nproc`
+JOBS=$(nproc)
 
-sudo apt-get install -y \
+apt-get install -y \
 	tmux \
 	qemu-system-arm \
 	qemu-system-gui \
@@ -37,28 +37,28 @@ echo "kdev: rootfs.qcow2 ready!"
 
 sync
 
-if [ ! -f "${ISONAME}" ] ; then
+if [ ! -f "${ISONAME}" ]; then
 	which aria2c
-	if [ $? -eq 0 ] ; then
+	if [ $? -eq 0 ]; then
 		aria2c --max-tries=10 --retry-wait=5 ${ISOURL}
 	fi
 fi
 
-if [ ! -f "${ISONAME}" ] ; then
+if [ ! -f "${ISONAME}" ]; then
 	which wget
-	if [ $? -eq 0 ] ; then
+	if [ $? -eq 0 ]; then
 		wget -c ${ISOURL}
 	fi
 fi
 
-if [ ! -f "${ISONAME}" ] ; then
+if [ ! -f "${ISONAME}" ]; then
 	which curl
-	if [ $? -eq 0 ] ; then
+	if [ $? -eq 0 ]; then
 		curl -o ${ISONAME} ${ISOURL}
 	fi
 fi
 
-if [ ! -f "${ISONAME}" ] ; then
+if [ ! -f "${ISONAME}" ]; then
 	echo "kdev: cound't download ${ISONAME}"
 	exit 1
 fi
@@ -93,12 +93,12 @@ if [ $? -ne 0 ]; then
 	exit 1
 fi
 
-if [ ! -f mnt/install.a64/vmlinuz ] ; then
+if [ ! -f mnt/install.a64/vmlinuz ]; then
 	echo "install.a64/vmlinuz does't exists!"
 	exit 1
 fi
 
-if [ ! -f mnt/install.a64/initrd.gz ] ; then
+if [ ! -f mnt/install.a64/initrd.gz ]; then
 	echo "install.a64/initrd.gz does't exists!"
 	exit 1
 fi
@@ -140,4 +140,3 @@ fi
 
 echo "kdev: all done!"
 exit 0
-

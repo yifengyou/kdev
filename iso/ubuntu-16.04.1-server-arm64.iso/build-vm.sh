@@ -13,7 +13,7 @@ if [ "$(id -u)" != "0" ]; then
 	exit 1
 fi
 
-sudo apt-get install -y \
+apt-get install -y \
   tmux \
   qemu-system-arm \
   qemu-system-gui \
@@ -111,7 +111,7 @@ ip -br a
 virsh net-list --all
 
 qemu-system-aarch64 \
-  -name "${ISO_NAME%.*}" \
+  -name "${ISONAME%.*}" \
   -machine virt,gic-version=2 \
   -cpu max \
   -accel tcg \
@@ -128,7 +128,7 @@ qemu-system-aarch64 \
   -boot order=dc \
   -kernel mnt/install/vmlinuz \
   -initrd mnt/install/initrd.gz \
-  -append 'auto=true priority=critical url=http://192.168.122.1:${FILE_SERVER_PORT}/preseed.cfg autoinstall earlyprintk ignore_loglevel console=ttyAMA0,115200n8 earlycon=pl011,mmio,0x09000000 level=10 ' \
+  -append 'auto=true priority=critical url=http://192.168.122.1:${FILE_SERVER_PORT}/preseed.cfg autoinstall earlyprintk ignore_loglevel console=ttyAMA0,115200n8 earlycon=pl011,mmio,0x09000000 level=10 " \
   -serial mon:stdio \
   -device virtio-net-device,netdev=net0 \
   -netdev user,id=net0,net=192.168.122.0/24,host=192.168.122.1 \

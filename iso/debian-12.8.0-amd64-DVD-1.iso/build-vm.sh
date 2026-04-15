@@ -9,7 +9,7 @@ VMNAME="kdev-$RANDOM"
 ISONAME=$(basename ${ISOURL})
 JOBS=`nproc`
 
-#sudo apt-get install -y \
+#apt-get install -y \
 #  tmux \
 #  qemu-system-arm \
 #  qemu-system-gui \
@@ -106,7 +106,7 @@ fi
 ls -alh /dev/kvm
 
 qemu-system-x86_64 \
-  -name "${ISO_NAME%.*}" \
+  -name "${ISONAME%.*}" \
   -machine pc,accel=kvm \
   -cpu host \
   -smp ${JOBS} \

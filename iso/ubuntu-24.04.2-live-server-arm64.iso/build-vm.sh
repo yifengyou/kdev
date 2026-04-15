@@ -14,7 +14,7 @@ if [ "$(id -u)" != "0" ]; then
 	exit 1
 fi
 
-sudo apt-get install -y \
+apt-get install -y \
   tmux \
   qemu-system-arm \
   qemu-system-gui \
@@ -114,7 +114,7 @@ ip -br a
 virsh net-list --all
 
 qemu-system-aarch64 \
-  -name "${ISO_NAME%.*}" \
+  -name "${ISONAME%.*}" \
   -machine virt \
   -cpu max \
   -accel kvm \
@@ -128,7 +128,7 @@ qemu-system-aarch64 \
   -boot order=dc \
   -kernel mnt/casper/vmlinuz \
   -initrd mnt/casper/initrd \
-  -append 'ds=nocloud-net;s=http://192.168.122.1:${FILE_SERVER_PORT}/ cloud-config-url=/dev/null autoinstall earlyprintk ignore_loglevel console=ttyAMA0,115200n8 earlycon=pl011,mmio,0x09000000 level=10 ' \
+  -append 'ds=nocloud-net;s=http://192.168.122.1:${FILE_SERVER_PORT}/ cloud-config-url=/dev/null autoinstall earlyprintk ignore_loglevel console=ttyAMA0,115200n8 earlycon=pl011,mmio,0x09000000 level=10 " \
   -serial mon:stdio \
   -net nic \
   -net user,net=192.168.122.0/24,host=192.168.122.1 \

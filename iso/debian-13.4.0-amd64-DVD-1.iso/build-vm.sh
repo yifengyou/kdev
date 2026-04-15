@@ -3,13 +3,13 @@
 set -x
 ISOURL="https://cdimage.debian.org/debian-cd/13.4.0/amd64/iso-dvd/debian-13.4.0-amd64-DVD-1.iso"
 
-WORKDIR=`pwd`
+WORKDIR=$(pwd)
 FILE_SERVER_PORT=$(shuf -i 20000-65535 -n 1)
 VMNAME="kdev-$RANDOM"
 ISONAME=$(basename ${ISOURL})
-JOBS=`nproc`
+JOBS=$(nproc)
 
-#sudo apt-get install -y \
+#apt-get install -y \
 #  tmux \
 #  qemu-system-arm \
 #  qemu-system-gui \
@@ -37,28 +37,28 @@ echo "kdev: rootfs.qcow2 ready!"
 
 sync
 
-if [ ! -f "${ISONAME}" ] ; then
+if [ ! -f "${ISONAME}" ]; then
 	which aria2c
-	if [ $? -eq 0 ] ; then
+	if [ $? -eq 0 ]; then
 		aria2c --max-tries=10 --retry-wait=5 ${ISOURL}
 	fi
 fi
 
-if [ ! -f "${ISONAME}" ] ; then
+if [ ! -f "${ISONAME}" ]; then
 	which wget
-	if [ $? -eq 0 ] ; then
+	if [ $? -eq 0 ]; then
 		wget -c ${ISOURL}
 	fi
 fi
 
-if [ ! -f "${ISONAME}" ] ; then
+if [ ! -f "${ISONAME}" ]; then
 	which curl
-	if [ $? -eq 0 ] ; then
+	if [ $? -eq 0 ]; then
 		curl -o ${ISONAME} ${ISOURL}
 	fi
 fi
 
-if [ ! -f "${ISONAME}" ] ; then
+if [ ! -f "${ISONAME}" ]; then
 	echo "kdev: cound't download ${ISONAME}"
 	exit 1
 fi
@@ -83,8 +83,8 @@ trap cleanup EXIT
 mkdir -p mnt
 mount ${ISONAME} mnt
 if [ $? -ne 0 ]; then
-  echo "kdev: mount ${ISONAME} failed!"
-  exit 1
+	echo "kdev: mount ${ISONAME} failed!"
+	exit 1
 fi
 
 ls -alh mnt/install.amd
@@ -93,35 +93,35 @@ if [ $? -ne 0 ]; then
 	exit 1
 fi
 
-if [ ! -f mnt/install.amd/vmlinuz ] ; then
-  echo "install.amd/vmlinuz does't exists!"
-  exit 1
+if [ ! -f mnt/install.amd/vmlinuz ]; then
+	echo "install.amd/vmlinuz does't exists!"
+	exit 1
 fi
 
-if [ ! -f mnt/install.amd/initrd.gz ] ; then
-  echo "install.amd/initrd.gz does't exists!"
-  exit 1
+if [ ! -f mnt/install.amd/initrd.gz ]; then
+	echo "install.amd/initrd.gz does't exists!"
+	exit 1
 fi
 
 ls -alh /dev/kvm
 
 qemu-system-x86_64 \
-  -name "${ISO_NAME%.*}" \
-  -machine pc,accel=kvm \
-  -cpu host \
-  -smp ${JOBS} \
-  -m 4096 \
-  -cdrom "${ISONAME}" \
-  -hda rootfs.qcow2 \
-  -boot order=dc \
-  -kernel mnt/install.amd/vmlinuz \
-  -initrd mnt/install.amd/initrd.gz \
-  -append "auto=true priority=critical preseed/url=http://10.0.2.1:${FILE_SERVER_PORT}/preseed.cfg earlyprintk console=ttyS0,115200n8" \
-  -net user,host=10.0.2.1,hostfwd=tcp::60023-:22 \
-  -net nic,model=e1000 \
-  -display none \
-  -serial mon:stdio \
-  -nographic
+	-name "${ISONAME%.*}" \
+	-machine pc,accel=kvm \
+	-cpu host \
+	-smp ${JOBS} \
+	-m 4096 \
+	-cdrom "${ISONAME}" \
+	-hda rootfs.qcow2 \
+	-boot order=dc \
+	-kernel mnt/install.amd/vmlinuz \
+	-initrd mnt/install.amd/initrd.gz \
+	-append "auto=true priority=critical preseed/url=http://10.0.2.1:${FILE_SERVER_PORT}/preseed.cfg earlyprintk console=ttyS0,115200n8" \
+	-net user,host=10.0.2.1,hostfwd=tcp::60023-:22 \
+	-net nic,model=e1000 \
+	-display none \
+	-serial mon:stdio \
+	-nographic
 
 sync
 ls -alh rootfs.qcow2
