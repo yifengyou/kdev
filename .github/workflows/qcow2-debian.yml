@@ -309,6 +309,8 @@ jobs:
             'debian-11.2.0-arm64-DVD-1.iso',
             'debian-11.1.0-arm64-DVD-1.iso',
             'debian-11.0.0-arm64-DVD-1.iso',
+            'debian-10.13.0-arm64-DVD-1.iso',
+            'debian-9.13.0-arm64-DVD-1.iso',
         ]
       max-parallel: 64
       fail-fast: false
