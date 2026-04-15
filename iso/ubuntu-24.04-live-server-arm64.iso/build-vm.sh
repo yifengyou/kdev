@@ -131,7 +131,7 @@ qemu-system-aarch64 \
 
 sync
 ls -alh rootfs.qcow2
-size=$(du -s rootfs.qcow2 | awk "{print $1}')
+size=$(du -s rootfs.qcow2 | awk '{print $1}')
 if [ "$size" -gt 204800 ]; then
   qemu-img snapshot -c 'install os' rootfs.qcow2
   qemu-img snapshot -l rootfs.qcow2
