@@ -109,8 +109,7 @@ if [ ! -f mnt/casper/initrd ]; then
 fi
 
 ls -alh /dev/kvm
-ip -br a
-virsh net-list --all
+ip -br a12.12.0
 
 qemu-system-aarch64 \
   -name "${ISONAME%.*}" \
