@@ -16,7 +16,6 @@ PKGS=(
     "qemu-efi-aarch64"
     "qemu-utils"
     "ipxe-qemu"
-    "qemu-kvm"
     "libvirt-daemon-system"
     "virtinst"
     "cpu-checker"
