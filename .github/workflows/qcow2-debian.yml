@@ -346,7 +346,8 @@ jobs:
           cd iso/${{ matrix.os_release }}
           sudo ./build-vm.sh
 
-      - name: Compress Rootfs image
+      - name: Compress qcow2 image
+        timeout-minutes: 20
         working-directory: /kdev/kdev.git/
         run: |
           set -x
