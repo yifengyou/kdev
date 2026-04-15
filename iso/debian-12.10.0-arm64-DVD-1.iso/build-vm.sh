@@ -120,7 +120,9 @@ qemu-system-aarch64 \
 	-m 4096 \
 	-drive file=/usr/share/AAVMF/AAVMF_CODE.fd,format=raw,if=pflash \
 	-drive file=rootfs.qcow2,format=qcow2 \
-	-drive file="${ISONAME}",format=raw,media=cdrom,readonly=on \
+	-drive file="${ISONAME}",format=raw,if=none,id=cdrom,media=cdrom \
+	-device virtio-scsi-device \
+	-device scsi-cd,drive=cdrom \
 	-boot order=dc \
 	-kernel mnt/install.a64/vmlinuz \
 	-initrd mnt/install.a64/initrd.gz \

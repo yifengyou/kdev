@@ -16,3 +16,4 @@ snipaste
 rootfs
 *.aria2
 *.temp
+/release
