@@ -109,8 +109,6 @@ if [ ! -f mnt/install.amd/initrd.gz ]; then
 	exit 1
 fi
 
-ls -alh /dev/kvm
-
 qemu-system-x86_64 \
 	-name "${ISONAME%.*}" \
 	-machine pc,accel=kvm \

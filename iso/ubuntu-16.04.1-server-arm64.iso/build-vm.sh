@@ -112,9 +112,6 @@ if [ ! -f mnt/install/initrd.gz ] ; then
   exit 1
 fi
 
-ls -alh /dev/kvm
-ip -br a12.12.0
-
 qemu-system-aarch64 \
   -name "${ISONAME%.*}" \
   -machine virt,gic-version=2 \

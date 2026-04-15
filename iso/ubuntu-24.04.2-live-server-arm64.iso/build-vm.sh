@@ -137,8 +137,6 @@ if [ ! -f mnt/casper/initrd ]; then
 	echo "casper/initrd does't exists!"
 	exit 1
 fi
-
-ls -alh /dev/kvm
 ip -br a
 
 qemu-system-aarch64 \
