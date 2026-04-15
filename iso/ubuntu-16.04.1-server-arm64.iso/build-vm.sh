@@ -114,9 +114,9 @@ fi
 
 qemu-system-aarch64 \
 	-name "${ISONAME%.*}" \
-	-machine virt,gic-version=2 \
+	-machine virt,gic-version=3 \
 	-cpu max \
-	-accel tcg \
+	-accel kvm \
 	-semihosting \
 	-drive file=/usr/share/AAVMF/AAVMF_CODE.fd,format=raw,if=pflash \
 	-smp ${JOBS} \
