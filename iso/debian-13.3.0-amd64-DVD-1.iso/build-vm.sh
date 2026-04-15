@@ -4,7 +4,7 @@ set -x
 ISOURL="https://cdimage.debian.org/cdimage/archive/13.3.0/amd64/iso-dvd/debian-13.3.0-amd64-DVD-1.iso"
 
 WORKDIR=`pwd`
-FILE_SERVER_PORT="63336"
+FILE_SERVER_PORT=$(shuf -i 20000-65535 -n 1)
 VMNAME="kdev-$RANDOM"
 ISONAME=$(basename ${ISOURL})
 JOBS=`nproc`
@@ -116,7 +116,7 @@ qemu-system-x86_64 \
   -boot order=dc \
   -kernel mnt/install.amd/vmlinuz \
   -initrd mnt/install.amd/initrd.gz \
-  -append 'auto=true priority=critical preseed/url=http://10.0.2.1:63336/preseed.cfg earlyprintk console=ttyS0,115200n8' \
+  -append 'auto=true priority=critical preseed/url=http://10.0.2.1:${FILE_SERVER_PORT}/preseed.cfg earlyprintk console=ttyS0,115200n8' \
   -net user,host=10.0.2.1,hostfwd=tcp::60023-:22 \
   -net nic,model=e1000 \
   -display none \

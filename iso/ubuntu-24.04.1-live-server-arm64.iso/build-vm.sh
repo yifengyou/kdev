@@ -3,7 +3,7 @@
 ISOURL="https://old-releases.ubuntu.com/releases/24.04/ubuntu-24.04.1-live-server-arm64.iso"
 
 WORKDIR=`pwd`
-FILE_SERVER_PORT="63336"
+FILE_SERVER_PORT=$(shuf -i 20000-65535 -n 1)
 VMNAME="kdev-$RANDOM"
 ISONAME=$(basename ${ISOURL})
 JOBS=`nproc`
@@ -127,7 +127,7 @@ qemu-system-aarch64 \
   -boot order=dc \
   -kernel mnt/casper/vmlinuz \
   -initrd mnt/casper/initrd \
-  -append 'ds=nocloud-net;s=http://192.168.122.1:63336/ cloud-config-url=/dev/null autoinstall earlyprintk ignore_loglevel console=ttyAMA0,115200n8 earlycon=pl011,mmio,0x09000000 level=10 ' \
+  -append 'ds=nocloud-net;s=http://192.168.122.1:${FILE_SERVER_PORT}/ cloud-config-url=/dev/null autoinstall earlyprintk ignore_loglevel console=ttyAMA0,115200n8 earlycon=pl011,mmio,0x09000000 level=10 ' \
   -serial mon:stdio \
   -net nic \
   -net user,net=192.168.122.0/24,host=192.168.122.1 \

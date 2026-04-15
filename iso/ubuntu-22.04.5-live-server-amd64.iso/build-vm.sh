@@ -3,7 +3,7 @@
 ISOURL="http://releases.ubuntu.com/22.04.5/ubuntu-22.04.5-live-server-amd64.iso"
 
 WORKDIR=`pwd`
-FILE_SERVER_PORT="63336"
+FILE_SERVER_PORT=$(shuf -i 20000-65535 -n 1)
 VMNAME="kdev-$RANDOM"
 ISONAME=$(basename ${ISOURL})
 LOGNAME="kdev.log"
@@ -65,7 +65,7 @@ qemu-system-x86_64 \
 	-boot order=dc \
 	-kernel ${WORKDIR}/mnt/casper/vmlinuz \
 	-initrd ${WORKDIR}/mnt/casper/initrd \
-	-append "ds=nocloud-net;s=http://192.168.122.1:63336/ cloud-config-url=/dev/null autoinstall earlyprintk console=ttyS0,115200n8" \
+	-append "ds=nocloud-net;s=http://192.168.122.1:${FILE_SERVER_PORT}/ cloud-config-url=/dev/null autoinstall earlyprintk console=ttyS0,115200n8" \
 	-serial file:${LOGNAME} \
 	-net nic -net user,net=192.168.122.0/24,host=192.168.122.1 \
 	-display none \

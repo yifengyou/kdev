@@ -4,7 +4,7 @@ set -x
 ISOURL="https://cdimage.debian.org/cdimage/archive/13.3.0/arm64/iso-dvd/debian-13.3.0-arm64-DVD-1.iso"
 
 WORKDIR=`pwd`
-FILE_SERVER_PORT="63336"
+FILE_SERVER_PORT=$(shuf -i 20000-65535 -n 1)
 VMNAME="kdev-$RANDOM"
 ISONAME=$(basename ${ISOURL})
 JOBS=`nproc`
@@ -106,7 +106,7 @@ fi
 ls -alh /dev/kvm
 
 qemu-system-aarch64 \
-	-name "${ISO_NAME%.*}" \
+	-name "${ISONAME%.*}" \
 	-machine virt,gic-version=3 \
 	-cpu max \
 	-accel kvm \
@@ -119,7 +119,7 @@ qemu-system-aarch64 \
 	-boot order=dc \
 	-kernel mnt/install.a64/vmlinuz \
 	-initrd mnt/install.a64/initrd.gz \
-	-append 'auto=true priority=critical preseed/url=http://10.0.2.1:63336/preseed.cfg earlyprintk console=ttyAMA0,115200n8 earlycon=pl011,mmio,0x09000000 level=10 ' \
+	-append "auto=true priority=critical preseed/url=http://10.0.2.1:${FILE_SERVER_PORT}/preseed.cfg earlyprintk console=ttyAMA0,115200n8 earlycon=pl011,mmio,0x09000000 level=10 " \
 	-net user,host=10.0.2.1,hostfwd=tcp::60023-:22 \
 	-net nic,model=e1000 \
 	-display none \
