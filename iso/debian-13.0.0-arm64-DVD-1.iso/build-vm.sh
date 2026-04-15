@@ -138,6 +138,7 @@ qemu-system-aarch64 \
 	-name "${ISONAME%.*}" \
 	-machine virt,gic-version=3 \
 	-cpu max \
+	-accel kvm \
 	-smp ${JOBS} \
 	-semihosting \
 	-m 4096 \
