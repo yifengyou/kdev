@@ -307,7 +307,7 @@ jobs:
 
       - name: Compress qcow2 image
         timeout-minutes: 20
-        working-directory: /builder/
+        working-directory: /kdev/kdev.git/
         run: |
           set -x
           cd iso/${{ matrix.os_release }}
