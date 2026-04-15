@@ -2,11 +2,11 @@
 
 ISOURL="https://old-releases.ubuntu.com/releases/16.04.6/ubuntu-16.04.1-server-arm64.iso"
 
-WORKDIR=`pwd`
+WORKDIR=$(pwd)
 FILE_SERVER_PORT=$(shuf -i 20000-65535 -n 1)
 VMNAME="kdev-$RANDOM"
 ISONAME=$(basename ${ISOURL})
-JOBS=`nproc`
+JOBS=$(nproc)
 
 if [ "$(id -u)" != "0" ]; then
 	echo "must run as root"
@@ -14,12 +14,12 @@ if [ "$(id -u)" != "0" ]; then
 fi
 
 apt-get install -y \
-  tmux \
-  qemu-system-arm \
-  qemu-system-gui \
-  qemu-efi-aarch64 \
-  qemu-utils \
-  ipxe-qemu
+	tmux \
+	qemu-system-arm \
+	qemu-system-gui \
+	qemu-efi-aarch64 \
+	qemu-utils \
+	ipxe-qemu
 
 fileserver=$(lsof -ti :${FILE_SERVER_PORT})
 if [ ! -z "${fileserver}" ]; then
@@ -47,28 +47,28 @@ echo "kdev: rootfs.qcow2 ready!"
 
 sync
 
-if [ ! -f "${ISONAME}" ] ; then
+if [ ! -f "${ISONAME}" ]; then
 	which aria2c
-	if [ $? -eq 0 ] ; then
+	if [ $? -eq 0 ]; then
 		aria2c --max-tries=10 --retry-wait=5 ${ISOURL}
 	fi
 fi
 
-if [ ! -f "${ISONAME}" ] ; then
+if [ ! -f "${ISONAME}" ]; then
 	which wget
-	if [ $? -eq 0 ] ; then
+	if [ $? -eq 0 ]; then
 		wget -c ${ISOURL}
 	fi
 fi
 
-if [ ! -f "${ISONAME}" ] ; then
+if [ ! -f "${ISONAME}" ]; then
 	which curl
-	if [ $? -eq 0 ] ; then
+	if [ $? -eq 0 ]; then
 		curl -o ${ISONAME} ${ISOURL}
 	fi
 fi
 
-if [ ! -f "${ISONAME}" ] ; then
+if [ ! -f "${ISONAME}" ]; then
 	echo "kdev: cound't download ${ISONAME}"
 	exit 1
 fi
@@ -92,8 +92,8 @@ trap cleanup EXIT
 mkdir -p mnt
 mount ${ISONAME} mnt
 if [ $? -ne 0 ]; then
-  echo "kdev: mount ${ISONAME} failed!"
-  exit 1
+	echo "kdev: mount ${ISONAME} failed!"
+	exit 1
 fi
 
 ls -alh mnt/install
@@ -102,39 +102,39 @@ if [ $? -ne 0 ]; then
 	exit 1
 fi
 
-if [ ! -f mnt/install/vmlinuz ] ; then
-  echo "install/vmlinuz does't exists!"
-  exit 1
+if [ ! -f mnt/install/vmlinuz ]; then
+	echo "install/vmlinuz does't exists!"
+	exit 1
 fi
 
-if [ ! -f mnt/install/initrd.gz ] ; then
-  echo "install/initrd.gz does't exists!"
-  exit 1
+if [ ! -f mnt/install/initrd.gz ]; then
+	echo "install/initrd.gz does't exists!"
+	exit 1
 fi
 
 qemu-system-aarch64 \
-  -name "${ISONAME%.*}" \
-  -machine virt,gic-version=2 \
-  -cpu max \
-  -accel tcg \
-  -semihosting \
-  -drive file=/usr/share/AAVMF/AAVMF_CODE.fd,format=raw,if=pflash \
-  -smp ${JOBS} \
-  -m 4096 \
-  -device virtio-scsi-device \
-  -device scsi-cd,drive=cdrom \
-  -drive id=cdrom,file=${ISONAME},if=none,media=cdrom \
-  -device virtio-scsi-pci,id=scsi \
-  -drive file=rootfs.qcow2,format=qcow2,if=none,id=root_disk \
-  -device scsi-hd,drive=root_disk \
-  -boot order=dc \
-  -kernel mnt/install/vmlinuz \
-  -initrd mnt/install/initrd.gz \
-  -append 'auto=true priority=critical url=http://192.168.122.1:${FILE_SERVER_PORT}/preseed.cfg autoinstall earlyprintk ignore_loglevel console=ttyAMA0,115200n8 earlycon=pl011,mmio,0x09000000 level=10 " \
-  -serial mon:stdio \
-  -device virtio-net-device,netdev=net0 \
-  -netdev user,id=net0,net=192.168.122.0/24,host=192.168.122.1 \
-  -nographic
+	-name "${ISONAME%.*}" \
+	-machine virt,gic-version=2 \
+	-cpu max \
+	-accel tcg \
+	-semihosting \
+	-drive file=/usr/share/AAVMF/AAVMF_CODE.fd,format=raw,if=pflash \
+	-smp ${JOBS} \
+	-m 4096 \
+	-device virtio-scsi-device \
+	-device scsi-cd,drive=cdrom \
+	-drive id=cdrom,file=${ISONAME},if=none,media=cdrom \
+	-device virtio-scsi-pci,id=scsi \
+	-drive file=rootfs.qcow2,format=qcow2,if=none,id=root_disk \
+	-device scsi-hd,drive=root_disk \
+	-boot order=dc \
+	-kernel mnt/install/vmlinuz \
+	-initrd mnt/install/initrd.gz \
+	-append "auto=true priority=critical url=http://192.168.122.1:${FILE_SERVER_PORT}/preseed.cfg autoinstall earlyprintk ignore_loglevel console=ttyAMA0,115200n8 earlycon=pl011,mmio,0x09000000 level=10 " \
+	-serial mon:stdio \
+	-device virtio-net-device,netdev=net0 \
+	-netdev user,id=net0,net=192.168.122.0/24,host=192.168.122.1 \
+	-nographic
 
 sync
 ls -alh rootfs.qcow2
@@ -150,4 +150,3 @@ fi
 
 echo "kdev: all done!"
 exit 0
-

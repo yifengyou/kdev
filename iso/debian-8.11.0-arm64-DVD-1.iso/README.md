@@ -32,7 +32,7 @@ dr-xr-xr-x 1 root root 4.0K  6月 23  2018 ..
 + '[' '!' -f mnt/install.a64/initrd.gz ']'
 + ls -alh /dev/kvm
 crw-rw---- 1 root 36 10, 232  4月 15 12:33 /dev/kvm
-+ qemu-system-aarch64 -name debian-8.11.0-arm64-DVD-1 -machine virt,gic-version=max -cpu cortex-a57 -smp 64 -semihosting -m 4096 -drive file=/usr/share/AAVMF/AAVMF_CODE.fd,format=raw,if=pflash -drive file=rootfs.qcow2,format=qcow2 -drive file=debian-8.11.0-arm64-DVD-1.iso,format=raw,if=none,id=cdrom,media=cdrom -device virtio-scsi-device -device scsi-cd,drive=cdrom -boot order=dc -kernel mnt/install.a64/vmlinuz -initrd mnt/install.a64/initrd.gz -append 'auto=true priority=critical preseed/url=http://10.0.2.1:49147/preseed.cfg earlyprintk console=ttyAMA0,115200n8 earlycon=pl011,mmio,0x09000000 level=10 ' -net user,host=10.0.2.1 -net nic,model=e1000 -display none -serial mon:stdio -nographic
++ qemu-system-aarch64 -name debian-8.11.0-arm64-DVD-1 -machine virt,gic-version=max -cpu cortex-a57 -smp 64 -semihosting -m 4096 -drive file=/usr/share/AAVMF/AAVMF_CODE.fd,format=raw,if=pflash -drive file=rootfs.qcow2,format=qcow2 -drive file=debian-8.11.0-arm64-DVD-1.iso,format=raw,if=none,id=cdrom,media=cdrom -device virtio-scsi-device -device scsi-cd,drive=cdrom -boot order=dc -kernel mnt/install.a64/vmlinuz -initrd mnt/install.a64/initrd.gz -append "auto=true priority=critical preseed/url=http://10.0.2.1:49147/preseed.cfg earlyprintk console=ttyAMA0,115200n8 earlycon=pl011,mmio,0x09000000 level=10 ' -net user,host=10.0.2.1 -net nic,model=e1000 -display none -serial mon:stdio -nographic
 
 
 EFI stub: Booting Linux Kernel...
