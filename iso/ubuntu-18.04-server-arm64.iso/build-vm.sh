@@ -22,6 +22,12 @@ if [ ! -z "${fileserver}" ]; then
 fi
 
 if [ -f rootfs.qcow2 ]; then
+	size=$(du -s rootfs.qcow2 | awk '{print $1}')
+	if [ "$size" -gt 204800 ]; then
+		echo "rootfs.qcow2 already ok!"
+		ls -alh rootfs.qcow2
+		exit 0
+	fi
 	lsof rootfs.qcow2
 	if [ $? -eq 0 ]; then
 		echo "kdev: rootfs.qcow2 is inuse"
