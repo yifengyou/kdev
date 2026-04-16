@@ -1,8 +1,7 @@
 #cloud-config
 autoinstall:
-  version: 1
   automatic:
-    reboot: false
+    reboot: true
     updates: false
     upgrade: false
   console: |
@@ -11,7 +10,18 @@ autoinstall:
   refresh-installer:
     update: false
   apt:
-    disable_suites: [security]
+    disable_components: []
+    geoip: true
+    preserve_sources_list: false
+    mirror-selection:
+      primary:
+        - country-mirror
+        - uri: "http://mirrors.aliyun.com/ubuntu"
+          arches: [i386, amd64]
+        - uri: "http://mirrors.aliyun.com/ubuntu-ports"
+          arches: [s390x, arm64, armhf, powerpc, ppc64el, riscv64]
+    fallback: offline-install
+    geoip: true
   drivers:
     install: false
   identity:
@@ -19,36 +29,48 @@ autoinstall:
     username: kdev
     # passwrod plain: linux
     password: "$6$le8Tsrwn14s46Axh$tD2pc/OSVm5Y85179nb7Uy9cioKP6UGEkIQ.cWXOiiAIVF3n/jBJwAap14S9msBJM.ciCXG4LOe27Lb2dE.zA1"
-  kernel:
-    package: linux-generic
   keyboard:
     layout: us
-    toggle: "shift_caps_toggle"
+    toggle: null
     variant: ''
   locale: "en_US.UTF-8"
-  early-commands:
-    - ls -alh /dev
-    - ip -br a
+  network:
+    ethernets:
+      all-eth:
+        match:
+          name: "*"
+        dhcp4: false
+        dhcp6: false
+    version: 2
   ssh:
     allow-pw: true
     authorized-keys: []
     install-server: true
   packages:
     - vim
-    - htop
     - openssh-server
-    - curl
-    - wget
-    - git
+    - sudo
   storage:
     swap:
       size: 0
     layout:
       name: direct
   late-commands:
-    - df -h
-    - uname -a
-    - cat /proc/cmdline
-    - systemctl poweroff --force
+    - "echo 'kdev ALL=(ALL) NOPASSWD: ALL' > /target/etc/sudoers.d/kdev"
+    - 'sed -i "s/^#Port 22/Port 22/g" /target/etc/ssh/sshd_config'
+    - 'sed -i "/^#PermitRootLogin/c\PermitRootLogin yes" /target/etc/ssh/sshd_config'
+    - |
+      cat > /target/etc/netplan/51-network-init.yaml <<EOF
+      network:
+        version: 2
+        ethernets:
+          all-eth:
+            match:
+              name: '*'
+            dhcp4: true
+            dhcp6: false
+      EOF
+    - 'systemctl poweroff --force'
+  version: 1
   shutdown: poweroff
 

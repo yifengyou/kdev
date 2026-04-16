@@ -1,9 +1,7 @@
 #cloud-config
 autoinstall:
-  cloud-init:
-    disable: true
   automatic:
-    reboot: false
+    reboot: true
     updates: false
     upgrade: false
   console: |
@@ -27,12 +25,10 @@ autoinstall:
   drivers:
     install: false
   identity:
-    hostname: ubuntu2204
+    hostname: ubuntu2404
     username: kdev
     # passwrod plain: linux
     password: "$6$le8Tsrwn14s46Axh$tD2pc/OSVm5Y85179nb7Uy9cioKP6UGEkIQ.cWXOiiAIVF3n/jBJwAap14S9msBJM.ciCXG4LOe27Lb2dE.zA1"
-  kernel:
-    package: linux-generic
   keyboard:
     layout: us
     toggle: null
@@ -40,8 +36,11 @@ autoinstall:
   locale: "en_US.UTF-8"
   network:
     ethernets:
-      enp1s0:
-        dhcp4: true
+      all-eth:
+        match:
+          name: "*"
+        dhcp4: false
+        dhcp6: false
     version: 2
   ssh:
     allow-pw: true
@@ -49,15 +48,28 @@ autoinstall:
     install-server: true
   packages:
     - vim
-    - htop
     - openssh-server
-    - curl
-    - wget
-    - git
+    - sudo
   storage:
     swap:
       size: 0
     layout:
       name: direct
+  late-commands:
+    - "echo 'kdev ALL=(ALL) NOPASSWD: ALL' > /target/etc/sudoers.d/kdev"
+    - 'sed -i "s/^#Port 22/Port 22/g" /target/etc/ssh/sshd_config'
+    - 'sed -i "/^#PermitRootLogin/c\PermitRootLogin yes" /target/etc/ssh/sshd_config'
+    - |
+      cat > /target/etc/netplan/51-network-init.yaml <<EOF
+      network:
+        version: 2
+        ethernets:
+          all-eth:
+            match:
+              name: '*'
+            dhcp4: true
+            dhcp6: false
+      EOF
   version: 1
   shutdown: poweroff
+
