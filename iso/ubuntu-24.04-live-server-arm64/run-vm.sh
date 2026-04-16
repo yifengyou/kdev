@@ -21,7 +21,7 @@ qemu-system-aarch64 \
   -smp ${JOBS} \
   -m 4096 \
   -device virtio-scsi-pci,id=scsi \
-  -drive file=compressed.qcow2,format=qcow2,if=virtio \
+  -drive file=rootfs.qcow2,format=qcow2,if=virtio \
   -cdrom ${ISONAME} \
   -boot order=hd \
   -serial mon:stdio \

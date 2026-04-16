@@ -83,7 +83,7 @@ jobs:
       - name: Install dependency
         run: |
           sudo apt update
-          sudo apt install -qq -y qemu-kvm libvirt-daemon-system virtinst cpu-checker rar aria2
+          sudo apt install -qq -y qemu-kvm libvirt-daemon-system virtinst cpu-checker aria2
           sudo systemctl enable --now libvirtd
           sudo mkdir -p /builder/release
 

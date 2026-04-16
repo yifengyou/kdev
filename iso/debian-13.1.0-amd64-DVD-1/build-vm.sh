@@ -129,7 +129,6 @@ qemu-system-x86_64 \
 
 sync
 ls -alh rootfs.qcow2
-
 size=$(du -s rootfs.qcow2 | awk '{print $1}')
 if [ "$size" -gt 204800 ]; then
 	qemu-img convert -c -O qcow2 rootfs.qcow2 rootfs.qcow2.tmp
