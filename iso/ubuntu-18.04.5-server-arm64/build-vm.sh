@@ -134,6 +134,10 @@ sync
 ls -alh rootfs.qcow2
 size=$(du -s rootfs.qcow2 | awk '{print $1}')
 if [ "$size" -gt 204800 ]; then
+	qemu-img convert -c -O qcow2 rootfs.qcow2 rootfs.qcow2.tmp
+	qemu-img check rootfs.qcow2.tmp
+	mv rootfs.qcow2.tmp rootfs.qcow2
+	ls -alh rootfs.qcow2
 	qemu-img snapshot -c 'install os' rootfs.qcow2
 	qemu-img snapshot -l rootfs.qcow2
 	ls -alh rootfs.qcow2
@@ -141,6 +145,7 @@ else
 	echo "kdev: rootfs.qcow2 size too small, abort!"
 	exit 1
 fi
+
 
 echo "kdev: all done!"
 exit 0
