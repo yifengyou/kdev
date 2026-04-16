@@ -21,3 +21,5 @@ mnt
 *.tar.gz
 *.tmp
 *.qcow2-origin
+*.filepart
+*.tar.bz2
