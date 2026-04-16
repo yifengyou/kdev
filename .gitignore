@@ -20,3 +20,4 @@ rootfs
 mnt
 *.tar.gz
 *.tmp
+*.qcow2-origin

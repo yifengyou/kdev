@@ -136,7 +136,7 @@ qemu-system-aarch64 \
 	-boot order=dc \
 	-kernel mnt/images/pxeboot/vmlinuz \
 	-initrd mnt/images/pxeboot/initrd.img \
-	-append "inst.ks=http://192.168.122.1:${FILE_SERVER_PORT}/ks.cfg inst.stage2=hd:LABEL=Rocky-8-9-aarch64-dvd inst.text inst.cmdline earlyprintk ignore_loglevel console=ttyAMA0,115200n8 earlycon=pl011,mmio,0x09000000 level=10 " \
+	-append "inst.ks=http://192.168.122.1:${FILE_SERVER_PORT}/ks.cfg inst.stage2=hd:LABEL=Rocky-8-9-aarch64-dvd inst.text inst.cmdline earlyprintk ignore_loglevel console=ttyAMA0,115200n8 earlycon=pl011,mmio,0x09000000 level=10 net.ifnames=0 biosdevname=0 " \
 	-serial mon:stdio \
 	-net nic \
 	-net user,net=192.168.122.0/24,host=192.168.122.1 \
