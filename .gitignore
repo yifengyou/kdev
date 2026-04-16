@@ -18,3 +18,5 @@ rootfs
 *.temp
 /release
 mnt
+*.tar.gz
+*.tmp
