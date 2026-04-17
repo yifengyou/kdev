@@ -1,5 +1,27 @@
 
-# aarch64架构
+# CentOS
+
+## aarch64
+
+http://mirrors.163.com/centos-vault/8.0.1905/isos/aarch64/CentOS-8-aarch64-1905-dvd1.iso
+http://mirrors.163.com/centos-vault/8.5.2111/isos/aarch64/CentOS-8.5.2111-aarch64-dvd1.iso
+http://mirrors.163.com/centos-vault/8.4.2105/isos/aarch64/CentOS-8.4.2105-aarch64-dvd1.iso
+http://mirrors.163.com/centos-vault/8.3.2011/isos/aarch64/CentOS-8.3.2011-aarch64-dvd1.iso
+http://mirrors.163.com/centos-vault/8.2.2004/isos/aarch64/CentOS-8.2.2004-aarch64-dvd1.iso
+
+http://mirrors.163.com/centos-vault/7.9.2009/isos/aarch64/CentOS-7.9.2009-aarch64-dvd1.iso
+
+http://mirrors.163.com/centos-vault/8.5.2111/isos/aarch64/CentOS-8.5.2111-aarch64-dvd1.iso
+http://mirrors.163.com/centos-vault/8.4.2105/isos/aarch64/CentOS-8.4.2105-aarch64-dvd1.iso
+http://mirrors.163.com/centos-vault/8.3.2011/isos/aarch64/CentOS-8.3.2011-aarch64-dvd1.iso
+http://mirrors.163.com/centos-vault/8.2.2004/isos/aarch64/CentOS-8.2.2004-aarch64-dvd1.iso
+http://mirrors.163.com/centos-vault/8.0.1905/isos/aarch64/CentOS-8.0.1905-aarch64-dvd1.iso
+
+---
+
+# openEuler
+
+## aarch64架构
 
 https://mirrors.pku.edu.cn/openeuler/openEuler-20.03-LTS-SP1/ISO/aarch64/openEuler-20.03-LTS-SP1-aarch64-dvd.iso
 https://mirrors.pku.edu.cn/openeuler/openEuler-20.03-LTS-SP2/ISO/aarch64/openEuler-20.03-LTS-SP2-aarch64-dvd.iso
@@ -15,9 +37,7 @@ https://mirrors.pku.edu.cn/openeuler/openEuler-24.03-LTS-SP1/ISO/aarch64/openEul
 https://mirrors.pku.edu.cn/openeuler/openEuler-24.03-LTS-SP2/ISO/aarch64/openEuler-24.03-LTS-SP2-aarch64-dvd.iso
 https://mirrors.pku.edu.cn/openeuler/openEuler-24.03-LTS-SP3/ISO/aarch64/openEuler-24.03-LTS-SP3-aarch64-dvd.iso
 
----
-
-# x86_64架构
+## x86_64架构
 
 https://mirrors.pku.edu.cn/openeuler/openEuler-20.03-LTS-SP1/ISO/x86_64/openEuler-20.03-LTS-SP1-x86_64-dvd.iso
 https://mirrors.pku.edu.cn/openeuler/openEuler-20.03-LTS-SP2/ISO/x86_64/openEuler-20.03-LTS-SP2-x86_64-dvd.iso
@@ -33,10 +53,38 @@ https://mirrors.pku.edu.cn/openeuler/openEuler-24.03-LTS-SP1/ISO/x86_64/openEule
 https://mirrors.pku.edu.cn/openeuler/openEuler-24.03-LTS-SP2/ISO/x86_64/openEuler-24.03-LTS-SP2-x86_64-dvd.iso
 https://mirrors.pku.edu.cn/openeuler/openEuler-24.03-LTS-SP3/ISO/x86_64/openEuler-24.03-LTS-SP3-x86_64-dvd.iso
 
----
+
 
 * 建议在 <https://www.openeuler.openatom.cn/zh/mirror/list/> 检索大带宽站点
 
 
 https://mirrors.163.com/openeuler/openEuler-20.03-LTS-SP1/ISO/aarch64/openEuler-20.03-LTS-SP1-aarch64-dvd.iso
+
+
+---
+
+
+# RockyLinux
+
+## aarch64
+
+https://mirror.nju.edu.cn/rocky-vault/8.3/isos/aarch64/Rocky-8.3-aarch64-minimal.iso
+https://mirror.nju.edu.cn/rocky-vault/8.4/isos/aarch64/Rocky-8.4-aarch64-minimal.iso
+https://mirror.nju.edu.cn/rocky-vault/8.5/isos/aarch64/Rocky-8.5-aarch64-minimal.iso
+https://mirror.nju.edu.cn/rocky-vault/8.6/isos/aarch64/Rocky-8.6-aarch64-minimal.iso
+https://mirror.nju.edu.cn/rocky-vault/8.7/isos/aarch64/Rocky-8.7-aarch64-minimal.iso
+https://mirror.nju.edu.cn/rocky-vault/8.8/isos/aarch64/Rocky-8.8-aarch64-minimal.iso
+
+https://mirror.nju.edu.cn/rocky-vault/9.6/isos/aarch64/Rocky-9.6-aarch64-minimal.iso
+https://mirror.nju.edu.cn/rocky-vault/9.5/isos/aarch64/Rocky-9.5-aarch64-minimal.iso
+https://mirror.nju.edu.cn/rocky-vault/9.4/isos/aarch64/Rocky-9.4-aarch64-minimal.iso
+https://mirror.nju.edu.cn/rocky-vault/9.3/isos/aarch64/Rocky-9.3-aarch64-minimal.iso
+https://mirror.nju.edu.cn/rocky-vault/9.2/isos/aarch64/Rocky-9.2-aarch64-minimal.iso
+https://mirror.nju.edu.cn/rocky-vault/9.1/isos/aarch64/Rocky-9.1-aarch64-minimal.iso
+https://mirror.nju.edu.cn/rocky-vault/9.0/isos/aarch64/Rocky-9.0-aarch64-minimal.iso
+
+
+
+---
+
 
