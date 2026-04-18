@@ -33,6 +33,8 @@ jobs:
             'openEuler-22.03-LTS-SP2-x86_64-dvd',
             'openEuler-22.03-LTS-SP3-x86_64-dvd',
             'openEuler-22.03-LTS-SP4-x86_64-dvd',
+            'openEuler-24.03-LTS-SP1-x86_64-dvd',
+            'openEuler-24.03-LTS-SP2-x86_64-dvd',
         ]
       max-parallel: 64
       fail-fast: false
