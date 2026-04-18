@@ -27,6 +27,12 @@ jobs:
         os_release: [
             'Rocky-10.0-x86_64-minimal',
             'Rocky-10.1-x86_64-minimal',
+            'Rocky-9.0-x86_64-minimal',
+            'Rocky-9.1-x86_64-minimal',
+            'Rocky-9.2-x86_64-minimal',
+            'Rocky-9.3-x86_64-minimal',
+            'Rocky-9.4-x86_64-minimal',
+            'Rocky-9.5-x86_64-minimal',
             'Rocky-8.3-x86_64-minimal',
             'Rocky-8.4-x86_64-minimal',
             'Rocky-8.5-x86_64-minimal',
