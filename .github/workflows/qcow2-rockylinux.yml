@@ -26,6 +26,7 @@ jobs:
       matrix:
         os_release: [
             'Rocky-10.0-x86_64-minimal',
+            'Rocky-10.1-x86_64-minimal',
         ]
       max-parallel: 64
       fail-fast: false

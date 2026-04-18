@@ -1,6 +1,7 @@
 #!/bin/bash
 
-ISOURL="https://dl.rockylinux.org/vault/rocky/10.0/isos/x86_64/Rocky-10.0-x86_64-minimal.iso"
+ISOURL="https://mirror.nju.edu.cn/rocky-vault/10.1/isos/x86_64/Rocky-10.1-x86_64-minimal.iso"
+ISOURL="https://dl.rockylinux.org/pub/rocky/10/isos/x86_64/Rocky-10.1-x86_64-minimal.iso"
 WORKDIR=$(pwd)
 FILE_SERVER_PORT=$(shuf -i 20000-65535 -n 1)
 ISONAME=$(basename ${ISOURL})
@@ -15,7 +16,6 @@ PKGS=(
 	"tmux"
 	"qemu-system-arm"
 	"qemu-system-gui"
-	"qemu-efi-x86_64"
 	"qemu-utils"
 	"ipxe-qemu"
 	"libvirt-daemon-system"
@@ -129,20 +129,22 @@ fi
 
 qemu-system-x86_64 \
 	-name "${ISONAME%.*}" \
-	-machine pc,accel=kvm \
+	-machine q35,accel=kvm \
 	-cpu host \
 	-smp 4 \
 	-m 2048 \
+	-drive if=pflash,format=raw,unit=0,file=/usr/share/OVMF/OVMF_CODE.fd \
+	-drive if=pflash,format=raw,unit=1,file=/usr/share/OVMF/OVMF_VARS.fd \
 	-cdrom ${ISONAME} \
 	-device virtio-scsi-pci,id=scsi \
 	-drive file=rootfs.qcow2,format=qcow2,if=virtio \
-	-boot order=dc \
 	-kernel mnt/images/pxeboot/vmlinuz \
 	-initrd mnt/images/pxeboot/initrd.img \
-	-append "inst.ks=http://192.168.122.1:${FILE_SERVER_PORT}/ks.cfg inst.stage2=hd:LABEL=Rocky-10-0-x86_64-dvd inst.text inst.cmdline earlyprintk ignore_loglevel console=tty0 level=10 net.ifnames=0 biosdevname=0 " \
+	-append "inst.ks=http://192.168.122.1:${FILE_SERVER_PORT}/ks.cfg inst.stage2=hd:LABEL=Rocky-10-1-x86_64-dvd inst.text inst.cmdline earlyprintk ignore_loglevel console=ttyS0 level=10 net.ifnames=0 biosdevname=0 " \
 	-serial mon:stdio \
 	-net nic \
 	-net user,net=192.168.122.0/24,host=192.168.122.1 \
+	-display none \
 	-nographic
 
 sync
