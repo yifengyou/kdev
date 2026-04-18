@@ -1,6 +1,6 @@
 #!/bin/bash
 
-ISOURL="https://mirrors.pku.edu.cn/openeuler/openEuler-20.03-LTS-SP1/ISO/x86_64/openEuler-20.03-LTS-SP1-x86_64-dvd.iso"
+ISOURL="https://mirrors.pku.edu.cn/openeuler/openEuler-20.03-LTS-SP2/ISO/x86_64/openEuler-20.03-LTS-SP2-x86_64-dvd.iso"
 WORKDIR=$(pwd)
 FILE_SERVER_PORT=$(shuf -i 20000-65535 -n 1)
 ISONAME=$(basename ${ISOURL})
@@ -141,7 +141,7 @@ qemu-system-x86_64 \
 	-boot order=dc \
 	-kernel mnt/images/pxeboot/vmlinuz \
 	-initrd mnt/images/pxeboot/initrd.img \
-	-append "inst.ks=http://192.168.122.1:${FILE_SERVER_PORT}/ks.cfg inst.stage2=hd:LABEL=openEuler-20.03-LTS-SP1-x86_64 inst.text inst.cmdline earlyprintk ignore_loglevel console=ttyS0 level=10 net.ifnames=0 biosdevname=0 " \
+	-append "inst.ks=http://192.168.122.1:${FILE_SERVER_PORT}/ks.cfg inst.stage2=hd:LABEL=openEuler-20.03-LTS-SP2-x86_64 inst.text inst.cmdline earlyprintk ignore_loglevel console=ttyS0 level=10 net.ifnames=0 biosdevname=0 " \
 	-serial mon:stdio \
 	-net nic \
 	-net user,net=192.168.122.0/24,host=192.168.122.1 \
