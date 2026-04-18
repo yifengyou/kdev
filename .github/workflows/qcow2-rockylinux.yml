@@ -25,8 +25,7 @@ jobs:
     strategy:
       matrix:
         os_release: [
-            'RockyLinux-13.4.0-amd64-DVD-1',
-            'RockyLinux-13.3.0-amd64-DVD-1',
+            'Rocky-10.0-x86_64-minimal',
         ]
       max-parallel: 64
       fail-fast: false
