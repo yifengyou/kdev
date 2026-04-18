@@ -1,6 +1,6 @@
 #!/bin/bash
 
-ISOURL="https://dl.rockylinux.org/vault/rocky/8.3/isos/x86_64/Rocky-8.3-x86_64-minimal.iso"
+ISOURL="https://dl.rockylinux.org/vault/rocky/8.9/isos/x86_64/Rocky-8.9-x86_64-minimal.iso"
 WORKDIR=$(pwd)
 FILE_SERVER_PORT=$(shuf -i 20000-65535 -n 1)
 ISONAME=$(basename ${ISOURL})
@@ -139,7 +139,7 @@ qemu-system-x86_64 \
 	-drive file=rootfs.qcow2,format=qcow2,if=virtio \
 	-kernel mnt/images/pxeboot/vmlinuz \
 	-initrd mnt/images/pxeboot/initrd.img \
-	-append "inst.ks=http://192.168.122.1:${FILE_SERVER_PORT}/ks.cfg inst.stage2=hd:LABEL=Rocky-8-3-x86_64-dvd inst.text inst.cmdline earlyprintk ignore_loglevel console=ttyS0 level=10 net.ifnames=0 biosdevname=0 " \
+	-append "inst.ks=http://192.168.122.1:${FILE_SERVER_PORT}/ks.cfg inst.stage2=hd:LABEL=Rocky-8-9-x86_64-dvd inst.text inst.cmdline earlyprintk ignore_loglevel console=ttyS0 level=10 net.ifnames=0 biosdevname=0 " \
 	-serial mon:stdio \
 	-net nic \
 	-net user,net=192.168.122.0/24,host=192.168.122.1 \

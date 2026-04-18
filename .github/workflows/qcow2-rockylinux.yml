@@ -27,6 +27,13 @@ jobs:
         os_release: [
             'Rocky-10.0-x86_64-minimal',
             'Rocky-10.1-x86_64-minimal',
+            'Rocky-8.3-x86_64-minimal',
+            'Rocky-8.4-x86_64-minimal',
+            'Rocky-8.5-x86_64-minimal',
+            'Rocky-8.6-x86_64-minimal',
+            'Rocky-8.7-x86_64-minimal',
+            'Rocky-8.8-x86_64-minimal',
+            'Rocky-8.9-x86_64-minimal',
         ]
       max-parallel: 64
       fail-fast: false
