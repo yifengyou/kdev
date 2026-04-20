@@ -1,6 +1,6 @@
 #!/bin/bash
 
-ISOURL="https://dl.rockylinux.org/vault/rocky/8.8/isos/aarch64/OpenCloudOS-8.8-aarch64-dvd1.iso"
+ISOURL="https://mirrors.cloud.tencent.com/opencloudos/8.8/isos/aarch64/OpenCloudOS-8.8-aarch64-dvd1.iso"
 WORKDIR=$(pwd)
 FILE_SERVER_PORT=$(shuf -i 20000-65535 -n 1)
 ISONAME=$(basename ${ISOURL})

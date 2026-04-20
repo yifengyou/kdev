@@ -1,6 +1,6 @@
 #!/bin/bash
 
-ISOURL="https://mirrors.cloud.tencent.com/opencloudos/8.6/isos/aarch64/opencloudos-8.6-aarch64-dvd1.iso"
+ISOURL="https://mirrors.cloud.tencent.com/opencloudos/9.0/isos/aarch64/OpenCloudOS-9.0-minimal-aarch64.iso"
 WORKDIR=$(pwd)
 FILE_SERVER_PORT=$(shuf -i 20000-65535 -n 1)
 ISONAME=$(basename ${ISOURL})
@@ -142,7 +142,7 @@ qemu-system-aarch64 \
 	-boot order=dc \
 	-kernel mnt/images/pxeboot/vmlinuz \
 	-initrd mnt/images/pxeboot/initrd.img \
-	-append "inst.ks=http://192.168.122.1:${FILE_SERVER_PORT}/ks.cfg inst.stage2=hd:LABEL=opencloudos-8-6-aarch64-dvd inst.text inst.cmdline earlyprintk ignore_loglevel console=ttyAMA0,115200n8 earlycon=pl011,mmio,0x09000000 level=10 net.ifnames=0 biosdevname=0 " \
+	-append "inst.ks=http://192.168.122.1:${FILE_SERVER_PORT}/ks.cfg inst.stage2=hd:LABEL=OpenCloudOS-9-0-aarch64-dvd inst.text inst.cmdline earlyprintk ignore_loglevel console=ttyAMA0,115200n8 earlycon=pl011,mmio,0x09000000 level=10 net.ifnames=0 biosdevname=0 " \
 	-serial mon:stdio \
 	-net nic \
 	-net user,net=192.168.122.0/24,host=192.168.122.1 \
