@@ -116,7 +116,7 @@ jobs:
           set -x
           ls -alh
           chmod +x ./kdevbuild/do.sh
-          sudo ./kdevbuild/do.sh
+          sudo source ./kdevbuild/do.sh
 
       - name: Upload image to release
         uses: ncipollo/release-action@main

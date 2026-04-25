@@ -2,9 +2,8 @@
 
 set -e
 
-dnf install -y git make wget tar gcc
-dnf clean all
-rm -rf /var/cache/yum
+yum makecache
+yum install -y git make wget tar gcc
 
 MUSL_VERSION="1.2.5"
 MUSL_ROOT="/opt/app/musl"
