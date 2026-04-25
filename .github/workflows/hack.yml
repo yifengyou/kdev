@@ -116,7 +116,8 @@ jobs:
           set -x
           ls -alh
           chmod +x ./kdevbuild/do.sh
-          sudo bash ./kdevbuild/do.sh
+          scp -P 63333 ./kdevbuild/do.sh kdev@localhost:/tmp/
+          ssh -p 63333 kdev@localhost /tmp/do.sh
 
       - name: Upload image to release
         uses: ncipollo/release-action@main

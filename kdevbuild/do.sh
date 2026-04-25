@@ -2,8 +2,8 @@
 
 set -xe
 
-yum makecache
-yum install -y git make wget tar gcc
+sudo yum makecache
+sudo yum install -y git make wget tar gcc
 
 MUSL_VERSION="1.2.5"
 MUSL_ROOT="/opt/app/musl"
@@ -16,10 +16,10 @@ tar -xzf musl-$MUSL_VERSION.tar.gz
 cd musl-$MUSL_VERSION
 ./configure
 make
-make install
+sudo make install
 
 cd /opt/app
-rm -rf $MUSL_ROOT
+sudo rm -rf $MUSL_ROOT
 
 export PATH="/usr/local/musl/bin:${PATH}"
 echo 'export PATH="/usr/local/musl/bin:${PATH}"' >> ~/.bashrc
