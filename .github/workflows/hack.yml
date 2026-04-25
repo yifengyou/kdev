@@ -106,14 +106,22 @@ jobs:
           ssh-keygen -t rsa -b 4096 -f ~/.ssh/id_rsa -N ""
           sshpass -p "linux" ssh-copy-id -o StrictHostKeyChecking=no -p 63333 kdev@localhost
           sshpass -p "linux" ssh -p 63333 kdev@localhost "echo 'kdev ALL=(ALL) NOPASSWD: ALL' | sudo tee -a /etc/sudoers"
+          sleep 30
           ssh -p 63333 kdev@localhost "uname -a"
           ssh -p 63333 kdev@localhost "df -h"
+
+      - name: Do work
+        working-directory: /builder/
+        run: |
+          set -x
+          chmod +x /kdevbuild/do.sh
+          sudo ./kdevbuild/do.sh
 
       - name: Upload image to release
         uses: ncipollo/release-action@main
         timeout-minutes: 10
         with:
-          tag: rockylinux-qcow2
+          tag: hack
           artifacts: /builder/release/*
           allowUpdates: true
           removeArtifacts: false
