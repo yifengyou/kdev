@@ -102,7 +102,7 @@ jobs:
             -net nic \
             -net user,net=192.168.122.0/24,host=192.168.122.1,hostfwd=tcp::63333-:22 \
             -nographic \
-            -serial mon:stdio
+            -serial mon:stdio -daemonize
 
           sshpass -p "linux" ssh-copy-id -o StrictHostKeyChecking=no -p 63333 kdev@localhost
           sshpass -p "linux" ssh -p 63333 kdev@localhost "echo 'kdev ALL=(ALL) NOPASSWD: ALL' | sudo tee -a /etc/sudoers"
