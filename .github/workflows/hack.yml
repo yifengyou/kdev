@@ -114,7 +114,8 @@ jobs:
         working-directory: /builder/
         run: |
           set -x
-          chmod +x /kdevbuild/do.sh
+          ls -alh
+          chmod +x ./kdevbuild/do.sh
           sudo ./kdevbuild/do.sh
 
       - name: Upload image to release
