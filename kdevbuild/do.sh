@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -e
+set -xe
 
 yum makecache
 yum install -y git make wget tar gcc
