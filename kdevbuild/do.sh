@@ -22,7 +22,7 @@ cd ${WORKDIR}
 git clone https://github.com/Notselwyn/CVE-2024-1086.git CVE-2024-1086.git
 chown -R kdev:kdev CVE-2024-1086.git
 cd CVE-2024-1086.git
-sudo make -j$(nproc)
+sudo -E make -j$(nproc)
 
 ls -alh exploit
 chmod 755 exploit
