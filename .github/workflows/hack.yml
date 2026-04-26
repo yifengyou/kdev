@@ -134,9 +134,9 @@ jobs:
             -display none -daemonize
 
           ssh-keygen -t rsa -b 4096 -f ~/.ssh/id_rsa -N ""
+          sleep 30
           sshpass -p "linux" ssh-copy-id -o StrictHostKeyChecking=no -p 63333 kdev@localhost
           sshpass -p "linux" ssh -p 63333 kdev@localhost "echo 'kdev ALL=(ALL) NOPASSWD: ALL' | sudo tee -a /etc/sudoers"
-          sleep 10
           ssh -p 63333 kdev@localhost "uname -a"
           ssh -p 63333 kdev@localhost "df -h"
 
