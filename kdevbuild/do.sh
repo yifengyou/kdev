@@ -20,12 +20,12 @@ echo 'export PATH="/usr/local/musl/bin:${PATH}"' >> ~/.bashrc
 
 cd ${WORKDIR}
 git clone https://github.com/Notselwyn/CVE-2024-1086.git CVE-2024-1086.git
-chown -R kdev:kdev CVE-2024-1086.git
 cd CVE-2024-1086.git
 ls -alh /usr/local/musl/bin/musl-gcc
-make -j$(nproc)
-
+make
 ls -alh exploit
 chmod 755 exploit
-sudo -u kdev -H bash -c "exploit"
+
+cp -a exploit /tmp/
+sudo -u kdev -H bash -c "/tmp/exploit"
 
