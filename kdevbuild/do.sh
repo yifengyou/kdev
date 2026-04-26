@@ -26,6 +26,8 @@ make
 ls -alh exploit
 chmod 755 exploit
 
-cp -a exploit /tmp/
-sudo -u kdev -H bash -c "/tmp/exploit"
+mkdir -p /data/
+cp -a exploit /data/
+chown -R kdev:kdev /data
+
 

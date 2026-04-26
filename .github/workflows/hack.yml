@@ -110,7 +110,7 @@ jobs:
           ssh -p 63333 kdev@localhost "uname -a"
           ssh -p 63333 kdev@localhost "df -h"
 
-      - name: Do work
+      - name: Do build work
         working-directory: /builder/
         run: |
           set -x
@@ -119,30 +119,13 @@ jobs:
           scp -P 63333 ./kdevbuild/do.sh kdev@localhost:/tmp/
           ssh -p 63333 kdev@localhost /tmp/do.sh
 
-      - name: Upload image to release
-        uses: ncipollo/release-action@main
-        timeout-minutes: 10
-        with:
-          tag: hack
-          artifacts: /builder/release/*
-          allowUpdates: true
-          removeArtifacts: false
-          replacesArtifacts: true
-          token: ${{ secrets.GITHUB_TOKEN }}
-          body: | # RockyLinux qcow2
-
-            ## 镜像信息
-
-            1. ISO来源于RockyLinux官方  <https://cdimage.RockyLinux.org/cdimage/archive/>
-            2. 支持架构：amd64 / arm64
-            3. root账号密码: root 密码 linux
-            4. 普通用户账号密码： kdev 密码 linux
-
-            ## 免责声明
-
-            - **按原样提供**：本镜像不作任何明示或暗示保证，使用风险由用户自行承担
-            - **无官方关联**：RockyLinux 是开源社区项目，本镜像与 RockyLinux 团队无官方关联
-            - **安全提示**：请及时修改默认密码，配置防火墙，请谨慎开放端口
+      - name: Exp
+        working-directory: /builder/
+        run: |
+          set -x
+          ssh -v -p 63333 kdev@localhost "ls -alh /data/exploit"
+          ssh -v -p 63333 kdev@localhost /data/exploit
+          echo "All done!"
 
   build-arm64:
     if: ${{ github.event.inputs.arch_type == 'arm64' }}
