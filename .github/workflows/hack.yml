@@ -24,6 +24,36 @@ jobs:
     strategy:
       matrix:
         os_release: [
+            'debian-qcow2/kdev_debian-11.0.0-amd64-DVD-1.qcow2.tar.gz',
+            'debian-qcow2/kdev_debian-11.1.0-amd64-DVD-1.qcow2.tar.gz',
+            'debian-qcow2/kdev_debian-11.10.0-amd64-DVD-1.qcow2.tar.gz',
+            'debian-qcow2/kdev_debian-11.11.0-amd64-DVD-1.qcow2.tar.gz',
+            'debian-qcow2/kdev_debian-11.2.0-amd64-DVD-1.qcow2.tar.gz',
+            'debian-qcow2/kdev_debian-11.3.0-amd64-DVD-1.qcow2.tar.gz',
+            'debian-qcow2/kdev_debian-11.4.0-amd64-DVD-1.qcow2.tar.gz',
+            'debian-qcow2/kdev_debian-11.5.0-amd64-DVD-1.qcow2.tar.gz',
+            'debian-qcow2/kdev_debian-11.6.0-amd64-DVD-1.qcow2.tar.gz',
+            'debian-qcow2/kdev_debian-11.7.0-amd64-DVD-1.qcow2.tar.gz',
+            'debian-qcow2/kdev_debian-11.8.0-amd64-DVD-1.qcow2.tar.gz',
+            'debian-qcow2/kdev_debian-11.9.0-amd64-DVD-1.qcow2.tar.gz',
+            'debian-qcow2/kdev_debian-12.0.0-amd64-DVD-1.qcow2.tar.gz',
+            'debian-qcow2/kdev_debian-12.1.0-amd64-DVD-1.qcow2.tar.gz',
+            'debian-qcow2/kdev_debian-12.10.0-amd64-DVD-1.qcow2.tar.gz',
+            'debian-qcow2/kdev_debian-12.11.0-amd64-DVD-1.qcow2.tar.gz',
+            'debian-qcow2/kdev_debian-12.12.0-amd64-DVD-1.qcow2.tar.gz',
+            'debian-qcow2/kdev_debian-12.13.0-amd64-DVD-1.qcow2.tar.gz',
+            'debian-qcow2/kdev_debian-12.2.0-amd64-DVD-1.qcow2.tar.gz',
+            'debian-qcow2/kdev_debian-12.4.0-amd64-DVD-1.qcow2.tar.gz',
+            'debian-qcow2/kdev_debian-12.5.0-amd64-DVD-1.qcow2.tar.gz',
+            'debian-qcow2/kdev_debian-12.6.0-amd64-DVD-1.qcow2.tar.gz',
+            'debian-qcow2/kdev_debian-12.7.0-amd64-DVD-1.qcow2.tar.gz',
+            'debian-qcow2/kdev_debian-12.8.0-amd64-DVD-1.qcow2.tar.gz',
+            'debian-qcow2/kdev_debian-12.9.0-amd64-DVD-1.qcow2.tar.gz',
+            'debian-qcow2/kdev_debian-13.0.0-amd64-DVD-1.qcow2.tar.gz',
+            'debian-qcow2/kdev_debian-13.1.0-amd64-DVD-1.qcow2.tar.gz',
+            'debian-qcow2/kdev_debian-13.2.0-amd64-DVD-1.qcow2.tar.gz',
+            'debian-qcow2/kdev_debian-13.3.0-amd64-DVD-1.qcow2.tar.gz',
+            'debian-qcow2/kdev_debian-13.4.0-amd64-DVD-1.qcow2.tar.gz',
             'rockylinux-qcow2/kdev_Rocky-10.0-x86_64-minimal.qcow2.tar.gz',
             'rockylinux-qcow2/kdev_Rocky-10.1-x86_64-minimal.qcow2.tar.gz',
             'rockylinux-qcow2/kdev_Rocky-8.3-x86_64-minimal.qcow2.tar.gz',
@@ -106,7 +136,7 @@ jobs:
           ssh-keygen -t rsa -b 4096 -f ~/.ssh/id_rsa -N ""
           sshpass -p "linux" ssh-copy-id -o StrictHostKeyChecking=no -p 63333 kdev@localhost
           sshpass -p "linux" ssh -p 63333 kdev@localhost "echo 'kdev ALL=(ALL) NOPASSWD: ALL' | sudo tee -a /etc/sudoers"
-          sleep 30
+          sleep 10
           ssh -p 63333 kdev@localhost "uname -a"
           ssh -p 63333 kdev@localhost "df -h"
 
@@ -123,6 +153,8 @@ jobs:
         working-directory: /builder/
         run: |
           set -x
-          ssh -v -p 63333 kdev@localhost "ls -alh /data/exploit"
+          ssh -p 63333 kdev@localhost "ls -alh /data/exploit"
+          ssh -p 63333 kdev@localhost "uptime"
           timeout 120 ssh -v -p 63333 kdev@localhost /data/exploit
+          timeout 120 ssh -v -p 63333 kdev@localhost uptime
           echo "All done!"

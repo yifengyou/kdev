@@ -3,8 +3,14 @@
 set -xe
 
 WORKDIR=$(pwd)
-sudo yum makecache
-sudo yum install -y git make wget tar gcc
+
+if [ -f /bin/yum ]; then
+  sudo yum makecache
+  sudo yum install -y git make wget tar gcc
+else
+  sudo apt-get update
+  sudo apt-get install -y git make wget tar gcc build-essential
+fi
 
 cd ${WORKDIR}
 MUSL_VERSION="1.2.5"
