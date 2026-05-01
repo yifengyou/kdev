@@ -115,6 +115,8 @@ qemu-system-x86_64 \
   -cpu host \
   -smp ${JOBS} \
   -m 4096 \
+  -drive if=pflash,format=raw,unit=0,file=/usr/share/OVMF/OVMF_CODE.fd \
+  -drive if=pflash,format=raw,unit=1,file=/usr/share/OVMF/OVMF_VARS.fd \
   -cdrom "${ISONAME}" \
   -hda rootfs.qcow2 \
   -boot order=dc \
