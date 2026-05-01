@@ -111,7 +111,7 @@ fi
 
 qemu-system-x86_64 \
   -name "${ISONAME%.*}" \
-  -machine pc,accel=kvm \
+  -machine q35,accel=kvm \
   -cpu host \
   -smp ${JOBS} \
   -m 4096 \
