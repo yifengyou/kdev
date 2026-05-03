@@ -1,7 +1,7 @@
 #cloud-config
 autoinstall:
   automatic:
-    reboot: true
+    reboot: false
     updates: false
     upgrade: false
   locale: en_US.UTF-8
@@ -12,17 +12,8 @@ autoinstall:
   refresh-installer:
     update: false
   apt:
-    disable_components: []
-    preserve_sources_list: false
-    mirror-selection:
-      primary:
-        - country-mirror
-        - uri: "http://mirrors.tuna.tsinghua.edu.cn/ubuntu"
-          arches: [i386, amd64]
-        - uri: "http://mirrors.tuna.tsinghua.edu.cn/ubuntu-ports"
-          arches: [s390x, arm64, armhf, powerpc, ppc64el, riscv64]
+    disable_components: [security]
     fallback: offline-install
-    geoip: true
   drivers:
     install: false
   identity:

@@ -12,8 +12,7 @@ autoinstall:
   refresh-installer:
     update: false
   apt:
-    disable_components: []
-    geoip: true
+    disable_components: [security]
     preserve_sources_list: false
     mirror-selection:
       primary:
@@ -23,7 +22,6 @@ autoinstall:
         - uri: "http://mirrors.aliyun.com/ubuntu-ports"
           arches: [s390x, arm64, armhf, powerpc, ppc64el, riscv64]
     fallback: offline-install
-    geoip: true
   drivers:
     install: false
   identity:
@@ -38,11 +36,6 @@ autoinstall:
     toggle: "shift_caps_toggle"
     variant: ''
   locale: "en_US.UTF-8"
-  network:
-    ethernets:
-      enp1s0:
-        dhcp4: true
-    version: 2
   ssh:
     allow-pw: true
     authorized-keys: []
