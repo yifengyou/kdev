@@ -36,11 +36,6 @@ autoinstall:
     toggle: "shift_caps_toggle"
     variant: ''
   locale: "en_US.UTF-8"
-  network:
-    ethernets:
-      enp1s0:
-        dhcp4: true
-    version: 2
   ssh:
     allow-pw: true
     authorized-keys: []
