@@ -4,6 +4,8 @@ autoinstall:
     reboot: true
     updates: false
     upgrade: false
+  locale: en_US.UTF-8
+  timezone: Asia/Shanghai
   console: |
     type=serial
     rich-mode=true
@@ -11,29 +13,27 @@ autoinstall:
     update: false
   apt:
     disable_components: []
-    geoip: true
     preserve_sources_list: false
     mirror-selection:
       primary:
         - country-mirror
-        - uri: "http://mirrors.aliyun.com/ubuntu"
+        - uri: "http://mirrors.tuna.tsinghua.edu.cn/ubuntu"
           arches: [i386, amd64]
-        - uri: "http://mirrors.aliyun.com/ubuntu-ports"
+        - uri: "http://mirrors.tuna.tsinghua.edu.cn/ubuntu-ports"
           arches: [s390x, arm64, armhf, powerpc, ppc64el, riscv64]
     fallback: offline-install
     geoip: true
   drivers:
     install: false
   identity:
-    hostname: ubuntu2404
+    hostname: ubuntu
     username: kdev
-    # passwrod plain: linux
     password: "$6$le8Tsrwn14s46Axh$tD2pc/OSVm5Y85179nb7Uy9cioKP6UGEkIQ.cWXOiiAIVF3n/jBJwAap14S9msBJM.ciCXG4LOe27Lb2dE.zA1"
   kernel:
     package: linux-generic
   keyboard:
     layout: us
-    toggle: null
+    toggle: "shift_caps_toggle"
     variant: ''
   locale: "en_US.UTF-8"
   network:
@@ -47,7 +47,7 @@ autoinstall:
     install-server: true
   packages:
     - vim
-    - htop
+    - sudo
     - openssh-server
     - curl
     - wget
@@ -57,6 +57,24 @@ autoinstall:
       size: 0
     layout:
       name: direct
-  version: 1
+  late-commands:
+    - echo 'kdev ALL=(ALL) NOPASSWD:ALL' > /target/etc/sudoers.d/kdev
+    - sed -i '/^GRUB_CMDLINE_LINUX/c\GRUB_CMDLINE_LINUX="net.ifnames=0 biosdevname=0 panic=5 level=10 console=ttyS0"' /target/etc/default/grub
+    - curtin in-target -- update-grub2
+    - 'sed -i "s/^#Port 22/Port 22/g" /target/etc/ssh/sshd_config'
+    - 'sed -i "/^#PermitRootLogin/c\PermitRootLogin yes" /target/etc/ssh/sshd_config'
+    - 'sed -i "/^#PubkeyAuthentication/c\PubkeyAuthentication yes" /target/etc/ssh/sshd_config'
+    - 'sed -i "/^#AllowAgentForwarding/c\AllowAgentForwarding yes" /target/etc/ssh/sshd_config'
+    - |
+      cat > /target/etc/netplan/51-network-init.yaml <<EOF
+      network:
+        version: 2
+        ethernets:
+          all-eth:
+            match:
+              name: '*'
+            dhcp4: true
+            dhcp6: false
+      EOF
   shutdown: poweroff
-
+  version: 1

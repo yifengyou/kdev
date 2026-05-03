@@ -7,8 +7,6 @@ FILE_SERVER_PORT="63334"
 VMNAME="kdev-ubuntu18"
 ISONAME=$(basename ${ISOURL})
 
-virsh destroy ${VMNAME} || :
-virsh undefine ${VMNAME} --nvram || :
 
 if [ -f rootfs.qcow2 ]; then
 	lsof rootfs.qcow2
