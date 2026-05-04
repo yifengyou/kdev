@@ -49,6 +49,6 @@ autoinstall:
     - df -h
     - uname -a
     - cat /proc/cmdline
-    - shutdown -h now
+    - systemctl poweroff --force
   version: 1
   shutdown: poweroff

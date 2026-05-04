@@ -70,7 +70,7 @@ autoinstall:
             dhcp4: true
             dhcp6: false
       EOF
-      shutdown -h now
+      systemctl poweroff --force
   version: 1
   shutdown: poweroff
 
