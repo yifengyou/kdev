@@ -4,29 +4,45 @@ autoinstall:
     reboot: false
     updates: false
     upgrade: false
-  locale: en_US.UTF-8
-  timezone: Asia/Shanghai
   console: |
     type=serial
     rich-mode=true
   refresh-installer:
     update: false
   apt:
-    disable_components: [security]
+    disable_components: []
+    disable_suites: [security]
+    geoip: true
+    preserve_sources_list: false
+    primary:
+      - arches:
+          - amd64
+        uri: http://archive.ubuntu.com/ubuntu
+      - arches:
+          - arm64
+        uri: http://ports.ubuntu.com/ubuntu-ports
     fallback: offline-install
   drivers:
     install: false
   identity:
     hostname: ubuntu
     username: kdev
+    # passwrod plain: linux
     password: "$6$le8Tsrwn14s46Axh$tD2pc/OSVm5Y85179nb7Uy9cioKP6UGEkIQ.cWXOiiAIVF3n/jBJwAap14S9msBJM.ciCXG4LOe27Lb2dE.zA1"
-  kernel:
-    package: linux-generic
   keyboard:
     layout: us
     toggle: "shift_caps_toggle"
     variant: ''
-  locale: "en_US.UTF-8"
+  locale: en_US.UTF-8
+  timezone: Asia/Shanghai
+  network:
+    ethernets:
+      all-eth:
+        match:
+          name: "*"
+        dhcp4: false
+        dhcp6: false
+    version: 2
   ssh:
     allow-pw: true
     authorized-keys: []
@@ -35,8 +51,8 @@ autoinstall:
     - vim
     - sudo
     - openssh-server
-    - curl
     - wget
+    - curl
     - git
   storage:
     swap:
@@ -44,14 +60,14 @@ autoinstall:
     layout:
       name: direct
   late-commands:
-    - echo 'kdev ALL=(ALL) NOPASSWD:ALL' > /target/etc/sudoers.d/kdev
-    - sed -i '/^GRUB_CMDLINE_LINUX/c\GRUB_CMDLINE_LINUX="net.ifnames=0 biosdevname=0 panic=5 level=10 console=ttyS0"' /target/etc/default/grub
-    - curtin in-target -- update-grub2
-    - 'sed -i "s/^#Port 22/Port 22/g" /target/etc/ssh/sshd_config'
-    - 'sed -i "/^#PermitRootLogin/c\PermitRootLogin yes" /target/etc/ssh/sshd_config'
-    - 'sed -i "/^#PubkeyAuthentication/c\PubkeyAuthentication yes" /target/etc/ssh/sshd_config'
-    - 'sed -i "/^#AllowAgentForwarding/c\AllowAgentForwarding yes" /target/etc/ssh/sshd_config'
     - |
+      sed -i '/^GRUB_CMDLINE_LINUX/c\GRUB_CMDLINE_LINUX="net.ifnames=0 biosdevname=0 panic=5 level=10 console=ttyS0"' /target/etc/default/grub
+      curtin in-target -- update-grub2
+      echo 'kdev ALL=(ALL) NOPASSWD:ALL' > /target/etc/sudoers.d/kdev
+      sed -i "/^#Port 22/c\Port 22" /target/etc/ssh/sshd_config
+      sed -i "/^#PermitRootLogin/c\PermitRootLogin yes" /target/etc/ssh/sshd_config
+      sed -i "/^#PubkeyAuthentication/c\PubkeyAuthentication yes" /target/etc/ssh/sshd_config
+      sed -i "/^#AllowAgentForwarding/c\AllowAgentForwarding yes" /target/etc/ssh/sshd_config
       cat > /target/etc/netplan/51-network-init.yaml <<EOF
       network:
         version: 2
@@ -62,5 +78,6 @@ autoinstall:
             dhcp4: true
             dhcp6: false
       EOF
-  shutdown: poweroff
   version: 1
+  shutdown: poweroff
+
