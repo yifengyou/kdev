@@ -35,14 +35,6 @@ autoinstall:
     variant: ''
   locale: en_US.UTF-8
   timezone: Asia/Shanghai
-  network:
-    ethernets:
-      all-eth:
-        match:
-          name: "*"
-        dhcp4: false
-        dhcp6: false
-    version: 2
   ssh:
     allow-pw: true
     authorized-keys: []
@@ -78,6 +70,7 @@ autoinstall:
             dhcp4: true
             dhcp6: false
       EOF
+      shutdown -h now
   version: 1
   shutdown: poweroff
 

@@ -78,6 +78,7 @@ autoinstall:
             dhcp4: true
             dhcp6: false
       EOF
+      shutdown -h now
   version: 1
   shutdown: poweroff
 
