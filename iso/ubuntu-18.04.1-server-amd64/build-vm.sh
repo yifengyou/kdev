@@ -105,7 +105,7 @@ qemu-system-x86_64 \
   -initrd mnt/install/initrd.gz \
   -append "auto=true priority=critical url=http://192.168.122.1:${FILE_SERVER_PORT}/preseed.cfg earlyprintk console=ttyS0,115200n8 level=10 " \
   -serial mon:stdio \
-  -net nic \
+  -net nic,model=e1000 \
   -net user,net=192.168.122.0/24,host=192.168.122.1 \
   -nographic
 

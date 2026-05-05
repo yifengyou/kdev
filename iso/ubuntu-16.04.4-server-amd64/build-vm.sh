@@ -87,11 +87,10 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 
-
 qemu-system-x86_64 \
   -name "${ISONAME%.*}" \
   -machine q35 \
--cpu qemu64,-spec-ctrl,-ibpb,-stibp,-kvm-asyncpf,-hypervisor \
+  -cpu qemu64,-spec-ctrl,-ibpb,-stibp,-kvm-asyncpf,-hypervisor \
   -accel kvm \
   -drive if=pflash,format=raw,unit=0,file=/usr/share/OVMF/OVMF_CODE.fd \
   -drive if=pflash,format=raw,unit=1,file=/usr/share/OVMF/OVMF_VARS.fd \
@@ -105,7 +104,7 @@ qemu-system-x86_64 \
   -initrd mnt/install/initrd.gz \
   -append "auto=true priority=critical url=http://192.168.122.1:${FILE_SERVER_PORT}/preseed.cfg earlyprintk console=ttyS0,115200n8 level=10 " \
   -serial mon:stdio \
-  -net nic \
+  -net nic,model=e1000 \
   -net user,net=192.168.122.0/24,host=192.168.122.1 \
   -nographic
 
@@ -127,4 +126,3 @@ fi
 
 echo "kdev: all done!"
 exit 0
-
