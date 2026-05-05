@@ -91,7 +91,7 @@ fi
 qemu-system-x86_64 \
   -name "${ISONAME%.*}" \
   -machine q35 \
-  -cpu max \
+  -cpu qemu64,-spec-ctrl,-ibpb,-stibp,-kvm-asyncpf,-hypervisor \
   -accel kvm \
   -drive if=pflash,format=raw,unit=0,file=/usr/share/OVMF/OVMF_CODE.fd \
   -drive if=pflash,format=raw,unit=1,file=/usr/share/OVMF/OVMF_VARS.fd \
