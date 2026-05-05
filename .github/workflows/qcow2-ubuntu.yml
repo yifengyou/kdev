@@ -27,6 +27,11 @@ jobs:
       matrix:
         os_release: [
            'ubuntu-18.04.5-server-amd64',
+           'ubuntu-18.04.4-server-amd64',
+           'ubuntu-18.04.3-server-amd64',
+           'ubuntu-18.04.2-server-amd64',
+           'ubuntu-18.04.1-server-amd64',
+           'ubuntu-18.04-server-amd64',
 #          'ubuntu-24.04.4-live-server-amd64',
 #          'ubuntu-24.04.3-live-server-amd64',
 #          'ubuntu-24.04.2-live-server-amd64',
@@ -83,6 +88,7 @@ jobs:
           sudo /bin/cp -a ${{ github.workspace }}/* .
           ls -alh
           cd iso/${{ matrix.os_release }}
+          chmod +x build-vm.sh
           sudo ./build-vm.sh
 
       - name: Compress Rootfs image
