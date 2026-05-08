@@ -1,0 +1,255 @@
+name: dirtyfrag
+
+on:
+  repository_dispatch:
+  workflow_dispatch:
+    inputs:
+      arch_type:
+        description: '架构'
+        required: false
+        default: 'amd64'
+        type: choice
+        options:
+          - amd64
+          - arm64
+
+env:
+  TZ: America/New_York
+  ACTIONS_STEP_DEBUG: true
+
+jobs:
+  build-amd64:
+    if: ${{ github.event.inputs.arch_type == 'amd64' }}
+    runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        os_release: [
+            'ubuntu-qcow2/kdev_ubuntu-16.04-server-amd64.qcow2.tar.gz',
+            'ubuntu-qcow2/kdev_ubuntu-16.04.1-server-amd64.qcow2.tar.gz',
+            'ubuntu-qcow2/kdev_ubuntu-16.04.2-server-amd64.qcow2.tar.gz',
+            'ubuntu-qcow2/kdev_ubuntu-16.04.3-server-amd64.qcow2.tar.gz',
+            'ubuntu-qcow2/kdev_ubuntu-16.04.4-server-amd64.qcow2.tar.gz',
+            'ubuntu-qcow2/kdev_ubuntu-16.04.5-server-amd64.qcow2.tar.gz',
+            'ubuntu-qcow2/kdev_ubuntu-16.04.6-server-amd64.qcow2.tar.gz',
+            'ubuntu-qcow2/kdev_ubuntu-18.04-server-amd64.qcow2.tar.gz',
+            'ubuntu-qcow2/kdev_ubuntu-18.04.1-server-amd64.qcow2.tar.gz',
+            'ubuntu-qcow2/kdev_ubuntu-18.04.2-server-amd64.qcow2.tar.gz',
+            'ubuntu-qcow2/kdev_ubuntu-18.04.3-server-amd64.qcow2.tar.gz',
+            'ubuntu-qcow2/kdev_ubuntu-18.04.4-server-amd64.qcow2.tar.gz',
+            'ubuntu-qcow2/kdev_ubuntu-18.04.5-server-amd64.qcow2.tar.gz',
+            'ubuntu-qcow2/kdev_ubuntu-24.04.4-live-server-amd64.qcow2.tar.gz',
+            'ubuntu-qcow2/kdev_ubuntu-24.04.3-live-server-amd64.qcow2.tar.gz',
+            'ubuntu-qcow2/kdev_ubuntu-24.04.2-live-server-amd64.qcow2.tar.gz',
+            'ubuntu-qcow2/kdev_ubuntu-24.04.1-live-server-amd64.qcow2.tar.gz',
+            'ubuntu-qcow2/kdev_ubuntu-24.04-live-server-amd64.qcow2.tar.gz',
+            'ubuntu-qcow2/kdev_ubuntu-22.04.5-live-server-amd64.qcow2.tar.gz',
+            'ubuntu-qcow2/kdev_ubuntu-22.04.4-live-server-amd64.qcow2.tar.gz',
+            'ubuntu-qcow2/kdev_ubuntu-22.04.3-live-server-amd64.qcow2.tar.gz',
+            'ubuntu-qcow2/kdev_ubuntu-22.04.2-live-server-amd64.qcow2.tar.gz',
+            'ubuntu-qcow2/kdev_ubuntu-22.04.1-live-server-amd64.qcow2.tar.gz',
+            'ubuntu-qcow2/kdev_ubuntu-22.04-live-server-amd64.qcow2.tar.gz',
+            'ubuntu-qcow2/kdev_ubuntu-20.04.5-live-server-amd64.qcow2.tar.gz',
+            'ubuntu-qcow2/kdev_ubuntu-20.04.4-live-server-amd64.qcow2.tar.gz',
+            'ubuntu-qcow2/kdev_ubuntu-20.04.3-live-server-amd64.qcow2.tar.gz',
+            'ubuntu-qcow2/kdev_ubuntu-20.04.2-live-server-amd64.qcow2.tar.gz',
+            'ubuntu-qcow2/kdev_ubuntu-20.04.1-live-server-amd64.qcow2.tar.gz',
+            'openeuler-qcow2/kdev_openEuler-22.03-LTS-SP2-x86_64-dvd.qcow2.tar.gz',
+            'openeuler-qcow2/kdev_openEuler-22.03-LTS-SP3-x86_64-dvd.qcow2.tar.gz',
+            'openeuler-qcow2/kdev_openEuler-22.03-LTS-SP4-x86_64-dvd.qcow2.tar.gz',
+            'openeuler-qcow2/kdev_openEuler-20.03-LTS-SP1-x86_64-dvd.qcow2.tar.gz',
+            'openeuler-qcow2/kdev_openEuler-24.03-LTS-SP2-x86_64-dvd.qcow2.tar.gz',
+            'openeuler-qcow2/kdev_openEuler-24.03-LTS-SP1-x86_64-dvd.qcow2.tar.gz',
+            'openeuler-qcow2/kdev_openEuler-20.03-LTS-SP2-x86_64-dvd.qcow2.tar.gz',
+            'openeuler-qcow2/kdev_openEuler-20.03-LTS-SP3-x86_64-dvd.qcow2.tar.gz',
+            'openeuler-qcow2/kdev_openEuler-20.03-LTS-SP4-x86_64-dvd.qcow2.tar.gz',
+            'openeuler-qcow2/kdev_openEuler-22.03-LTS-SP1-x86_64-dvd.qcow2.tar.gz',
+            'rockylinux-qcow2/kdev_Rocky-10.0-x86_64-minimal.qcow2.tar.gz',
+            'rockylinux-qcow2/kdev_Rocky-10.1-x86_64-minimal.qcow2.tar.gz',
+            'rockylinux-qcow2/kdev_Rocky-8.3-x86_64-minimal.qcow2.tar.gz',
+            'rockylinux-qcow2/kdev_Rocky-8.4-x86_64-minimal.qcow2.tar.gz',
+            'rockylinux-qcow2/kdev_Rocky-8.5-x86_64-minimal.qcow2.tar.gz',
+            'rockylinux-qcow2/kdev_Rocky-8.6-x86_64-minimal.qcow2.tar.gz',
+            'rockylinux-qcow2/kdev_Rocky-8.7-x86_64-minimal.qcow2.tar.gz',
+            'rockylinux-qcow2/kdev_Rocky-8.8-x86_64-minimal.qcow2.tar.gz',
+            'rockylinux-qcow2/kdev_Rocky-8.9-x86_64-minimal.qcow2.tar.gz',
+            'rockylinux-qcow2/kdev_Rocky-9.0-x86_64-minimal.qcow2.tar.gz',
+            'rockylinux-qcow2/kdev_Rocky-9.1-x86_64-minimal.qcow2.tar.gz',
+            'rockylinux-qcow2/kdev_Rocky-9.2-x86_64-minimal.qcow2.tar.gz',
+            'rockylinux-qcow2/kdev_Rocky-9.3-x86_64-minimal.qcow2.tar.gz',
+            'rockylinux-qcow2/kdev_Rocky-9.4-x86_64-minimal.qcow2.tar.gz',
+            'rockylinux-qcow2/kdev_Rocky-9.5-x86_64-minimal.qcow2.tar.gz',
+            'debian-qcow2/kdev_debian-11.0.0-amd64-DVD-1.qcow2.tar.gz',
+            'debian-qcow2/kdev_debian-11.1.0-amd64-DVD-1.qcow2.tar.gz',
+            'debian-qcow2/kdev_debian-11.10.0-amd64-DVD-1.qcow2.tar.gz',
+            'debian-qcow2/kdev_debian-11.11.0-amd64-DVD-1.qcow2.tar.gz',
+            'debian-qcow2/kdev_debian-11.2.0-amd64-DVD-1.qcow2.tar.gz',
+            'debian-qcow2/kdev_debian-11.3.0-amd64-DVD-1.qcow2.tar.gz',
+            'debian-qcow2/kdev_debian-11.4.0-amd64-DVD-1.qcow2.tar.gz',
+            'debian-qcow2/kdev_debian-11.5.0-amd64-DVD-1.qcow2.tar.gz',
+            'debian-qcow2/kdev_debian-11.6.0-amd64-DVD-1.qcow2.tar.gz',
+            'debian-qcow2/kdev_debian-11.7.0-amd64-DVD-1.qcow2.tar.gz',
+            'debian-qcow2/kdev_debian-11.8.0-amd64-DVD-1.qcow2.tar.gz',
+            'debian-qcow2/kdev_debian-11.9.0-amd64-DVD-1.qcow2.tar.gz',
+            'debian-qcow2/kdev_debian-12.0.0-amd64-DVD-1.qcow2.tar.gz',
+            'debian-qcow2/kdev_debian-12.1.0-amd64-DVD-1.qcow2.tar.gz',
+            'debian-qcow2/kdev_debian-12.10.0-amd64-DVD-1.qcow2.tar.gz',
+            'debian-qcow2/kdev_debian-12.11.0-amd64-DVD-1.qcow2.tar.gz',
+            'debian-qcow2/kdev_debian-12.12.0-amd64-DVD-1.qcow2.tar.gz',
+            'debian-qcow2/kdev_debian-12.13.0-amd64-DVD-1.qcow2.tar.gz',
+            'debian-qcow2/kdev_debian-12.2.0-amd64-DVD-1.qcow2.tar.gz',
+            'debian-qcow2/kdev_debian-12.4.0-amd64-DVD-1.qcow2.tar.gz',
+            'debian-qcow2/kdev_debian-12.5.0-amd64-DVD-1.qcow2.tar.gz',
+            'debian-qcow2/kdev_debian-12.6.0-amd64-DVD-1.qcow2.tar.gz',
+            'debian-qcow2/kdev_debian-12.7.0-amd64-DVD-1.qcow2.tar.gz',
+            'debian-qcow2/kdev_debian-12.8.0-amd64-DVD-1.qcow2.tar.gz',
+            'debian-qcow2/kdev_debian-12.9.0-amd64-DVD-1.qcow2.tar.gz',
+            'debian-qcow2/kdev_debian-13.0.0-amd64-DVD-1.qcow2.tar.gz',
+            'debian-qcow2/kdev_debian-13.1.0-amd64-DVD-1.qcow2.tar.gz',
+            'debian-qcow2/kdev_debian-13.2.0-amd64-DVD-1.qcow2.tar.gz',
+            'debian-qcow2/kdev_debian-13.3.0-amd64-DVD-1.qcow2.tar.gz',
+            'debian-qcow2/kdev_debian-13.4.0-amd64-DVD-1.qcow2.tar.gz',
+        ]
+      max-parallel: 64
+      fail-fast: false
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Create simulated physical disk
+        run: |
+          mnt_size=$(expr $(df -h /mnt | tail -1 | awk '{print $4}' | sed 's/[[:alpha:]]//g' | sed 's/\..*//') - 1)
+          root_size=$(expr $(df -h / | tail -1 | awk '{print $4}' | sed 's/[[:alpha:]]//g' | sed 's/\..*//') - 4)
+          sudo truncate -s "${mnt_size}"G /mnt/mnt.img
+          sudo truncate -s "${root_size}"G /root.img
+          sudo losetup /dev/loop6 /mnt/mnt.img
+          sudo losetup /dev/loop7 /root.img
+          sudo pvcreate /dev/loop6
+          sudo pvcreate /dev/loop7
+          sudo vgcreate github /dev/loop6 /dev/loop7
+          sudo lvcreate -n runner -l 100%FREE github
+          sudo mkfs.xfs /dev/github/runner
+          sudo mkdir -p /builder
+          sudo mount /dev/github/runner /builder
+          sudo chown -R runner.runner /builder
+          df -Th
+
+      - name: Install dependency
+        run: |
+          sudo apt update
+          sudo apt install -qq -y qemu-kvm libvirt-daemon-system virtinst cpu-checker aria2 ansible sshpass net-tools
+          sudo mkdir -p /builder/release
+
+      - name: Download qcow2
+        timeout-minutes: 30
+        working-directory: /builder/
+        run: |
+          set -x
+          set +e
+          sudo /bin/cp -a ${{ github.workspace }}/* .
+          ls -alh
+          for i in {1..60}; do
+            aria2c -o rootfs.qcow2.tar.gz https://github.com/yifengyou/kdev/releases/download/${{ matrix.os_release }}
+            if [ -s rootfs.qcow2.tar.gz ]; then
+              echo "成功！"
+              break
+            else
+              echo "第 $i 次尝试失败..."
+              sleep 5
+            fi
+          done
+          if [ ! -s rootfs.qcow2.tar.gz ]; then
+            echo "获取rootfs.qcow2失败！"
+            exit 1
+          fi
+          ls -alh rootfs.qcow2.tar.gz
+          md5sum rootfs.qcow2.tar.gz
+          tar -xvf rootfs.qcow2.tar.gz
+          ls -alh rootfs.qcow2
+          md5sum rootfs.qcow2
+
+      - name: Startup vm
+        working-directory: /builder/
+        run: |
+          set -x
+          sudo qemu-system-x86_64 \
+            -name "kdev-${RANDOM}" \
+            -machine q35 \
+            -accel kvm \
+            -drive if=pflash,format=raw,unit=0,file=/usr/share/OVMF/OVMF_CODE.fd \
+            -drive if=pflash,format=raw,unit=1,file=/usr/share/OVMF/OVMF_VARS.fd \
+            -cpu qemu64 \
+            -smp $(nproc) \
+            -m 8192 \
+            -device virtio-scsi-pci,id=scsi \
+            -drive file=rootfs.qcow2,format=qcow2,if=virtio \
+            -net nic,model=e1000 \
+            -net user,net=192.168.122.0/24,host=192.168.122.1,hostfwd=tcp::63333-:22 \
+            -serial file:serial.log \
+            -display none -daemonize
+
+          ssh-keygen -t rsa -b 4096 -f ~/.ssh/id_rsa -N ""
+          set +e
+          for i in {1..10}; do
+            sshpass -p "linux" ssh-copy-id -o StrictHostKeyChecking=no -p 63333 kdev@localhost
+            if [ $? -eq 0 ]; then
+              echo "成功！"
+              break
+            else
+              echo "第 $i 次尝试失败..."
+              sudo netstat -tlnp | grep 63333
+              sudo tail -n 50 serial.log
+              sleep 3
+            fi
+          done
+          sshpass -p "linux" ssh -p 63333 kdev@localhost "echo 'kdev ALL=(ALL) NOPASSWD: ALL' | sudo tee -a /etc/sudoers"
+          ssh -p 63333 kdev@localhost "uname -a"
+          ssh -p 63333 kdev@localhost "df -h"
+
+      - name: Exp
+        timeout-minutes: 60
+        env:
+          OS_RELEASE: ${{ matrix.os_release }}
+        working-directory: /builder/
+        run: |
+          set -x
+          set +e
+          ls -alh
+
+          # change mode
+          chmod +x 2026/dirtyfrag-exp/test.sh
+
+          # push file to target
+          scp -P 63333 2026/dirtyfrag-exp/test.sh kdev@localhost:/tmp/
+
+          # trigger
+          LOGFILE="$(basename ${OS_RELEASE%%.tar.gz}).md"
+          timeout 3590 ssh -p 63333 kdev@localhost /tmp/test.sh  2>&1 | tee report.md
+          if [ ! -s report.md ]; then
+            echo "获取报告失败！"
+            exit 1
+          fi
+          ls -alh report.md
+          mv report.md ${LOGFILE}
+
+          # copy output to release
+          sudo mkdir -p /builder/release/
+          sudo cp ${LOGFILE} /builder/release/
+          echo "All done!"
+
+      - name: List build output
+        run: |
+          ls -alh  /builder/release/*
+          md5sum /builder/release/*
+
+      - name: Upload Image to Release
+        uses: ncipollo/release-action@main
+        timeout-minutes: 8
+        with:
+          tag: dirtyfrag
+          artifacts: /builder/release/*
+          allowUpdates: true
+          removeArtifacts: false
+          replacesArtifacts: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+          body: | # dirtyfrag
+            ### 漏洞测试结果
