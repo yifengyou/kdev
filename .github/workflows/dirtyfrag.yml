@@ -207,7 +207,9 @@ jobs:
             fi
           done
 
-          sudo pkill -9 qemu-system-x86_64
+          sudo kill -9 $(sudo lsof -t rootfs.qcow2)
+          sudo rm -rf serial.log
+          sudo lsof rootfs.qcow2
           sync
           sleep 3
           sudo qemu-system-x86_64 \
@@ -241,7 +243,9 @@ jobs:
             fi
           done
 
-          sudo pkill -9 qemu-system-x86_64
+          sudo kill -9 $(sudo lsof -t rootfs.qcow2)
+          sudo rm -rf serial.log
+          sudo lsof rootfs.qcow2
           sync
           sleep 3
           sudo qemu-system-x86_64 \
