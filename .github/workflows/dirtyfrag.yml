@@ -171,6 +171,11 @@ jobs:
         working-directory: /builder/
         run: |
           set -x
+          set +e
+
+          cat /proc/cpuinfo
+          ssh-keygen -t rsa -b 4096 -f ~/.ssh/id_rsa -N ""
+
           sudo qemu-system-x86_64 \
             -name "kdev-${RANDOM}" \
             -machine q35 \
@@ -187,13 +192,13 @@ jobs:
             -serial file:serial.log \
             -display none -daemonize
 
-          ssh-keygen -t rsa -b 4096 -f ~/.ssh/id_rsa -N ""
-          set +e
           for i in {1..3}; do
-            sshpass -p "linux" ssh-copy-id -o StrictHostKeyChecking=no -p 63333 kdev@localhost
+            sshpass -p "linux" ssh-copy-id -o ConnectTimeout=60 -o StrictHostKeyChecking=no -p 63333 kdev@localhost
             if [ $? -eq 0 ]; then
-              echo "成功！"
-              break
+              sshpass -p "linux" ssh -p 63333 kdev@localhost "echo 'kdev ALL=(ALL) NOPASSWD: ALL' | sudo tee -a /etc/sudoers"
+              ssh -p 63333 kdev@localhost "uname -a"
+              ssh -p 63333 kdev@localhost "df -h"
+              exit 0
             else
               echo "第 $i 次尝试失败..."
               sudo netstat -tlnp | grep 63333
@@ -221,13 +226,13 @@ jobs:
             -serial file:serial.log \
             -display none -daemonize
 
-          ssh-keygen -t rsa -b 4096 -f ~/.ssh/id_rsa -N ""
-          set +e
           for i in {1..3}; do
-            sshpass -p "linux" ssh-copy-id -o StrictHostKeyChecking=no -p 63333 kdev@localhost
+            sshpass -p "linux" ssh-copy-id -o ConnectTimeout=60 -o StrictHostKeyChecking=no -p 63333 kdev@localhost
             if [ $? -eq 0 ]; then
-              echo "成功！"
-              break
+              sshpass -p "linux" ssh -p 63333 kdev@localhost "echo 'kdev ALL=(ALL) NOPASSWD: ALL' | sudo tee -a /etc/sudoers"
+              ssh -p 63333 kdev@localhost "uname -a"
+              ssh -p 63333 kdev@localhost "df -h"
+              exit 0
             else
               echo "第 $i 次尝试失败..."
               sudo netstat -tlnp | grep 63333
@@ -236,9 +241,43 @@ jobs:
             fi
           done
 
-          sshpass -p "linux" ssh -p 63333 kdev@localhost "echo 'kdev ALL=(ALL) NOPASSWD: ALL' | sudo tee -a /etc/sudoers"
-          ssh -p 63333 kdev@localhost "uname -a"
-          ssh -p 63333 kdev@localhost "df -h"
+          sudo pkill -9 qemu-system-x86_64
+          sync
+          sleep 3
+          sudo qemu-system-x86_64 \
+            -name "kdev-${RANDOM}" \
+            -machine q35 \
+            -accel kvm \
+            -drive if=pflash,format=raw,unit=0,file=/usr/share/OVMF/OVMF_CODE.fd \
+            -drive if=pflash,format=raw,unit=1,file=/usr/share/OVMF/OVMF_VARS.fd \
+            -cpu qemu64,+ssse3,+sse4.1,+sse4.2,+popcnt \
+            -smp $(nproc) \
+            -m 8192 \
+            -device virtio-scsi-pci,id=scsi \
+            -drive file=rootfs.qcow2,format=qcow2,if=virtio \
+            -net nic,model=e1000 \
+            -net user,net=192.168.122.0/24,host=192.168.122.1,hostfwd=tcp::63333-:22 \
+            -serial file:serial.log \
+            -display none -daemonize
+
+          for i in {1..3}; do
+            sshpass -p "linux" ssh-copy-id -o ConnectTimeout=60 -o StrictHostKeyChecking=no -p 63333 kdev@localhost
+            if [ $? -eq 0 ]; then
+              echo "成功！"
+              sshpass -p "linux" ssh -p 63333 kdev@localhost "echo 'kdev ALL=(ALL) NOPASSWD: ALL' | sudo tee -a /etc/sudoers"
+              ssh -p 63333 kdev@localhost "uname -a"
+              ssh -p 63333 kdev@localhost "df -h"
+              exit 0
+            else
+              echo "第 $i 次尝试失败..."
+              sudo netstat -tlnp | grep 63333
+              sudo tail -n 50 serial.log
+              sleep 3
+            fi
+          done
+
+          echo "All bad! exit 1"
+          exit 1
 
       - name: Exp
         timeout-minutes: 60
