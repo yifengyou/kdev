@@ -131,7 +131,7 @@ file ${ISONAME}
 LABEL=$(file ${ISONAME} | sed -n "s/.*'\([^']*\)'.*/\1/p")
 qemu-system-x86_64 \
   -name "${ISONAME%.*}" \
-  -machine virt \
+  -machine q35 \
   -cpu max \
   -accel kvm \
   -drive if=pflash,format=raw,unit=0,file=/usr/share/OVMF/OVMF_CODE.fd \
