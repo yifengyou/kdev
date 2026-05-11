@@ -25,7 +25,17 @@ jobs:
     strategy:
       matrix:
         os_release: [
+            'OpenCloudOS-7.9-everything-x86_64',
+            'opencloudos-8.5-x86_64-minimal',
+            'opencloudos-8.6-x86_64-minimal',
+            'OpenCloudOS-8.8-x86_64-minimal',
             'OpenCloudOS-8.10-x86_64-dvd1',
+            'OpenCloudOS-8.10-20241210.0-x86_64-minimal',
+            'OpenCloudOS-8.10-20251230.1-x86_64-minimal',
+            'OpenCloudOS-8.10-x86_64-minimal',
+            'OpenCloudOS-9.2-20250327.0-x86_64-minimal',
+            'OpenCloudOS-9.2-20250421.0-x86_64-minimal',
+            'OpenCloudOS-9.2-x86_64-minimal',
             'OpenCloudOS-9.4-20260313.0-x86_64-minimal',
             'OpenCloudOS-9.4-20250507.0-x86_64-minimal',
             'OpenCloudOS-9.4-20250616.0-x86_64-minimal',
