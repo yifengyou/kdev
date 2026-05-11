@@ -146,8 +146,8 @@ qemu-system-x86_64 \
   -initrd mnt/images/pxeboot/initrd.img \
   -append "inst.ks=http://192.168.122.1:${FILE_SERVER_PORT}/ks.cfg inst.stage2=hd:LABEL=${LABEL} inst.text inst.cmdline earlyprintk ignore_loglevel console=ttyS0,115200n8 level=10 net.ifnames=0 biosdevname=0 selinux=0 " \
   -serial mon:stdio \
-  -net nic \
   -net user,net=192.168.122.0/24,host=192.168.122.1 \
+  -net nic,model=e1000 \
   -nographic
 
 sync
