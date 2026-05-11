@@ -1,6 +1,7 @@
 #!/bin/bash
 
 ISOURL="https://mirrors.cloud.tencent.com/opencloudos/9.4/isos/x86_64/20260313.0/OpenCloudOS-9.4-20260313.0-x86_64-minimal.iso"
+ISOURL="https://mirrors.tencent.com/opencloudos/9.4/isos/x86_64/20260313.0/OpenCloudOS-9.4-20260313.0-x86_64-minimal.iso"
 WORKDIR=$(pwd)
 FILE_SERVER_PORT=$(shuf -i 20000-65535 -n 1)
 ISONAME=$(basename ${ISOURL})
