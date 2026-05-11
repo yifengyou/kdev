@@ -25,21 +25,7 @@ jobs:
     strategy:
       matrix:
         os_release: [
-            'Rocky-10.0-x86_64-minimal',
-            'Rocky-10.1-x86_64-minimal',
-            'Rocky-9.0-x86_64-minimal',
-            'Rocky-9.1-x86_64-minimal',
-            'Rocky-9.2-x86_64-minimal',
-            'Rocky-9.3-x86_64-minimal',
-            'Rocky-9.4-x86_64-minimal',
-            'Rocky-9.5-x86_64-minimal',
-            'Rocky-8.3-x86_64-minimal',
-            'Rocky-8.4-x86_64-minimal',
-            'Rocky-8.5-x86_64-minimal',
-            'Rocky-8.6-x86_64-minimal',
-            'Rocky-8.7-x86_64-minimal',
-            'Rocky-8.8-x86_64-minimal',
-            'Rocky-8.9-x86_64-minimal',
+            'OpenCloudOS-8.10-x86_64-dvd1',
         ]
       max-parallel: 64
       fail-fast: false
