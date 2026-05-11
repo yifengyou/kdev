@@ -27,6 +27,11 @@ jobs:
         os_release: [
             'OpenCloudOS-8.10-x86_64-dvd1',
             'OpenCloudOS-9.4-20260313.0-x86_64-minimal',
+            'OpenCloudOS-9.4-20250507.0-x86_64-minimal',
+            'OpenCloudOS-9.4-20250616.0-x86_64-minimal',
+            'OpenCloudOS-9.4-20250819.0-x86_64-minimal',
+            'OpenCloudOS-9.4-20251111.0-x86_64-minimal',
+            'OpenCloudOS-9.4-x86_64-minimal',
         ]
       max-parallel: 64
       fail-fast: false
