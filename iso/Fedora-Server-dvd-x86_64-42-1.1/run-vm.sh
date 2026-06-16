@@ -17,7 +17,7 @@ set -x
 
 qemu-system-x86_64 \
 	-name "kdev-${RANDOM}" \
-	-machine q35 \
+	-machine q35,accel=kvm \
 	-drive if=pflash,format=raw,unit=0,file=/usr/share/OVMF/OVMF_CODE_4M.fd \
 	-drive if=pflash,format=raw,unit=1,file=/usr/share/OVMF/OVMF_VARS_4M.fd \
 	-cpu max \
